@@ -1,47 +1,48 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { db, auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { db } from "../firebase";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  query,
+  orderBy,
+} from "firebase/firestore";
 
 export default function Students() {
   const [students, setStudents] = useState([]);
   const [name, setName] = useState("");
   const [exam, setExam] = useState("");
-  const [coachId, setCoachId] = useState(null);
-
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) setCoachId(user.uid);
-    });
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   const fetchStudents = async () => {
-    const querySnapshot = await getDocs(collection(db, "students"));
-    const list = [];
-    querySnapshot.forEach((doc) => {
-      list.push({ id: doc.id, ...doc.data() });
-    });
-    setStudents(list.filter((s) => s.coachId === coachId));
+    const q = query(collection(db, "students"), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    setStudents(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
   };
 
   useEffect(() => {
-    if (coachId) fetchStudents();
-  }, [coachId]);
+    fetchStudents();
+  }, []);
 
   const addStudent = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // 🔥 butonun sayfayı yenilememesi için şart
     if (!name || !exam) return;
 
+    setLoading(true);
     await addDoc(collection(db, "students"), {
       name,
       exam,
-      coachId,
-      createdAt: new Date(),
+      coachId: "Koç1",
+      createdAt: serverTimestamp(),
     });
 
     setName("");
     setExam("");
-    fetchStudents();
+    await fetchStudents();
+    setLoading(false);
   };
 
   const deleteStudent = async (id) => {
@@ -51,76 +52,68 @@ export default function Students() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">Öğrencilerim</h1>
+      <h1 className="text-2xl font-semibold mb-6">🎓 Öğrenci Listesi</h1>
 
-      <form onSubmit={addStudent} className="bg-white p-4 rounded-lg shadow flex flex-wrap items-center gap-3 mb-6">
+      <form onSubmit={addStudent} className="flex flex-wrap gap-3 mb-6">
         <input
           type="text"
-          placeholder="Öğrenci Adı"
+          placeholder="Ad Soyad"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="border rounded p-2 flex-1 min-w-[200px]"
+          className="border rounded p-2 flex-1 min-w-[160px]"
           required
         />
-        <select
+        <input
+          type="text"
+          placeholder="Sınav Türü (LGS, YKS...)"
           value={exam}
           onChange={(e) => setExam(e.target.value)}
-          className="border rounded p-2"
+          className="border rounded p-2 flex-1 min-w-[160px]"
           required
+        />
+        <button
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          <option value="">Sınav Türü</option>
-          <option value="LGS">LGS</option>
-          <option value="YKS">YKS</option>
-          <option value="KPSS">KPSS</option>
-          <option value="ALES">ALES</option>
-          <option value="DGS">DGS</option>
-        </select>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          Ekle
+          {loading ? "Ekleniyor..." : "Ekle"}
         </button>
       </form>
 
-      <div className="bg-white rounded-lg shadow">
-        <table className="w-full text-left">
-          <thead className="bg-gray-200">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border">
+          <thead className="bg-gray-100">
             <tr>
-              <th className="p-3">Ad Soyad</th>
-              <th className="p-3">Sınav Türü</th>
-              <th className="p-3 text-right">İşlem</th>
+              <th className="p-2 border">#</th>
+              <th className="p-2 border">Ad Soyad</th>
+              <th className="p-2 border">Sınav Türü</th>
+              <th className="p-2 border text-right">İşlemler</th>
             </tr>
           </thead>
           <tbody>
-            {students.map((s) => (
-              <tr key={s.id} className="border-b">
-                <td className="p-3">{s.name}</td>
-                <td className="p-3">{s.exam}</td>
-                <td className="p-3 text-right">
+            {students.map((s, i) => (
+              <tr key={s.id} className="border-t">
+                <td className="p-2 border">{i + 1}</td>
+                <td className="p-2 border">{s.name}</td>
+                <td className="p-2 border">{s.exam}</td>
+                <td className="p-2 border text-right">
                   <button
                     onClick={() => deleteStudent(s.id)}
-                    className="text-red-500 hover:underline"
+                    className="text-red-500 hover:underline mr-2"
                   >
                     Sil
                   </button>
+                  <button
+                    onClick={() => (window.location.href = `/students/${s.id}`)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Detay
+                  </button>
                 </td>
-                <td className="p-3 text-right flex justify-end gap-3">
-  <button
-    onClick={() => deleteStudent(s.id)}
-    className="text-red-500 hover:underline"
-  >
-    Sil
-  </button>
-  <button
-    onClick={() => window.location.href = `/students/${s.id}`}
-    className="text-blue-600 hover:underline"
-  >
-    Detay
-  </button>
-</td>
               </tr>
             ))}
             {students.length === 0 && (
               <tr>
-                <td colSpan="3" className="p-4 text-center text-gray-500">
+                <td colSpan="4" className="text-center text-gray-500 p-3">
                   Henüz öğrenci eklenmedi.
                 </td>
               </tr>

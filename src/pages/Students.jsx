@@ -103,7 +103,7 @@ export default function Students() {
                     Sil
                   </button>
                   <button
-  onClick={() => navigate(`/students/${s.id}`)}
+  onClick={() => (window.location.href = `/students/${s.id}`)}
   className="text-blue-600 hover:underline"
 >
   Detay

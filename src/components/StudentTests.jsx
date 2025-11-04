@@ -1,3 +1,4 @@
+import TestProgressChart from "./TestProgressChart";
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
 import {
@@ -109,6 +110,7 @@ export default function StudentTests({ studentId }) {
           </tbody>
         </table>
       </div>
+      <TestProgressChart data={tests} />
     </div>
   );
 }

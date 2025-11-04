@@ -30,22 +30,29 @@ export default function Students() {
 const addStudent = async (e) => {
   e.preventDefault();
   if (!name || !exam) return;
+
   const user = auth.currentUser;
-  const coachName = user?.displayName || "Koç Adı Belirtilmemiş";
+  if (!user) {
+    alert("Lütfen tekrar giriş yapın (koç bilgisi bulunamadı).");
+    return;
+  }
+
+  const coachName = user.displayName || "Koç Bilgisi Yok";
 
   setLoading(true);
   await addDoc(collection(db, "students"), {
     name,
     exam,
-    coachId: coachName, // 🔹 artık koçun adı kaydediliyor
+    coachId: coachName,
     createdAt: serverTimestamp(),
   });
+  setLoading(false);
 
   setName("");
   setExam("");
   await fetchStudents();
-  setLoading(false);
 };
+
 
   return (
     <div className="p-6">

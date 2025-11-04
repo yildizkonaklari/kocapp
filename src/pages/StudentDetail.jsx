@@ -1,11 +1,11 @@
-import WeeklyPlan from "../components/WeeklyPlan";
-import TopicTracker from "../components/TopicTracker";
-import CoachNotes from "../components/CoachNotes";
-import StudentTests from "../components/StudentTests";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import StudentTests from "../components/StudentTests";
+import CoachNotes from "../components/CoachNotes";
+import TopicTracker from "../components/TopicTracker";
+import WeeklyPlan from "../components/WeeklyPlan";
 
 export default function StudentDetail() {
   const { id } = useParams();
@@ -54,27 +54,20 @@ export default function StudentDetail() {
         <h1 className="text-2xl font-semibold mb-4">{student.name}</h1>
         <p><strong>Sınav Türü:</strong> {student.exam}</p>
         <p><strong>Koç ID:</strong> {student.coachId}</p>
-        <p><strong>Oluşturulma:</strong> {new Date(student.createdAt.seconds * 1000).toLocaleDateString()}</p>
+        {student.createdAt && (
+          <p>
+            <strong>Oluşturulma:</strong>{" "}
+            {new Date(student.createdAt.seconds * 1000).toLocaleDateString()}
+          </p>
+        )}
       </div>
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-  <StudentTests studentId={id} />
-  <CoachNotes studentId={id} />      
-  <div className="bg-white p-5 rounded-lg shadow">
-    <h2 className="text-xl font-semibold mb-3">🧠 Koç Notları</h2>
-    <p className="text-gray-500">Henüz not eklenmedi.</p>
-  </div>
-</div>
-        <div className="bg-white p-5 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-3">🧠 Koç Notları</h2>
-          <p className="text-gray-500">Henüz not eklenmedi.</p>
-        </div>
+
+      <div className="mt-6">
+        <StudentTests studentId={id} />
+        <CoachNotes studentId={id} />
+        <TopicTracker studentId={id} />
+        <WeeklyPlan studentId={id} />
       </div>
-    <div className="mt-6">
-  <StudentTests studentId={id} />
-  <CoachNotes studentId={id} />
-  <TopicTracker studentId={id} />
-    <WeeklyPlan studentId={id} />
-</div>
     </div>
   );
 }

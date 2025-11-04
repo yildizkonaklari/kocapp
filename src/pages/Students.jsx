@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { db } from "../firebase";
+import { db, auth } from "../firebase"; // ✅ auth eklendi
 import {
   collection,
   addDoc,
@@ -27,32 +27,38 @@ export default function Students() {
     fetchStudents();
   }, []);
 
-const addStudent = async (e) => {
-  e.preventDefault();
-  if (!name || !exam) return;
+  // ✅ öğrenci ekleme
+  const addStudent = async (e) => {
+    e.preventDefault();
+    if (!name || !exam) return;
 
-  const user = auth.currentUser;
-  if (!user) {
-    alert("Lütfen tekrar giriş yapın (koç bilgisi bulunamadı).");
-    return;
-  }
+    const user = auth.currentUser; // 🔹 artık mevcut
+    if (!user) {
+      alert("Lütfen tekrar giriş yapın (koç bilgisi bulunamadı).");
+      return;
+    }
 
-  const coachName = user.displayName || "Koç Bilgisi Yok";
+    const coachName = user.displayName || "Koç Bilgisi Yok";
 
-  setLoading(true);
-  await addDoc(collection(db, "students"), {
-    name,
-    exam,
-    coachId: coachName,
-    createdAt: serverTimestamp(),
-  });
-  setLoading(false);
+    setLoading(true);
+    await addDoc(collection(db, "students"), {
+      name,
+      exam,
+      coachId: coachName,
+      createdAt: serverTimestamp(),
+    });
+    setLoading(false);
 
-  setName("");
-  setExam("");
-  await fetchStudents();
-};
+    setName("");
+    setExam("");
+    await fetchStudents();
+  };
 
+  // ✅ öğrenci silme
+  const deleteStudent = async (id) => {
+    await deleteDoc(doc(db, "students", id));
+    fetchStudents();
+  };
 
   return (
     <div className="p-6">
@@ -107,11 +113,11 @@ const addStudent = async (e) => {
                     Sil
                   </button>
                   <button
-  onClick={() => (window.location.href = `/students/${s.id}`)}
-  className="text-blue-600 hover:underline"
->
-  Detay
-</button>
+                    onClick={() => (window.location.href = `/students/${s.id}`)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Detay
+                  </button>
                 </td>
               </tr>
             ))}

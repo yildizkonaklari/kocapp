@@ -1,3 +1,4 @@
+import Profile from "./pages/Profile";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/students" element={<Students />} />
           <Route path="/students/:id" element={<StudentDetail />} /> {/* ✅ eklendi */}
           <Route path="*" element={<Navigate to="/" />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </div>
     </div>

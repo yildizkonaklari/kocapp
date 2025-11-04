@@ -1,3 +1,5 @@
+import CoachNotes from "../components/CoachNotes";
+
 import StudentTests from "../components/StudentTests";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -55,6 +57,7 @@ export default function StudentDetail() {
       </div>
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
   <StudentTests studentId={id} />
+  <CoachNotes studentId={id} />      
   <div className="bg-white p-5 rounded-lg shadow">
     <h2 className="text-xl font-semibold mb-3">🧠 Koç Notları</h2>
     <p className="text-gray-500">Henüz not eklenmedi.</p>

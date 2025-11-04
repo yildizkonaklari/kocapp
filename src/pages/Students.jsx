@@ -28,17 +28,18 @@ export default function Students() {
   }, []);
 
   // ✅ öğrenci ekleme
-  const addStudent = async (e) => {
+const addStudent = async (e) => {
     e.preventDefault();
     if (!name || !exam) return;
 
-    const user = auth.currentUser; // 🔹 artık mevcut
+    const user = auth.currentUser;
     if (!user) {
       alert("Lütfen tekrar giriş yapın (koç bilgisi bulunamadı).");
       return;
     }
 
-    const coachName = user.displayName || "Koç Bilgisi Yok";
+    // 🔹 Profilden koç adını çek
+    const coachName = coachProfile?.name || user.displayName || "Koç Bilgisi Yok";
 
     setLoading(true);
     await addDoc(collection(db, "students"), {

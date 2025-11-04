@@ -7,6 +7,7 @@ import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
 import Login from "./pages/Login";
+import StudentDetail from "./pages/StudentDetail"; // ✅ import en üste taşındı
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -24,20 +25,14 @@ export default function App() {
       <Sidebar />
       <div className="flex-1 flex flex-col bg-gray-100 min-h-screen">
         <Navbar onLogout={handleLogout} />
+
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/students" element={<Students />} />
+          <Route path="/students/:id" element={<StudentDetail />} /> {/* ✅ eklendi */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
     </div>
   );
 }
-import StudentDetail from "./pages/StudentDetail";
-
-<Routes>
-  <Route path="/" element={<Dashboard />} />
-  <Route path="/students" element={<Students />} />
-  <Route path="/students/:id" element={<StudentDetail />} />
-  <Route path="*" element={<Navigate to="/" />} />
-</Routes>

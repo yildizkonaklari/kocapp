@@ -1,5 +1,5 @@
+import TopicTracker from "../components/TopicTracker";
 import CoachNotes from "../components/CoachNotes";
-
 import StudentTests from "../components/StudentTests";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -68,6 +68,11 @@ export default function StudentDetail() {
           <p className="text-gray-500">Henüz not eklenmedi.</p>
         </div>
       </div>
+    <div className="mt-6">
+  <StudentTests studentId={id} />
+  <CoachNotes studentId={id} />
+  <TopicTracker studentId={id} />
+</div>
     </div>
   );
 }

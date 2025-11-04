@@ -26,19 +26,11 @@ export default function StudentDetail() {
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="p-10 text-center text-gray-500">
-        Yükleniyor...
-      </div>
-    );
+    return <div className="p-10 text-center text-gray-500">Yükleniyor...</div>;
   }
 
   if (!student) {
-    return (
-      <div className="p-10 text-center text-red-500">
-        Öğrenci bulunamadı.
-      </div>
-    );
+    return <div className="p-10 text-center text-red-500">Öğrenci bulunamadı.</div>;
   }
 
   return (
@@ -53,7 +45,10 @@ export default function StudentDetail() {
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h1 className="text-2xl font-semibold mb-4">{student.name}</h1>
         <p><strong>Sınav Türü:</strong> {student.exam}</p>
-        <p><strong>Koç ID:</strong> {student.coachId}</p>
+
+        {/* 🔹 Koç Adı Eklendi */}
+        <p><strong>Koç Adı:</strong> {student.coachId || "Belirtilmemiş"}</p>
+
         {student.createdAt && (
           <p>
             <strong>Oluşturulma:</strong>{" "}

@@ -27,28 +27,25 @@ export default function Students() {
     fetchStudents();
   }, []);
 
-  const addStudent = async (e) => {
-    e.preventDefault(); // 🔥 butonun sayfayı yenilememesi için şart
-    if (!name || !exam) return;
+const addStudent = async (e) => {
+  e.preventDefault();
+  if (!name || !exam) return;
+  const user = auth.currentUser;
+  const coachName = user?.displayName || "Koç Adı Belirtilmemiş";
 
-    setLoading(true);
-    await addDoc(collection(db, "students"), {
-      name,
-      exam,
-      coachId: "Koç1",
-      createdAt: serverTimestamp(),
-    });
+  setLoading(true);
+  await addDoc(collection(db, "students"), {
+    name,
+    exam,
+    coachId: coachName, // 🔹 artık koçun adı kaydediliyor
+    createdAt: serverTimestamp(),
+  });
 
-    setName("");
-    setExam("");
-    await fetchStudents();
-    setLoading(false);
-  };
-
-  const deleteStudent = async (id) => {
-    await deleteDoc(doc(db, "students", id));
-    fetchStudents();
-  };
+  setName("");
+  setExam("");
+  await fetchStudents();
+  setLoading(false);
+};
 
   return (
     <div className="p-6">

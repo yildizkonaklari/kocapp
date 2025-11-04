@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "../firebase";
 
 export default function Login({ onLogin }) {
@@ -10,16 +10,30 @@ export default function Login({ onLogin }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // 🔹 Giriş yap
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 🔹 Eğer kullanıcıda isim yoksa, e-posta adresinin baş kısmını displayName olarak kaydet
+      if (!user.displayName) {
+        const defaultName = email.split("@")[0];
+        await updateProfile(user, { displayName: defaultName });
+      }
+
+      // 🔹 App.jsx'e kullanıcı bilgisini ilet
       onLogin(true);
     } catch (err) {
+      console.error(err);
       setError("Giriş başarısız, bilgileri kontrol et.");
     }
   };
 
   return (
     <div className="h-screen flex items-center justify-center bg-gray-100">
-      <form onSubmit={handleLogin} className="bg-white p-8 rounded-lg shadow-md w-80">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white p-8 rounded-lg shadow-md w-80"
+      >
         <h2 className="text-2xl font-bold mb-5 text-center">Koç Girişi</h2>
 
         <input
@@ -47,7 +61,9 @@ export default function Login({ onLogin }) {
           Giriş Yap
         </button>
 
-        {error && <p className="text-red-500 text-sm mt-3 text-center">{error}</p>}
+        {error && (
+          <p className="text-red-500 text-sm mt-3 text-center">{error}</p>
+        )}
       </form>
     </div>
   );

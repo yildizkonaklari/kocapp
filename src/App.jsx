@@ -1,15 +1,8 @@
-import Sidebar from "./components/Sidebar";
-import Navbar from "./components/Navbar";
-import Dashboard from "./pages/Dashboard";
+import StudentDetail from "./pages/StudentDetail";
 
-export default function App() {
-  return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 flex flex-col bg-gray-100 min-h-screen">
-        <Navbar />
-        <Dashboard />
-      </div>
-    </div>
-  );
-}
+<Routes>
+  <Route path="/" element={<Dashboard />} />
+  <Route path="/students" element={<Students />} />
+  <Route path="/students/:id" element={<StudentDetail />} />
+  <Route path="*" element={<Navigate to="/" />} />
+</Routes>

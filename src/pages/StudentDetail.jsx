@@ -1,3 +1,4 @@
+import StudentTests from "../components/StudentTests";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
@@ -52,13 +53,13 @@ export default function StudentDetail() {
         <p><strong>Koç ID:</strong> {student.coachId}</p>
         <p><strong>Oluşturulma:</strong> {new Date(student.createdAt.seconds * 1000).toLocaleDateString()}</p>
       </div>
-
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-5 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-3">📊 Denemeler</h2>
-          <p className="text-gray-500">Henüz deneme eklenmedi.</p>
-        </div>
-
+  <StudentTests studentId={id} />
+  <div className="bg-white p-5 rounded-lg shadow">
+    <h2 className="text-xl font-semibold mb-3">🧠 Koç Notları</h2>
+    <p className="text-gray-500">Henüz not eklenmedi.</p>
+  </div>
+</div>
         <div className="bg-white p-5 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-3">🧠 Koç Notları</h2>
           <p className="text-gray-500">Henüz not eklenmedi.</p>

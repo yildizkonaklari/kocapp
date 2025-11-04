@@ -102,6 +102,20 @@ export default function Students() {
                     Sil
                   </button>
                 </td>
+                <td className="p-3 text-right flex justify-end gap-3">
+  <button
+    onClick={() => deleteStudent(s.id)}
+    className="text-red-500 hover:underline"
+  >
+    Sil
+  </button>
+  <button
+    onClick={() => window.location.href = `/students/${s.id}`}
+    className="text-blue-600 hover:underline"
+  >
+    Detay
+  </button>
+</td>
               </tr>
             ))}
             {students.length === 0 && (

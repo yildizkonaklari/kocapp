@@ -14,6 +14,12 @@ export default function Sidebar() {
             <Home size={20} /> Anasayfa
           </Link>
           <Link
+  to="/profile"
+  className="flex items-center gap-3 hover:text-blue-400 transition"
+>
+  <Settings size={20} /> Profil
+</Link>
+          <Link
             to="/students"
             className="flex items-center gap-3 hover:text-blue-400 transition"
           >

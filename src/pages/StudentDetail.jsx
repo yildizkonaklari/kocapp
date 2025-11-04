@@ -1,3 +1,4 @@
+import WeeklyPlan from "../components/WeeklyPlan";
 import TopicTracker from "../components/TopicTracker";
 import CoachNotes from "../components/CoachNotes";
 import StudentTests from "../components/StudentTests";
@@ -72,6 +73,7 @@ export default function StudentDetail() {
   <StudentTests studentId={id} />
   <CoachNotes studentId={id} />
   <TopicTracker studentId={id} />
+    <WeeklyPlan studentId={id} />
 </div>
     </div>
   );

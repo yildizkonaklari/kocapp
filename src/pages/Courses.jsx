@@ -1,36 +1,59 @@
 import { useState, useEffect } from "react";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 import {
   collection,
   addDoc,
   getDocs,
   deleteDoc,
   doc,
+  query,
+  where,
   serverTimestamp,
 } from "firebase/firestore";
 
 export default function Courses() {
   const [newCourse, setNewCourse] = useState("");
   const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const fetchCourses = async () => {
-    const snapshot = await getDocs(collection(db, "courses"));
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, "courses"),
+      where("coachId", "==", user.uid)
+    );
+    const snapshot = await getDocs(q);
     setCourses(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
   };
 
   useEffect(() => {
-    fetchCourses();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) fetchCourses();
+    });
+    return () => unsubscribe();
   }, []);
 
   const addCourse = async (e) => {
     e.preventDefault();
     if (!newCourse.trim()) return;
+
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Lütfen giriş yapın!");
+      return;
+    }
+
+    setLoading(true);
     await addDoc(collection(db, "courses"), {
       name: newCourse,
+      coachId: user.uid,
       createdAt: serverTimestamp(),
     });
     setNewCourse("");
-    fetchCourses();
+    await fetchCourses();
+    setLoading(false);
   };
 
   const deleteCourse = async (id) => {
@@ -52,8 +75,11 @@ export default function Courses() {
           onChange={(e) => setNewCourse(e.target.value)}
           className="border p-2 rounded flex-1"
         />
-        <button className="bg-green-600 text-white px-4 rounded hover:bg-green-700">
-          Ekle
+        <button
+          disabled={loading}
+          className="bg-green-600 text-white px-4 rounded hover:bg-green-700"
+        >
+          {loading ? "Ekleniyor..." : "Ekle"}
         </button>
       </form>
 
@@ -77,6 +103,7 @@ export default function Courses() {
                 >
                   Sil
                 </button>
+                {/* İleri seviye için: <button className="ml-3 text-blue-600 hover:underline">Düzenle</button> */}
               </td>
             </tr>
           ))}

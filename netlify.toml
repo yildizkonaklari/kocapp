@@ -7,9 +7,6 @@
   NPM_FLAGS = "--legacy-peer-deps"
   CI = "false"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
 [[redirects]]
   from = "/*"
   to = "/index.html"

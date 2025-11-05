@@ -1,10 +1,8 @@
-// Firebase modüllerini import et
+// src/firebase.js
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage";
+import { getFirestore } from "firebase/firestore";
 
-// .env'den gelen değişkenleri oku
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
   authDomain: import.meta.env.VITE_AUTH_DOMAIN,
@@ -14,10 +12,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_APP_ID,
 };
 
-// Firebase'i başlat
 const app = initializeApp(firebaseConfig);
 
-// Servisleri dışa aktar
-export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const storage = getStorage(app);
+export const db = getFirestore(app);

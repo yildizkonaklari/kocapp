@@ -9,59 +9,79 @@ export default function Profile({ user }) {
   const [email, setEmail] = useState("");
   const [photoURL, setPhotoURL] = useState("");
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (user) {
-      setEmail(user.email);
-      fetchProfile();
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      setEmail(currentUser.email);
+      fetchProfile(currentUser.uid);
     }
-  }, [user]);
+  }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (uid) => {
     try {
-      const docRef = doc(db, "coaches", user.uid);
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
+      const refDoc = doc(db, "coaches", uid);
+      const snap = await getDoc(refDoc);
+      if (snap.exists()) {
+        const data = snap.data();
         setName(data.name || "");
         setPhone(data.phone || "");
         setPhotoURL(data.photoURL || "");
       }
     } catch (error) {
-      console.error("Profil verisi alınamadı:", error);
+      console.error("Profil yüklenemedi:", error);
     }
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setSaved(false);
-
-    try {
-      await setDoc(doc(db, "coaches", user.uid), {
-        name,
-        phone,
-        email,
-        photoURL,
-        updatedAt: new Date(),
-      });
-      setSaved(true);
-    } catch (error) {
-      console.error("Kaydetme hatası:", error);
-      alert("Profil kaydedilemedi. Lütfen tekrar deneyin.");
-    }
-
-    setLoading(false);
   };
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const fileRef = ref(storage, `coachPhotos/${user.uid}`);
-    await uploadBytes(fileRef, file);
-    const url = await getDownloadURL(fileRef);
-    setPhotoURL(url);
+
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      alert("Giriş yapmanız gerekiyor!");
+      return;
+    }
+
+    try {
+      const fileRef = ref(storage, `coachPhotos/${uid}`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      setPhotoURL(url);
+      setMessage("Fotoğraf yüklendi ✅");
+    } catch (error) {
+      console.error("Fotoğraf yüklenemedi:", error);
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      alert("Giriş yapmanız gerekiyor!");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      await setDoc(doc(db, "coaches", uid), {
+        name,
+        phone,
+        email,
+        photoURL,
+        updatedAt: new Date().toISOString(),
+      });
+
+      setMessage("Profil başarıyla kaydedildi ✅");
+    } catch (error) {
+      console.error("Kayıt hatası:", error);
+      alert("Profil kaydedilemedi. Firestore izinlerini kontrol edin.");
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -96,6 +116,7 @@ export default function Profile({ user }) {
             className="w-full border rounded p-2 bg-gray-100 text-gray-500"
           />
         </div>
+
         <div>
           <label className="block mb-1 font-medium">Profil Fotoğrafı</label>
           <input type="file" accept="image/*" onChange={handlePhotoUpload} />
@@ -106,20 +127,3 @@ export default function Profile({ user }) {
               className="mt-2 w-24 h-24 rounded-full object-cover border"
             />
           )}
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          {loading ? "Kaydediliyor..." : "Kaydet"}
-        </button>
-
-        {saved && (
-          <p className="text-green-600 text-sm mt-2">✅ Profil kaydedildi!</p>
-        )}
-      </form>
-    </div>
-  );
-}

@@ -1,71 +1,45 @@
+import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 import StudentTests from "../components/StudentTests";
-import CoachNotes from "../components/CoachNotes";
-import TopicTracker from "../components/TopicTracker";
-import WeeklyPlan from "../components/WeeklyPlan";
-import { analyzeProgress } from "../utils/analytics";
+import StudentChart from "../components/StudentChart";
+
 export default function StudentDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [student, setStudent] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [coachLessons, setCoachLessons] = useState([]);
 
   useEffect(() => {
-    const fetchStudent = async () => {
-      const docRef = doc(db, "students", id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setStudent(docSnap.data());
+    const fetchData = async () => {
+      const studentSnap = await getDoc(doc(db, "students", id));
+      if (studentSnap.exists()) {
+        const data = studentSnap.data();
+        setStudent(data);
+
+        // 🔹 Koçun ders listesi
+        const coachSnap = await getDoc(doc(db, "coaches", data.coachId));
+        if (coachSnap.exists()) {
+          setCoachLessons(coachSnap.data().lessons || []);
+        }
       }
-      setLoading(false);
     };
-    fetchStudent();
+    fetchData();
   }, [id]);
 
-  if (loading) {
-    return <div className="p-10 text-center text-gray-500">Yükleniyor...</div>;
-  }
-
-  if (!student) {
-    return <div className="p-10 text-center text-red-500">Öğrenci bulunamadı.</div>;
-  }
+  if (!student)
+    return <div className="p-6 text-gray-600">Öğrenci bilgileri yükleniyor...</div>;
 
   return (
     <div className="p-6">
-      <button
-        onClick={() => navigate(-1)}
-        className="text-blue-600 hover:underline mb-4"
-      >
-        ← Geri
-      </button>
+      <h1 className="text-2xl font-semibold mb-4">{student.name}</h1>
+      <p className="text-gray-600 mb-6">Sınav Türü: {student.exam}</p>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h1 className="text-2xl font-semibold mb-4">{student.name}</h1>
-        <p><strong>Sınav Türü:</strong> {student.exam}</p>
+      {/* 🔹 Deneme ekleme ve listeleme */}
+      <StudentTests studentId={id} coachLessons={coachLessons} />
 
-        {/* 🔹 Koç Adı Eklendi */}
-        <p><strong>Koç Adı:</strong> {student.coachId || "Belirtilmemiş"}</p>
-
-        {student.createdAt && (
-          <p>
-            <strong>Oluşturulma:</strong>{" "}
-            {new Date(student.createdAt.seconds * 1000).toLocaleDateString()}
-          </p>
-      <p className="text-gray-700 mt-4 italic">
-  {analyzeProgress(tests)}
-</p>
-        )}
-      </div>
-
-      <div className="mt-6">
-        <StudentTests studentId={id} />
-        <CoachNotes studentId={id} />
-        <TopicTracker studentId={id} />
-        <WeeklyPlan studentId={id} />
-      </div>
+      {/* 🔹 Net gelişim grafiği */}
+      <StudentChart studentId={id} />
     </div>
   );
 }

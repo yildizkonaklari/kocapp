@@ -1,9 +1,10 @@
+// src/pages/Profile.jsx
 import { useState, useEffect } from "react";
 import { auth, db, storage } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-export default function Profile({ user }) {
+export default function Profile() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -14,7 +15,7 @@ export default function Profile({ user }) {
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (currentUser) {
-      setEmail(currentUser.email);
+      setEmail(currentUser.email || "");
       fetchProfile(currentUser.uid);
     }
   }, []);
@@ -35,7 +36,7 @@ export default function Profile({ user }) {
   };
 
   const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const uid = auth.currentUser?.uid;
@@ -52,11 +53,13 @@ export default function Profile({ user }) {
       setMessage("Fotoğraf yüklendi ✅");
     } catch (error) {
       console.error("Fotoğraf yüklenemedi:", error);
+      setMessage("Fotoğraf yüklenemedi.");
     }
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
+
     const uid = auth.currentUser?.uid;
     if (!uid) {
       alert("Giriş yapmanız gerekiyor!");
@@ -74,19 +77,19 @@ export default function Profile({ user }) {
         photoURL,
         updatedAt: new Date().toISOString(),
       });
-
       setMessage("Profil başarıyla kaydedildi ✅");
     } catch (error) {
       console.error("Kayıt hatası:", error);
-      alert("Profil kaydedilemedi. Firestore izinlerini kontrol edin.");
+      setMessage("Profil kaydedilemedi. Firestore kurallarını kontrol edin.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-4">👤 Profil Bilgileri</h1>
+
       <form onSubmit={handleSave} className="max-w-md space-y-4">
         <div>
           <label className="block mb-1 font-medium">Ad Soyad</label>
@@ -98,6 +101,7 @@ export default function Profile({ user }) {
             required
           />
         </div>
+
         <div>
           <label className="block mb-1 font-medium">Telefon</label>
           <input
@@ -105,8 +109,10 @@ export default function Profile({ user }) {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="w-full border rounded p-2"
+            placeholder="05xx xxx xx xx"
           />
         </div>
+
         <div>
           <label className="block mb-1 font-medium">E-posta</label>
           <input
@@ -127,3 +133,26 @@ export default function Profile({ user }) {
               className="mt-2 w-24 h-24 rounded-full object-cover border"
             />
           )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          {loading ? "Kaydediliyor..." : "Kaydet"}
+        </button>
+
+        {message && (
+          <p
+            className={`text-sm mt-2 ${
+              message.includes("✅") ? "text-green-600" : "text-red-500"
+            }`}
+          >
+            {message}
+          </p>
+        )}
+      </form>
+    </div>
+  );
+}

@@ -9,6 +9,7 @@ export default function Profile({ user }) {
   const [email, setEmail] = useState("");
   const [photoURL, setPhotoURL] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -18,28 +19,39 @@ export default function Profile({ user }) {
   }, [user]);
 
   const fetchProfile = async () => {
-    const docRef = doc(db, "coaches", user.uid);
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-      const data = snapshot.data();
-      setName(data.name || "");
-      setPhone(data.phone || "");
-      setPhotoURL(data.photoURL || "");
+    try {
+      const docRef = doc(db, "coaches", user.uid);
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setName(data.name || "");
+        setPhone(data.phone || "");
+        setPhotoURL(data.photoURL || "");
+      }
+    } catch (error) {
+      console.error("Profil verisi alınamadı:", error);
     }
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setSaved(false);
 
-    await setDoc(doc(db, "coaches", user.uid), {
-      name,
-      phone,
-      email,
-      photoURL,
-    });
+    try {
+      await setDoc(doc(db, "coaches", user.uid), {
+        name,
+        phone,
+        email,
+        photoURL,
+        updatedAt: new Date(),
+      });
+      setSaved(true);
+    } catch (error) {
+      console.error("Kaydetme hatası:", error);
+      alert("Profil kaydedilemedi. Lütfen tekrar deneyin.");
+    }
 
-    alert("Profil başarıyla kaydedildi ✅");
     setLoading(false);
   };
 
@@ -73,7 +85,6 @@ export default function Profile({ user }) {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="w-full border rounded p-2"
-            placeholder="05xx xxx xx xx"
           />
         </div>
         <div>
@@ -85,7 +96,6 @@ export default function Profile({ user }) {
             className="w-full border rounded p-2 bg-gray-100 text-gray-500"
           />
         </div>
-
         <div>
           <label className="block mb-1 font-medium">Profil Fotoğrafı</label>
           <input type="file" accept="image/*" onChange={handlePhotoUpload} />
@@ -105,6 +115,10 @@ export default function Profile({ user }) {
         >
           {loading ? "Kaydediliyor..." : "Kaydet"}
         </button>
+
+        {saved && (
+          <p className="text-green-600 text-sm mt-2">✅ Profil kaydedildi!</p>
+        )}
       </form>
     </div>
   );

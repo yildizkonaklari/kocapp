@@ -6,7 +6,7 @@ import StudentTests from "../components/StudentTests";
 import CoachNotes from "../components/CoachNotes";
 import TopicTracker from "../components/TopicTracker";
 import WeeklyPlan from "../components/WeeklyPlan";
-
+import { analyzeProgress } from "../utils/analytics";
 export default function StudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -54,6 +54,9 @@ export default function StudentDetail() {
             <strong>Oluşturulma:</strong>{" "}
             {new Date(student.createdAt.seconds * 1000).toLocaleDateString()}
           </p>
+      <p className="text-gray-700 mt-4 italic">
+  {analyzeProgress(tests)}
+</p>
         )}
       </div>
 

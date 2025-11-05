@@ -29,18 +29,28 @@ export default function Sidebar() {
       <div>
         <div className="flex flex-col items-center mb-6">
           <img
-            src={coach?.photoURL || "/default-avatar.png"}
-            alt="Koç Logosu"
-            className="w-20 h-20 rounded-full border mb-2 object-cover"
+            src={coach?.photoURL || "/avatar.svg"}
+            alt="Koç Avatar"
+            className="w-20 h-20 rounded-full border mb-2 object-cover shadow"
           />
-          <h2 className="text-lg font-semibold">{coach?.name || "Koç Paneli"}</h2>
+          <h2 className="text-lg font-semibold text-center">
+            Hoş geldin{coach?.name ? `, ${coach.name}` : ""}
+          </h2>
         </div>
 
         <nav className="space-y-3">
-          <Link to="/" className="block p-2 hover:bg-gray-700 rounded">🏠 Ana Sayfa</Link>
-          <Link to="/students" className="block p-2 hover:bg-gray-700 rounded">🎓 Öğrenciler</Link>
-          <Link to="/courses" className="block p-2 hover:bg-gray-700 rounded">📘 Dersler</Link>
-          <Link to="/profile" className="block p-2 hover:bg-gray-700 rounded">👤 Profil</Link>
+          <Link to="/" className="block p-2 hover:bg-gray-700 rounded transition">
+            🏠 Ana Sayfa
+          </Link>
+          <Link to="/students" className="block p-2 hover:bg-gray-700 rounded transition">
+            🎓 Öğrenciler
+          </Link>
+          <Link to="/courses" className="block p-2 hover:bg-gray-700 rounded transition">
+            📘 Dersler
+          </Link>
+          <Link to="/profile" className="block p-2 hover:bg-gray-700 rounded transition">
+            👤 Profil
+          </Link>
         </nav>
       </div>
     </div>

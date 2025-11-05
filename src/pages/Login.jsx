@@ -58,3 +58,23 @@ export default function Login({ onLogin }) {
           type="password"
           placeholder="Şifre"
           value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full p-2 mb-4 border rounded"
+          required
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+        >
+          {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+        </button>
+
+        {error && (
+          <p className="text-red-500 text-sm mt-3 text-center">{error}</p>
+        )}
+      </form>
+    </div>
+  );
+}

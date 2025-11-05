@@ -9,6 +9,7 @@ import Students from "./pages/Students";
 import StudentDetail from "./pages/StudentDetail";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import Courses from "./pages/Courses"; // yeni sayfa
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -33,8 +34,10 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/students" element={<Students />} />
           <Route path="/students/:id" element={<StudentDetail />} />
+          <Route path="/courses" element={<Courses />} />
           <Route path="/profile" element={<Profile user={user} />} />
           <Route path="*" element={<Navigate to="/" />} />
+
         </Routes>
       </div>
     </div>

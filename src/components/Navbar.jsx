@@ -1,11 +1,17 @@
-export default function Navbar() {
+export default function Navbar({ onLogout }) {
   return (
-    <div className="flex justify-between items-center bg-white shadow px-6 py-3">
-      <h2 className="text-xl font-semibold text-gray-800">Hoş geldin, Koç!</h2>
-      <div className="flex items-center gap-4">
-        <button className="text-sm font-medium text-blue-600 hover:underline">Profil</button>
-        <button className="text-sm bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">Çıkış</button>
+    <header className="bg-white shadow-soft sticky top-0 z-40">
+      <div className="flex justify-between items-center px-6 py-3">
+        <h1 className="text-primary text-xl font-bold tracking-tight">
+          TYOSİS – Koç Paneli
+        </h1>
+        <button
+          onClick={onLogout}
+          className="bg-danger text-white px-4 py-2 rounded-lg hover:bg-red-600"
+        >
+          Çıkış Yap
+        </button>
       </div>
-    </div>
+    </header>
   );
 }

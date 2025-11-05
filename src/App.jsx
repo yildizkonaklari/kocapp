@@ -1,70 +1,68 @@
-import { Link } from "react-router-dom";
-import { Home, Users, BarChart2, Settings } from "lucide-react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth, db } from "./firebase";
+import { doc, getDoc } from "firebase/firestore";
 
-export default function Sidebar({ coachProfile }) {
+import Sidebar from "./components/Sidebar";
+import Navbar from "./components/Navbar";
+import Dashboard from "./pages/Dashboard";
+import Students from "./pages/Students";
+import Login from "./pages/Login";
+import Profile from "./pages/Profile";
+import StudentDetail from "./pages/StudentDetail";
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [coachProfile, setCoachProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        // 🔹 Profil bilgilerini Firestore'dan çek
+        const docRef = doc(db, "coaches", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setCoachProfile(docSnap.data());
+          // 🔹 Ad-soyad boşsa profil sayfasına yönlendir
+          if (!docSnap.data().name) {
+            navigate("/profile");
+          }
+        } else {
+          // 🔹 Hiç profil kaydı yoksa profil sayfasına yönlendir
+          navigate("/profile");
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
+  const handleLogout = () => signOut(auth);
+
+  if (loading)
+    return <div className="p-10 text-center text-gray-500">Yükleniyor...</div>;
+
+  if (!user) return <Login />;
+
   return (
-    <div className="bg-gray-900 text-white w-64 min-h-screen p-5 flex flex-col justify-between">
-      <div>
-        {/* 🔹 PROFİL KISMI */}
-        <div className="flex flex-col items-center mb-8">
-          {coachProfile?.logoUrl ? (
-            <img
-              src={coachProfile.logoUrl}
-              alt="Koç Logosu"
-              className="w-16 h-16 rounded-full object-cover border border-gray-600 mb-2"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center text-xl font-semibold mb-2">
-              {coachProfile?.name
-                ? coachProfile.name.charAt(0).toUpperCase()
-                : "K"}
-            </div>
-          )}
-
-          <p className="text-sm font-semibold">
-            {coachProfile?.name || "Koç Adı"}
-          </p>
-          <p className="text-xs text-gray-400">
-            {coachProfile?.email || ""}
-          </p>
-        </div>
-
-        {/* 🔹 MENÜ */}
-        <h2 className="text-xl font-semibold mb-6 text-center text-gray-300">
-          TYOSİS
-        </h2>
-        <nav className="space-y-4">
-          <Link
-            to="/"
-            className="flex items-center gap-3 hover:text-blue-400 transition"
-          >
-            <Home size={20} /> Anasayfa
-          </Link>
-          <Link
-            to="/students"
-            className="flex items-center gap-3 hover:text-blue-400 transition"
-          >
-            <Users size={20} /> Öğrenciler
-          </Link>
-          <Link
-            to="/reports"
-            className="flex items-center gap-3 hover:text-blue-400 transition"
-          >
-            <BarChart2 size={20} /> Raporlar
-          </Link>
-          <Link
-            to="/profile"
-            className="flex items-center gap-3 hover:text-blue-400 transition"
-          >
-            <Settings size={20} /> Profil
-          </Link>
-        </nav>
+    <div className="flex">
+      <Sidebar coachProfile={coachProfile} />
+      <div className="flex-1 flex flex-col bg-gray-100 min-h-screen">
+        <Navbar onLogout={handleLogout} />
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/students" element={<Students coachProfile={coachProfile} />} />
+          <Route path="/students/:id" element={<StudentDetail />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
       </div>
-
-      {/* Alt Bilgi */}
-      <p className="text-xs text-gray-500 text-center mt-10">
-        © 2025 TYOSİS
-      </p>
     </div>
   );
 }

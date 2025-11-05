@@ -2,140 +2,110 @@ import { useState, useEffect } from "react";
 import { auth, db, storage } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { updateProfile } from "firebase/auth";
 
-export default function Profile() {
+export default function Profile({ user }) {
   const [name, setName] = useState("");
-  const [school, setSchool] = useState("");
-  const [phone, setPhone] = useState(""); // 🔹 yeni alan
-  const [logoUrl, setLogoUrl] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const user = auth.currentUser;
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [photoURL, setPhotoURL] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      const docRef = doc(db, "coaches", user.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setName(data.name || "");
-        setSchool(data.school || "");
-        setPhone(data.phone || "");
-        setLogoUrl(data.logoUrl || "");
-      }
-    };
-    fetchProfile();
+    if (user) {
+      setEmail(user.email);
+      fetchProfile();
+    }
   }, [user]);
 
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !user) return;
-    setUploading(true);
-    const fileRef = ref(storage, `logos/${user.uid}.png`);
-    await uploadBytes(fileRef, file);
-    const url = await getDownloadURL(fileRef);
-    setLogoUrl(url);
-    setUploading(false);
+  const fetchProfile = async () => {
+    const docRef = doc(db, "coaches", user.uid);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      setName(data.name || "");
+      setPhone(data.phone || "");
+      setPhotoURL(data.photoURL || "");
+    }
   };
 
-  const handleSave = async () => {
-    if (!user) return;
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
     await setDoc(doc(db, "coaches", user.uid), {
       name,
-      school,
       phone,
-      email: user.email, // 🔹 mail kaydı da tutulsun
-      logoUrl,
-      uid: user.uid,
+      email,
+      photoURL,
     });
-    await updateProfile(user, { displayName: name });
-    alert("Profil güncellendi ✅");
+
+    alert("Profil başarıyla kaydedildi ✅");
+    setLoading(false);
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const fileRef = ref(storage, `coachPhotos/${user.uid}`);
+    await uploadBytes(fileRef, file);
+    const url = await getDownloadURL(fileRef);
+    setPhotoURL(url);
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6">👤 Koç Profil Bilgileri</h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">👤 Profil Bilgileri</h1>
+      <form onSubmit={handleSave} className="max-w-md space-y-4">
+        <div>
+          <label className="block mb-1 font-medium">Ad Soyad</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full border rounded p-2"
+            required
+          />
+        </div>
+        <div>
+          <label className="block mb-1 font-medium">Telefon</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full border rounded p-2"
+            placeholder="05xx xxx xx xx"
+          />
+        </div>
+        <div>
+          <label className="block mb-1 font-medium">E-posta</label>
+          <input
+            type="email"
+            value={email}
+            disabled
+            className="w-full border rounded p-2 bg-gray-100 text-gray-500"
+          />
+        </div>
 
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex flex-col items-center mb-5">
-          {logoUrl ? (
+        <div>
+          <label className="block mb-1 font-medium">Profil Fotoğrafı</label>
+          <input type="file" accept="image/*" onChange={handlePhotoUpload} />
+          {photoURL && (
             <img
-              src={logoUrl}
-              alt="Koç Logosu"
-              className="w-24 h-24 rounded-full object-cover mb-3 border"
+              src={photoURL}
+              alt="Profil"
+              className="mt-2 w-24 h-24 rounded-full object-cover border"
             />
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mb-3">
-              Logo Yok
-            </div>
           )}
-          <label className="cursor-pointer text-blue-600 hover:underline">
-            {uploading ? "Yükleniyor..." : "Logo Değiştir"}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleLogoUpload}
-              className="hidden"
-            />
-          </label>
         </div>
 
-        <div className="space-y-4">
-          {/* 🔹 Ad Soyad */}
-          <div>
-            <label className="block font-medium mb-1">Ad Soyad</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="border rounded p-2 w-full"
-            />
-          </div>
-
-          {/* 🔹 Kurum / Okul */}
-          <div>
-            <label className="block font-medium mb-1">Kurum / Okul</label>
-            <input
-              type="text"
-              value={school}
-              onChange={(e) => setSchool(e.target.value)}
-              className="border rounded p-2 w-full"
-            />
-          </div>
-
-          {/* 🔹 Mail (değiştirilemez) */}
-          <div>
-            <label className="block font-medium mb-1">E-posta</label>
-            <input
-              type="email"
-              value={user?.email || ""}
-              readOnly
-              className="border rounded p-2 w-full bg-gray-100 cursor-not-allowed"
-            />
-          </div>
-
-          {/* 🔹 Telefon No */}
-          <div>
-            <label className="block font-medium mb-1">Telefon Numarası</label>
-            <input
-              type="tel"
-              placeholder="05xx xxx xx xx"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="border rounded p-2 w-full"
-            />
-          </div>
-
-          <button
-            onClick={handleSave}
-            disabled={uploading}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4 w-full"
-          >
-            Kaydet
-          </button>
-        </div>
-      </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          {loading ? "Kaydediliyor..." : "Kaydet"}
+        </button>
+      </form>
     </div>
   );
 }

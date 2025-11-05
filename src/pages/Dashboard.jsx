@@ -1,41 +1,36 @@
-import { useEffect, useState } from "react";
-import { db, auth } from "../firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import StudentCard from "../components/StudentCard";
-import AnalyticsPanel from "../components/AnalyticsPanel";
-import NotificationPanel from "../components/NotificationPanel";
+import { TrendingUp, Users, BookOpen } from "lucide-react";
 
 export default function Dashboard() {
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const user = auth.currentUser;
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      const q = query(collection(db, "students"), where("coachId", "==", user.displayName));
-      const snapshot = await getDocs(q);
-      setStudents(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    };
-    fetchData();
-  }, [user]);
-
-  if (loading) return <p className="p-6 text-gray-500">Yükleniyor...</p>;
-
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">🏠 Koç Paneli</h1>
+      <h1 className="h1">Hoş Geldiniz 👋</h1>
+      <p className="text-gray-600 mb-6">
+        Bugünün özetini aşağıda bulabilirsiniz.
+      </p>
 
-      <AnalyticsPanel students={students} />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-        {students.map((s) => (
-          <StudentCard key={s.id} student={s} />
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="card flex items-center gap-3">
+          <Users className="text-primary" size={36} />
+          <div>
+            <p className="text-sm text-gray-500">Toplam Öğrenci</p>
+            <h2 className="text-2xl font-bold">18</h2>
+          </div>
+        </div>
+        <div className="card flex items-center gap-3">
+          <BookOpen className="text-accent" size={36} />
+          <div>
+            <p className="text-sm text-gray-500">Toplam Deneme</p>
+            <h2 className="text-2xl font-bold">47</h2>
+          </div>
+        </div>
+        <div className="card flex items-center gap-3">
+          <TrendingUp className="text-success" size={36} />
+          <div>
+            <p className="text-sm text-gray-500">Ortalama Net</p>
+            <h2 className="text-2xl font-bold">14.2</h2>
+          </div>
+        </div>
       </div>
-
-      <NotificationPanel />
     </div>
   );
 }

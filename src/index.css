@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html, body {
+  @apply bg-gray-50 text-gray-800 font-sans;
+}
+
+button {
+  @apply transition-all duration-200;
+}
+
+/* Kart tasarımı */
+.card {
+  @apply bg-white p-5 rounded-2xl shadow-soft hover:shadow-lg transition;
+}
+
+/* Başlık stilleri */
+.h1 {
+  @apply text-2xl font-semibold mb-4 text-secondary;
+}
+.h2 {
+  @apply text-xl font-semibold mb-2 text-secondary;
+}

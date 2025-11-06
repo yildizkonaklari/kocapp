@@ -1,4 +1,3 @@
-// src/pages/Profile.jsx
 import { useState, useEffect } from "react";
 import { auth, db, storage } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -17,6 +16,8 @@ export default function Profile() {
     if (currentUser) {
       setEmail(currentUser.email || "");
       fetchProfile(currentUser.uid);
+    } else {
+      console.log("⚠️ Kullanıcı oturumu bulunamadı.");
     }
   }, []);
 
@@ -31,7 +32,7 @@ export default function Profile() {
         setPhotoURL(data.photoURL || "");
       }
     } catch (error) {
-      console.error("Profil yüklenemedi:", error);
+      console.error("❌ Profil yüklenemedi:", error);
     }
   };
 
@@ -50,9 +51,9 @@ export default function Profile() {
       await uploadBytes(fileRef, file);
       const url = await getDownloadURL(fileRef);
       setPhotoURL(url);
-      setMessage("Fotoğraf yüklendi ✅");
+      setMessage("📸 Fotoğraf yüklendi ✅");
     } catch (error) {
-      console.error("Fotoğraf yüklenemedi:", error);
+      console.error("❌ Fotoğraf yüklenemedi:", error);
       setMessage("Fotoğraf yüklenemedi.");
     }
   };
@@ -66,6 +67,8 @@ export default function Profile() {
       return;
     }
 
+    console.log("🟢 Kayıt işlemi başlatıldı UID:", uid);
+
     setLoading(true);
     setMessage("");
 
@@ -77,10 +80,11 @@ export default function Profile() {
         photoURL,
         updatedAt: new Date().toISOString(),
       });
+      console.log("✅ Firestore kaydı tamamlandı!");
       setMessage("Profil başarıyla kaydedildi ✅");
     } catch (error) {
-      console.error("Kayıt hatası:", error);
-      setMessage("Profil kaydedilemedi. Firestore kurallarını kontrol edin.");
+      console.error("🔥 Firestore kayıt hatası:", error);
+      setMessage("Profil kaydedilemedi. Lütfen tarayıcı konsolunu kontrol edin.");
     } finally {
       setLoading(false);
     }

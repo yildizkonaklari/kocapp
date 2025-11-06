@@ -15,17 +15,25 @@ export default function Courses() {
   const [newCourse, setNewCourse] = useState("");
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const fetchCourses = async () => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+      console.log("⚠️ Kullanıcı yok, dersler yüklenemiyor.");
+      return;
+    }
 
-    const q = query(
-      collection(db, "courses"),
-      where("coachId", "==", user.uid)
-    );
-    const snapshot = await getDocs(q);
-    setCourses(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    try {
+      const q = query(
+        collection(db, "courses"),
+        where("coachId", "==", user.uid)
+      );
+      const snapshot = await getDocs(q);
+      setCourses(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("❌ Dersler çekilemedi:", err);
+    }
   };
 
   useEffect(() => {
@@ -37,29 +45,42 @@ export default function Courses() {
 
   const addCourse = async (e) => {
     e.preventDefault();
-    if (!newCourse.trim()) return;
-
     const user = auth.currentUser;
     if (!user) {
-      alert("Lütfen giriş yapın!");
+      alert("Giriş yapmanız gerekiyor!");
       return;
     }
+    if (!newCourse.trim()) return;
 
     setLoading(true);
-    await addDoc(collection(db, "courses"), {
-      name: newCourse,
-      coachId: user.uid,
-      createdAt: serverTimestamp(),
-    });
-    setNewCourse("");
-    await fetchCourses();
-    setLoading(false);
+    setMessage("");
+
+    try {
+      await addDoc(collection(db, "courses"), {
+        name: newCourse,
+        coachId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      console.log("✅ Ders eklendi:", newCourse);
+      setMessage("Ders başarıyla eklendi ✅");
+      setNewCourse("");
+      await fetchCourses();
+    } catch (error) {
+      console.error("🔥 Firestore ders ekleme hatası:", error);
+      setMessage("Ders eklenemedi.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const deleteCourse = async (id) => {
-    if (confirm("Bu dersi silmek istediğinize emin misiniz?")) {
-      await deleteDoc(doc(db, "courses", id));
-      fetchCourses();
+    if (confirm("Bu dersi silmek istiyor musunuz?")) {
+      try {
+        await deleteDoc(doc(db, "courses", id));
+        await fetchCourses();
+      } catch (err) {
+        console.error("🔥 Silme hatası:", err);
+      }
     }
   };
 
@@ -83,6 +104,16 @@ export default function Courses() {
         </button>
       </form>
 
+      {message && (
+        <p
+          className={`text-sm mb-3 ${
+            message.includes("✅") ? "text-green-600" : "text-red-500"
+          }`}
+        >
+          {message}
+        </p>
+      )}
+
       <table className="w-full border text-left">
         <thead className="bg-gray-100">
           <tr>
@@ -103,7 +134,6 @@ export default function Courses() {
                 >
                   Sil
                 </button>
-                {/* İleri seviye için: <button className="ml-3 text-blue-600 hover:underline">Düzenle</button> */}
               </td>
             </tr>
           ))}

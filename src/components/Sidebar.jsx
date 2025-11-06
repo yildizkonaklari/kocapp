@@ -1,57 +1,61 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { auth, db } from "../firebase";
 import { doc, onSnapshot } from "firebase/firestore";
+import { Link } from "react-router-dom";
 
 export default function Sidebar() {
   const [coach, setCoach] = useState(null);
 
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      if (user) {
-        const docRef = doc(db, "coaches", user.uid);
-        const unsubscribeDoc = onSnapshot(docRef, (snapshot) => {
-          if (snapshot.exists()) {
-            setCoach(snapshot.data());
-          }
-        });
-        return unsubscribeDoc;
-      } else {
-        setCoach(null);
-      }
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const unsub = onSnapshot(doc(db, "coaches", user.uid), (snap) => {
+      if (snap.exists()) setCoach(snap.data());
     });
 
-    return () => unsubscribeAuth();
+    return () => unsub();
   }, []);
 
   return (
-    <div className="bg-gray-900 text-white w-64 min-h-screen p-5 flex flex-col justify-between">
+    <div className="w-64 bg-white border-r h-screen flex flex-col justify-between">
       <div>
-        <div className="flex flex-col items-center mb-6">
-          <img
-            src={coach?.photoURL || "/avatar.svg"}
-            alt="Koç Avatar"
-            className="w-20 h-20 rounded-full border mb-2 object-cover shadow"
-          />
-          <h2 className="text-lg font-semibold text-center">
-            Hoş geldin{coach?.name ? `, ${coach.name}` : ""}
-          </h2>
+        <div className="p-6 flex flex-col items-center border-b">
+          {coach?.photoURL ? (
+            <img
+              src={coach.photoURL}
+              alt="Koç"
+              className="w-20 h-20 rounded-full mb-2 object-cover border"
+            />
+          ) : (
+            <img
+              src="/avatar.svg"
+              alt="Avatar"
+              className="w-20 h-20 rounded-full mb-2 border"
+            />
+          )}
+          <h2 className="text-lg font-semibold">{coach?.name || "Koç"}</h2>
+          <p className="text-sm text-gray-500">{coach?.email}</p>
         </div>
 
-        <nav className="space-y-3">
-          <Link to="/" className="block p-2 hover:bg-gray-700 rounded transition">
-            🏠 Ana Sayfa
+        <nav className="mt-4 px-4 space-y-2">
+          <Link className="block p-2 rounded hover:bg-gray-100" to="/">
+            🏠 Dashboard
           </Link>
-          <Link to="/students" className="block p-2 hover:bg-gray-700 rounded transition">
+          <Link className="block p-2 rounded hover:bg-gray-100" to="/students">
             🎓 Öğrenciler
           </Link>
-          <Link to="/courses" className="block p-2 hover:bg-gray-700 rounded transition">
+          <Link className="block p-2 rounded hover:bg-gray-100" to="/courses">
             📘 Dersler
           </Link>
-          <Link to="/profile" className="block p-2 hover:bg-gray-700 rounded transition">
+          <Link className="block p-2 rounded hover:bg-gray-100" to="/profile">
             👤 Profil
           </Link>
         </nav>
+      </div>
+
+      <div className="text-center text-xs text-gray-400 py-3 border-t">
+        TYOSİS • Koç Paneli
       </div>
     </div>
   );

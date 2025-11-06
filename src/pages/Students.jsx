@@ -11,6 +11,10 @@ import {
   orderBy,
   where,
 } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
 
 export default function Students() {
   const [students, setStudents] = useState([]);
@@ -18,57 +22,91 @@ export default function Students() {
   const [exam, setExam] = useState("");
   const [target, setTarget] = useState("");
   const [loading, setLoading] = useState(false);
-  const [coachName, setCoachName] = useState("");
+  const [coach, setCoach] = useState(null);
+  const [message, setMessage] = useState("");
 
+  // 🔹 Giriş yapan koçu al
   useEffect(() => {
     const user = auth.currentUser;
-    if (user) setCoachName(user.displayName || user.email.split("@")[0]);
-    fetchStudents();
+    if (user) {
+      setCoach({
+        name: user.displayName || user.email.split("@")[0],
+        email: user.email,
+      });
+      fetchStudents(user.email);
+    }
   }, []);
 
-  // 🔹 Öğrencileri Firestore'dan çek
-  const fetchStudents = async () => {
+  // 🔹 Öğrencileri çek
+  const fetchStudents = async (coachEmail) => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      // sadece giriş yapan koçun öğrencilerini çek
       const q = query(
         collection(db, "students"),
-        where("coachEmail", "==", user.email),
+        where("coachEmail", "==", coachEmail),
         orderBy("createdAt", "desc")
       );
-
       const snapshot = await getDocs(q);
       setStudents(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (err) {
-      console.error("Öğrenciler yüklenemedi:", err);
+      console.error("Listeleme hatası:", err);
     }
   };
 
-  // 🔹 Yeni öğrenci ekle
+  // 🔹 Yeni öğrenci oluştur (Auth + Firestore)
   const addStudent = async (e) => {
     e.preventDefault();
     if (!name || !exam) return;
-    try {
-      setLoading(true);
-      const user = auth.currentUser;
+    if (!coach) {
+      alert("Koç bilgisi bulunamadı. Lütfen yeniden giriş yapın.");
+      return;
+    }
 
+    setLoading(true);
+    setMessage("");
+
+    try {
+      // Otomatik email ve şifre oluştur
+      const email =
+        name.toLowerCase().replace(/\s+/g, ".") + "@ogrenci.com";
+      const password = "ogrenci123";
+
+      // Firebase Auth'ta öğrenci hesabı oluştur
+      const newStudent = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      await updateProfile(newStudent.user, { displayName: name });
+
+      // Firestore’a öğrenci kaydı
       await addDoc(collection(db, "students"), {
+        uid: newStudent.user.uid,
         name,
         exam,
         target,
-        coachName: user.displayName || "Koç",
-        coachEmail: user.email,
+        email,
+        password, // isteğe bağlı (yalnızca koç görür)
+        coachName: coach.name,
+        coachEmail: coach.email,
         createdAt: serverTimestamp(),
       });
 
+      setMessage(
+        `✅ ${name} eklendi. Giriş bilgileri: ${email} / ${password}`
+      );
       setName("");
       setExam("");
       setTarget("");
-      await fetchStudents();
+
+      // Listeyi yenile
+      await fetchStudents(coach.email);
     } catch (err) {
-      console.error("Öğrenci eklenemedi:", err);
+      console.error(err);
+      if (err.code === "auth/email-already-in-use") {
+        setMessage("⚠️ Bu öğrenci zaten kayıtlı.");
+      } else {
+        setMessage("❌ Öğrenci eklenirken hata oluştu.");
+      }
     } finally {
       setLoading(false);
     }
@@ -78,14 +116,15 @@ export default function Students() {
   const deleteStudent = async (id) => {
     if (!window.confirm("Bu öğrenciyi silmek istediğine emin misin?")) return;
     await deleteDoc(doc(db, "students", id));
-    fetchStudents();
+    await fetchStudents(coach.email);
   };
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">🎓 Öğrencilerim</h1>
+      <h1 className="text-2xl font-semibold mb-6 text-blue-700">
+        🎓 Öğrencilerim
+      </h1>
 
-      {/* ➕ Yeni Öğrenci Ekle */}
       <form onSubmit={addStudent} className="flex flex-wrap gap-3 mb-6">
         <input
           type="text"
@@ -118,29 +157,43 @@ export default function Students() {
         </button>
       </form>
 
-      {/* 📋 Öğrenci Listesi */}
+      {message && (
+        <div
+          className={`mb-4 p-3 rounded ${
+            message.startsWith("✅")
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
+          }`}
+        >
+          {message}
+        </div>
+      )}
+
       <div className="overflow-x-auto bg-white shadow rounded-lg">
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-100">
             <tr>
               <th className="p-2 border">#</th>
               <th className="p-2 border">Ad Soyad</th>
+              <th className="p-2 border">E-posta</th>
               <th className="p-2 border">Sınav Türü</th>
               <th className="p-2 border">Hedef</th>
-              <th className="p-2 border">Koç</th>
               <th className="p-2 border text-right">İşlemler</th>
             </tr>
           </thead>
           <tbody>
             {students.map((s, i) => (
-              <tr key={s.id} className="border-t hover:bg-gray-50 transition">
+              <tr
+                key={s.id}
+                className="border-t hover:bg-gray-50 transition text-sm"
+              >
                 <td className="p-2 border">{i + 1}</td>
                 <td className="p-2 border font-medium text-gray-800">
                   {s.name}
                 </td>
+                <td className="p-2 border text-gray-600">{s.email}</td>
                 <td className="p-2 border">{s.exam}</td>
                 <td className="p-2 border">{s.target || "-"}</td>
-                <td className="p-2 border text-gray-600">{s.coachName}</td>
                 <td className="p-2 border text-right">
                   <button
                     onClick={() =>

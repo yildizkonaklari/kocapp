@@ -10,6 +10,8 @@ import StudentDetail from "./pages/StudentDetail";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Courses from "./pages/Courses"; // yeni sayfa
+import StudentLogin from "./pages/StudentLogin";
+import StudentDashboard from "./pages/StudentDashboard";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -37,7 +39,10 @@ export default function App() {
           <Route path="/courses" element={<Courses />} />
           <Route path="/profile" element={<Profile user={user} />} />
           <Route path="*" element={<Navigate to="/" />} />
-
+<Routes>
+  {/* ...koç rotaları */}
+  <Route path="/student/login" element={<StudentLogin />} />
+  <Route path="/student/dashboard" element={<StudentDashboard />} />
         </Routes>
       </div>
     </div>

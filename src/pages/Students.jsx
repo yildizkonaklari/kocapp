@@ -16,60 +16,76 @@ export default function Students() {
   const [students, setStudents] = useState([]);
   const [name, setName] = useState("");
   const [exam, setExam] = useState("");
+  const [target, setTarget] = useState("");
   const [loading, setLoading] = useState(false);
-  const [coach, setCoach] = useState(null);
+  const [coachName, setCoachName] = useState("");
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setCoach(user);
-        fetchStudents(user.uid);
-      }
-    });
-    return () => unsubscribe();
+    const user = auth.currentUser;
+    if (user) setCoachName(user.displayName || user.email.split("@")[0]);
+    fetchStudents();
   }, []);
 
-  const fetchStudents = async (uid) => {
-    const q = query(
-      collection(db, "students"),
-      where("coachId", "==", uid),
-      orderBy("createdAt", "desc")
-    );
-    const snap = await getDocs(q);
-    setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  // 🔹 Öğrencileri Firestore'dan çek
+  const fetchStudents = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      // sadece giriş yapan koçun öğrencilerini çek
+      const q = query(
+        collection(db, "students"),
+        where("coachEmail", "==", user.email),
+        orderBy("createdAt", "desc")
+      );
+
+      const snapshot = await getDocs(q);
+      setStudents(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Öğrenciler yüklenemedi:", err);
+    }
   };
 
+  // 🔹 Yeni öğrenci ekle
   const addStudent = async (e) => {
     e.preventDefault();
     if (!name || !exam) return;
-    if (!coach) {
-      alert("Profil tamamlanmadan öğrenci eklenemez!");
-      return;
-    }
+    try {
+      setLoading(true);
+      const user = auth.currentUser;
 
-    setLoading(true);
-    await addDoc(collection(db, "students"), {
-      name,
-      exam,
-      coachId: coach.uid,
-      coachName: coach.displayName || "Koç",
-      createdAt: serverTimestamp(),
-    });
-    setLoading(false);
-    setName("");
-    setExam("");
-    fetchStudents(coach.uid);
+      await addDoc(collection(db, "students"), {
+        name,
+        exam,
+        target,
+        coachName: user.displayName || "Koç",
+        coachEmail: user.email,
+        createdAt: serverTimestamp(),
+      });
+
+      setName("");
+      setExam("");
+      setTarget("");
+      await fetchStudents();
+    } catch (err) {
+      console.error("Öğrenci eklenemedi:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // 🔹 Öğrenci sil
   const deleteStudent = async (id) => {
+    if (!window.confirm("Bu öğrenciyi silmek istediğine emin misin?")) return;
     await deleteDoc(doc(db, "students", id));
-    fetchStudents(coach.uid);
+    fetchStudents();
   };
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">🎓 Öğrenci Listesi</h1>
+      <h1 className="text-2xl font-semibold mb-6">🎓 Öğrencilerim</h1>
 
+      {/* ➕ Yeni Öğrenci Ekle */}
       <form onSubmit={addStudent} className="flex flex-wrap gap-3 mb-6">
         <input
           type="text"
@@ -87,6 +103,13 @@ export default function Students() {
           className="border rounded p-2 flex-1 min-w-[160px]"
           required
         />
+        <input
+          type="text"
+          placeholder="Hedef Okul / Bölüm"
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          className="border rounded p-2 flex-1 min-w-[160px]"
+        />
         <button
           disabled={loading}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -95,43 +118,53 @@ export default function Students() {
         </button>
       </form>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border">
+      {/* 📋 Öğrenci Listesi */}
+      <div className="overflow-x-auto bg-white shadow rounded-lg">
+        <table className="w-full text-left border-collapse">
           <thead className="bg-gray-100">
             <tr>
               <th className="p-2 border">#</th>
               <th className="p-2 border">Ad Soyad</th>
               <th className="p-2 border">Sınav Türü</th>
+              <th className="p-2 border">Hedef</th>
+              <th className="p-2 border">Koç</th>
               <th className="p-2 border text-right">İşlemler</th>
             </tr>
           </thead>
           <tbody>
             {students.map((s, i) => (
-              <tr key={s.id} className="border-t">
+              <tr key={s.id} className="border-t hover:bg-gray-50 transition">
                 <td className="p-2 border">{i + 1}</td>
-                <td className="p-2 border">{s.name}</td>
+                <td className="p-2 border font-medium text-gray-800">
+                  {s.name}
+                </td>
                 <td className="p-2 border">{s.exam}</td>
+                <td className="p-2 border">{s.target || "-"}</td>
+                <td className="p-2 border text-gray-600">{s.coachName}</td>
                 <td className="p-2 border text-right">
-                  <button
-                    onClick={() => deleteStudent(s.id)}
-                    className="text-red-500 hover:underline mr-2"
-                  >
-                    Sil
-                  </button>
                   <button
                     onClick={() =>
                       (window.location.href = `/students/${s.id}`)
                     }
-                    className="text-blue-600 hover:underline"
+                    className="text-blue-600 hover:underline mr-3"
                   >
                     Detay
+                  </button>
+                  <button
+                    onClick={() => deleteStudent(s.id)}
+                    className="text-red-500 hover:underline"
+                  >
+                    Sil
                   </button>
                 </td>
               </tr>
             ))}
             {students.length === 0 && (
               <tr>
-                <td colSpan="4" className="text-center text-gray-500 p-3">
+                <td
+                  colSpan="6"
+                  className="text-center text-gray-500 p-4 italic"
+                >
                   Henüz öğrenci eklenmedi.
                 </td>
               </tr>

@@ -7,9 +7,7 @@ import {
 } from "https.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // =================================================================
-// 1. ADIM: BURAYI GÜNCELLE
-// app.js'ye yapıştırdığınız 'firebaseConfig' objesinin
-// AYNISINI buraya da yapıştırın.
+// 1. ADIM: firebaseConfig BİLGİLERİNİZ BURAYA EKLENDİ
 // =================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
@@ -25,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 
-// GÜNCELLENDİ: Tüm kod, sayfanın yüklenmesini bekleyen bu bloğun içine alındı.
+// Sayfanın tamamen yüklenmesini bekle
 document.addEventListener("DOMContentLoaded", () => {
 
     // DOM Elementlerini Seç

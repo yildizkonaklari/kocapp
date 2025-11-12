@@ -12,7 +12,7 @@ import {
 // AYNISINI buraya da yapıştırın.
 // =================================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
+    apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
   projectId: "kocluk-99ad2",
   storageBucket: "kocluk-99ad2.firebasestorage.app",

@@ -22,9 +22,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =================================================================
-// 1. ADIM: BURAYI GÜNCELLE
-// Firebase projenizin ayarlarından "firebaseConfig" objesini
-// kopyalayıp buraya yapıştırın. (auth.js'ye yaptığınızın aynısı)
+// 1. ADIM: firebaseConfig BİLGİLERİNİZ BURAYA EKLENDİ
 // =================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
@@ -112,7 +110,6 @@ let db;
 let currentUserId = null; // Koçun kimliği (UID)
 const appId = firebaseConfig.appId; 
 
-// DÜZELTME: Eksik olan SINAV_DERSLERI objesi eklendi
 const SINAV_DERSLERI = {
     'TYT': {
         netKural: 4, // 4 yanlış 1 doğruyu götürür
@@ -284,9 +281,7 @@ function loadOgrenciler() {
     const studentListContainer = document.getElementById('studentListContainer');
     if (!studentListContainer) return;
     
-    // GÜNCELLENDİ: Firestore güvenlik kurallarıyla uyumlu hale getirmek için
-    // veriyi artık /koclar/{kocID}/ogrencilerim yolundan okuyoruz.
-    // Bu, "çoklu koç" (multi-tenant) mimarisinin temelidir.
+    // Veriyi /koclar/{kocID}/ogrencilerim yolundan okuyoruz
     const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"));
     
     onSnapshot(q, (querySnapshot) => {
@@ -298,7 +293,6 @@ function loadOgrenciler() {
 
     }, (error) => {
         console.error("Öğrencileri yüklerken hata:", error);
-        // GÜNCELLENDİ: Firestore Güvenlik Kuralı hatası için daha net bir mesaj
         if (error.code === 'permission-denied' || error.code === 'failed-precondition') {
              studentListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Veri okuma izni alınamadı. Lütfen Firebase Güvenlik Kurallarınızı kontrol edin.</p>`;
         } else {
@@ -1282,6 +1276,7 @@ function renderKoclukNotlariTab(studentId, studentName) {
     if (!tabContentArea) return;
     tabContentArea.innerHTML = `
         <h3 class="text-xl font-semibold text-gray-700 mb-4">Koçluk Notları (Sadece Siz Görürsünüz)</h3>
+        <!-- YENİ HTML: Formu modal yerine doğrudan sayfaya ekle -->
         <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
             <textarea id="newNotIcerik" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="${studentName} ile ilgili yeni bir not ekle..."></textarea>
             <p id="newNotErrorMessage" class="text-sm text-red-600 hidden"></p>
@@ -1289,13 +1284,18 @@ function renderKoclukNotlariTab(studentId, studentName) {
                 <button id="saveNewNotButton" class="bg-purple-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-purple-700">Notu Kaydet</button>
             </div>
         </div>
+        <!-- Not Listesi -->
         <div id="notListContainer">
             <p class="text-gray-500 text-center py-4">Notlar yükleniyor...</p>
         </div>
     `;
+    
+    // Butonu bağla
     document.getElementById('saveNewNotButton').addEventListener('click', () => {
         saveNewKoclukNotu(studentId);
     });
+    
+    // Notları yükle
     loadKoclukNotlari(studentId);
 }
 
@@ -1329,6 +1329,8 @@ function renderKoclukNotlariList(notlar, studentId) {
             </div>
         `).join('')}
     </div>`;
+    
+    // Sil butonlarını bağla
     document.querySelectorAll('.delete-not-button').forEach(btn => btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id;
         if (confirm('Bu koçluk notunu silmek istediğinize emin misiniz?')) {
@@ -1356,7 +1358,7 @@ async function saveNewKoclukNotu(studentId) {
             icerik: icerik,
             tarih: serverTimestamp()
         });
-        icerikEl.value = "";
+        icerikEl.value = ""; // Formu temizle
     } catch (error) {
         console.error("Koçluk notu ekleme hatası:", error);
         errorEl.textContent = `Bir hata oluştu: ${error.message}`;
@@ -1479,7 +1481,11 @@ saveOdevButton.addEventListener('click', saveNewOdev);
 
 closeNotModalButton.addEventListener('click', () => { addNotModal.style.display = 'none'; });
 cancelNotModalButton.addEventListener('click', () => { addNotModal.style.display = 'none'; });
-// (Kaydetme butonu renderKoclukNotlariTab içinde bağlanıyor)
+saveNotButton.addEventListener('click', (e) => {
+    // Bu butonu, not sekmesi oluşturulurken dinamik olarak bağlıyoruz.
+    // O yüzden burada 'saveNewKoclukNotu' çağırmıyoruz.
+    // Bu sadece modalı kapatmak için. (Not: Bu butonu modal'dan sildik, renderKoclukNotlariTab içine taşıdık)
+});
 
 denemeTuruSelect.addEventListener('change', (e) => {
     renderDenemeNetInputs(e.target.value);

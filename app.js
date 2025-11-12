@@ -27,12 +27,12 @@ import {
 // kopyalayıp buraya yapıştırın. (auth.js'ye yaptığınızın aynısı)
 // =================================================================
 const firebaseConfig = {
-  apiKey: "AIzaSy...SİZİN-API-KEYİNİZ",
-  authDomain: "PROJE-IDNIZ.firebaseapp.com",
-  projectId: "PROJE-IDNIZ",
-  storageBucket: "PROJE-IDNIZ.appspot.com",
-  messagingSenderId: "SENDER-ID",
-  appId: "SİZİN-APP-IDNIZ"
+    apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
+  authDomain: "kocluk-99ad2.firebaseapp.com",
+  projectId: "kocluk-99ad2",
+  storageBucket: "kocluk-99ad2.firebasestorage.app",
+  messagingSenderId: "784379379600",
+  appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
 };
 
 // 2. DOM Elementlerini Seç

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koç Giriş Ekranı</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 flex justify-center items-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
+        <h2 class="text-3xl font-bold text-center text-gray-800 mb-2">Koç Paneli</h2>
+        <p class="text-center text-gray-500 mb-6">Lütfen giriş yapın.</p>
+        
+        <div class="space-y-4">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">E-posta</label>
+                <input type="email" id="email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Şifre</label>
+                <input type="password" id="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+            </div>
+        </div>
+        
+        <p id="errorMessage" class="text-sm text-red-600 mt-4 text-center hidden"></p>
+        
+        <button id="loginButton" class="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 mt-6 font-semibold">
+            Giriş Yap
+        </button>
+        
+        <p class="text-sm text-gray-600 text-center mt-4">
+            Hesabınız yok mu? 
+            <a href="signup.html" class="font-medium text-purple-600 hover:text-purple-500">
+                Hemen kaydolun
+            </a>
+        </p>
+    </div>
+
+    <!-- Bu sayfanın JS'i (auth.js) -->
+    <script type="module" src="auth.js"></script>
+</body>
+</html>

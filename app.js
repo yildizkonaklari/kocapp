@@ -18,10 +18,7 @@ import {
     onSnapshot,
     deleteDoc,
     orderBy,
-    serverTimestamp,
-    limit, // Gerekli importlar (Dashboard için eklendi)
-    increment, // Gerekli importlar (Muhasebe için eklendi)
-    getDocs // Gerekli importlar (Muhasebe için eklendi)
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =================================================================
@@ -52,7 +49,6 @@ const closeModalButton = document.getElementById("closeModalButton");
 const cancelModalButton = document.getElementById("cancelModalButton");
 const saveStudentButton = document.getElementById("saveStudentButton");
 const modalErrorMessage = document.getElementById("modalErrorMessage");
-const studentDersSecimiContainer = document.getElementById("studentDersSecimiContainer"); // Ders seçimi
 
 // Öğrenci Düzenleme Modalı
 const editStudentModal = document.getElementById("editStudentModal");
@@ -64,7 +60,6 @@ const editStudentId = document.getElementById("editStudentId");
 const editStudentName = document.getElementById("editStudentName");
 const editStudentSurname = document.getElementById("editStudentSurname");
 const editStudentClass = document.getElementById("editStudentClass");
-const editStudentDersSecimiContainer = document.getElementById("editStudentDersSecimiContainer"); // Ders seçimi
 
 // Deneme Ekleme Modalı
 const addDenemeModal = document.getElementById("addDenemeModal");
@@ -100,36 +95,24 @@ const saveOdevButton = document.getElementById("saveOdevButton");
 const odevModalErrorMessage = document.getElementById("odevModalErrorMessage");
 const currentStudentIdForOdev = document.getElementById("currentStudentIdForOdev");
 
-// Randevu Modalı
-const addRandevuModal = document.getElementById("addRandevuModal");
-const closeRandevuModalButton = document.getElementById("closeRandevuModalButton");
-const cancelRandevuModalButton = document.getElementById("cancelRandevuModalButton");
-const saveRandevuButton = document.getElementById("saveRandevuButton");
-const randevuModalErrorMessage = document.getElementById("randevuModalErrorMessage");
-
-// Muhasebe Modalları
-const addTahsilatModal = document.getElementById("addTahsilatModal");
-const closeTahsilatModalButton = document.getElementById("closeTahsilatModalButton");
-const cancelTahsilatModalButton = document.getElementById("cancelTahsilatModalButton");
-const saveTahsilatButton = document.getElementById("saveTahsilatButton");
-const tahsilatModalErrorMessage = document.getElementById("tahsilatModalErrorMessage");
-
-const addBorcModal = document.getElementById("addBorcModal");
-const closeBorcModalButton = document.getElementById("closeBorcModalButton");
-const cancelBorcModalButton = document.getElementById("cancelBorcModalButton");
-const saveBorcButton = document.getElementById("saveBorcButton");
-const borcModalErrorMessage = document.getElementById("borcModalErrorMessage");
+// Koçluk Notu Modalı
+const addNotModal = document.getElementById("addNotModal");
+const closeNotModalButton = document.getElementById("closeNotModalButton");
+const cancelNotModalButton = document.getElementById("cancelNotModalButton");
+const saveNotButton = document.getElementById("saveNotButton");
+const notModalErrorMessage = document.getElementById("notModalErrorMessage");
+const currentStudentIdForNot = document.getElementById("currentStudentIdForNot");
 
 
 // 3. Global Değişkenler
 let auth;
 let db;
 let currentUserId = null; // Koçun kimliği (UID)
-const appId = "kocluk-sistemi"; // Bu, student-auth.js ile eşleşmeli (veya config'den alınmalı)
+const appId = firebaseConfig.appId; 
 
 const SINAV_DERSLERI = {
     'TYT': {
-        netKural: 4,
+        netKural: 4, // 4 yanlış 1 doğruyu götürür
         dersler: [
             { id: 'tyt_turkce', ad: 'Türkçe', soru: 40 },
             { id: 'tyt_tarih_sos', ad: 'Tarih (Sosyal)', soru: 5 },
@@ -160,7 +143,7 @@ const SINAV_DERSLERI = {
         ]
     },
     'LGS': {
-        netKural: 3,
+        netKural: 3, // 3 yanlış 1 doğruyu götürür
         dersler: [
             { id: 'lgs_turkce', ad: 'Türkçe', soru: 20 },
             { id: 'lgs_mat', ad: 'Matematik', soru: 20 },
@@ -171,39 +154,27 @@ const SINAV_DERSLERI = {
         ]
     },
     'YDS': {
-        netKural: 0,
+        netKural: 0, // Yanlış doğruyu götürmez
         dersler: [
             { id: 'yds_dil', ad: 'Yabancı Dil', soru: 80 }
         ]
     },
     'Diger': {
-        netKural: 0,
-        dersler: []
+        netKural: 0, // Kural yok
+        dersler: [] // 'Diger' için özel form gösterilecek
     }
 };
 
-const DERS_HAVUZU = {
-    'ORTAOKUL': [ // 5, 6, 7, 8
-        "Türkçe", "Matematik", "Fen Bilimleri", 
-        "Sosyal Bilgiler", "T.C. İnkılap", "Din Kültürü", "İngilizce"
-    ],
-    'LISE': [ // 9, 10, 11, 12, Mezun
-        "Türk Dili ve Edebiyatı", "Matematik", "Geometri",
-        "Fizik", "Kimya", "Biyoloji",
-        "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"
-    ]
-};
-
-// Aktif dinleyicileri (unsubscribe functions) tutan global değişkenler
-let studentUnsubscribe = null;
+// Soru takibi için durum (state) değişkenleri
 let soruTakibiUnsubscribe = null;
+let soruTakibiZaman = 'haftalik';
+let soruTakibiOffset = 0;
+// Hedefler/Ödevler için dinleyiciler
 let hedeflerUnsubscribe = null;
 let odevlerUnsubscribe = null;
+// Koçluk Notları için dinleyici
 let notlarUnsubscribe = null;
-let ajandaUnsubscribe = null;
-let muhasebeUnsubscribe = null;
-let chatUnsubscribe = null;
-let islemGecmisiUnsubscribe = null;
+
 
 // 4. Ana Uygulama Fonksiyonu (Başlatıcı)
 async function main() {
@@ -222,7 +193,7 @@ async function main() {
             console.log("Koç giriş yaptı, UID:", currentUserId);
             
             updateUIForLoggedInUser(user);
-            renderAnaSayfa(); // Ana Sayfa ile başla
+            renderOgrenciSayfasi();
             
             loadingSpinner.style.display = 'none';
             appContainer.style.display = 'flex';
@@ -234,27 +205,11 @@ async function main() {
     });
 }
 
-// === 5. Arayüz Güncelleme ve Navigasyon ===
-
-// Aktif olan tüm veritabanı dinleyicilerini (snapshotları) temizler.
-function cleanUpListeners() {
-    if (studentUnsubscribe) { studentUnsubscribe(); studentUnsubscribe = null; }
-    if (soruTakibiUnsubscribe) { soruTakibiUnsubscribe(); soruTakibiUnsubscribe = null; }
-    if (hedeflerUnsubscribe) { hedeflerUnsubscribe(); hedeflerUnsubscribe = null; }
-    if (odevlerUnsubscribe) { odevlerUnsubscribe(); odevlerUnsubscribe = null; }
-    if (notlarUnsubscribe) { notlarUnsubscribe(); notlarUnsubscribe = null; }
-    if (ajandaUnsubscribe) { ajandaUnsubscribe(); ajandaUnsubscribe = null; }
-    if (muhasebeUnsubscribe) { muhasebeUnsubscribe(); muhasebeUnsubscribe = null; }
-    if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
-    if (islemGecmisiUnsubscribe) { islemGecmisiUnsubscribe(); islemGecmisiUnsubscribe = null; }
-    console.log("Tüm aktif dinleyiciler temizlendi.");
-}
-
-
+// === 5. Arayüz Güncelleme Fonksiyonları ===
 function updateUIForLoggedInUser(user) {
     if (user) {
-        const displayName = user.email ? user.email.split('@')[0] : "Koç";
-        const displayEmail = user.email || "E-posta yok";
+        const displayName = user.isAnonymous ? "Demo Koç" : (user.email || user.uid);
+        const displayEmail = user.isAnonymous ? "Anonim Oturum" : (user.email || "E-posta yok");
         
         userName.textContent = displayName;
         userEmail.textContent = displayEmail;
@@ -271,187 +226,20 @@ function updateUIForLoggedInUser(user) {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            
-            // Sayfa değiştirmeden önce tüm dinleyicileri kapat
-            cleanUpListeners();
-
-            // Aktif menü öğesini ayarla
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold'));
             link.classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
             
             const pageId = link.id.split('-')[1];
             
-            // İlgili sayfanın render fonksiyonunu çağır
             switch(pageId) {
-                case 'anasayfa':
-                    renderAnaSayfa();
-                    break;
                 case 'ogrencilerim':
                     renderOgrenciSayfasi();
-                    break;
-                case 'ajandam':
-                    renderAjandaSayfasi();
-                    break;
-                case 'muhasebe':
-                    renderMuhasebeSayfasi();
-                    break;
-                case 'mesajlar':
-                    renderMesajlarSayfasi();
                     break;
                 default:
                     renderPlaceholderSayfasi(link.textContent.trim());
                     break;
             }
         });
-    });
-}
-
-// === 5.1 ANA SAYFA (DASHBOARD) ===
-
-async function renderAnaSayfa() {
-    mainContentTitle.textContent = "Kontrol Paneli";
-    
-    // İskeleti Oluştur
-    mainContentArea.innerHTML = `
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg mb-8 flex justify-between items-center">
-            <div>
-                <h2 class="text-2xl font-bold mb-1">Hoş geldin, Hocam! 👋</h2>
-                <p class="text-purple-100 text-sm">Bugün öğrencilerinin başarısı için harika bir gün.</p>
-            </div>
-            <div class="hidden md:block text-right">
-                <p class="text-3xl font-bold" id="dashDateDay">--</p>
-                <p class="text-sm text-purple-200" id="dashDateFull">--</p>
-            </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-users"></i></div>
-                <div><p class="text-sm text-gray-500 font-medium">Aktif Öğrenci</p><h3 class="text-2xl font-bold text-gray-800" id="dashTotalStudent">...</h3></div>
-            </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-regular fa-calendar-check"></i></div>
-                <div><p class="text-sm text-gray-500 font-medium">Bugünkü Randevular</p><h3 class="text-2xl font-bold text-gray-800" id="dashTodayAppt">...</h3></div>
-            </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-turkish-lira-sign"></i></div>
-                <div><p class="text-sm text-gray-500 font-medium">Bekleyen Alacak</p><h3 class="text-2xl font-bold text-gray-800" id="dashPendingPayment">...</h3></div>
-            </div>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2"><span class="w-2 h-6 bg-orange-500 rounded-full"></span>Bugünkü Programım</h3>
-                        <button id="btnDashGoAjanda" class="text-sm text-purple-600 hover:text-purple-800 font-medium">Tümünü Gör</button>
-                    </div>
-                    <div id="dashAgendaList" class="p-2 max-h-80 overflow-y-auto"><p class="text-center text-gray-400 py-8">Yükleniyor...</p></div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100"><h3 class="font-bold text-gray-800 flex items-center gap-2"><span class="w-2 h-6 bg-blue-500 rounded-full"></span>Öğrenci Durum Özeti</h3></div>
-                    <div class="overflow-x-auto"><table class="min-w-full text-sm text-left"><thead class="bg-gray-50 text-gray-500 font-medium"><tr><th class="px-6 py-3">Öğrenci</th><th class="px-6 py-3">Sınıf</th><th class="px-6 py-3 text-center">İşlem</th></tr></thead><tbody id="dashStudentTableBody" class="divide-y divide-gray-100"></tbody></table></div>
-                </div>
-            </div>
-            <div class="space-y-6">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                    <h3 class="font-bold text-gray-800 mb-4">Hızlı İşlemler</h3>
-                    <div class="space-y-3">
-                        <button id="btnDashAddStudent" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-200 transition-colors group"><div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3 group-hover:bg-purple-600 group-hover:text-white transition-colors"><i class="fa-solid fa-user-plus"></i></div><span class="font-medium text-gray-700 group-hover:text-purple-700">Yeni Öğrenci Ekle</span></button>
-                        <button id="btnDashAddRandevu" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-orange-50 hover:border-orange-200 transition-colors group"><div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mr-3 group-hover:bg-orange-600 group-hover:text-white transition-colors"><i class="fa-regular fa-calendar-plus"></i></div><span class="font-medium text-gray-700 group-hover:text-orange-700">Randevu Oluştur</span></button>
-                        <button id="btnDashGoMesajlar" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors group"><div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-colors"><i class="fa-regular fa-envelope"></i></div><span class="font-medium text-gray-700 group-hover:text-blue-700">Mesajları Oku</span></button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Tarih Bilgisi
-    const now = new Date();
-    const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-    document.getElementById('dashDateDay').textContent = days[now.getDay()];
-    document.getElementById('dashDateFull').textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
-
-    // Hızlı Eylem Butonları
-    document.getElementById('btnDashAddStudent').addEventListener('click', () => {
-        document.getElementById('studentName').value = '';
-        document.getElementById('studentSurname').value = '';
-        document.getElementById('studentClass').value = '12. Sınıf';
-        modalErrorMessage.classList.add('hidden');
-        renderDersSecimi('12. Sınıf', studentDersSecimiContainer);
-        addStudentModal.style.display = 'block';
-    });
-    document.getElementById('btnDashAddRandevu').addEventListener('click', () => {
-        populateStudentSelect('randevuStudentId'); 
-        document.getElementById('addRandevuModal').style.display = 'block';
-    });
-    document.getElementById('btnDashGoAjanda').addEventListener('click', () => document.getElementById('nav-ajandam').click());
-    document.getElementById('btnDashGoMesajlar').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
-
-    // Verileri Yükle
-    loadDashboardStats();
-    loadTodayAgenda();
-}
-
-function loadDashboardStats() {
-    const studentTableBody = document.getElementById('dashStudentTableBody');
-    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"), orderBy("ad"));
-    
-    studentUnsubscribe = onSnapshot(q, (snapshot) => {
-        let totalStudents = 0, totalAlacak = 0, tableHtml = '';
-        snapshot.forEach(doc => {
-            const s = doc.data();
-            totalStudents++;
-            const bakiye = (s.toplamBorc || 0) - (s.toplamOdenen || 0);
-            if (bakiye > 0) totalAlacak += bakiye;
-            
-            tableHtml += `
-                <tr class="hover:bg-gray-50 transition-colors group cursor-pointer" onclick="document.getElementById('mainContentArea').dataset.studentId='${doc.id}'; document.getElementById('mainContentArea').dataset.studentName='${s.ad} ${s.soyad}'; renderOgrenciDetaySayfasi('${doc.id}', '${s.ad} ${s.soyad}');">
-                    <td class="px-6 py-3 whitespace-nowrap"><div class="flex items-center"><div class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-bold mr-3 group-hover:bg-purple-100 group-hover:text-purple-600">${s.ad[0]}${s.soyad[0]}</div><div><div class="text-sm font-medium text-gray-900">${s.ad} ${s.soyad}</div></div></div></td>
-                    <td class="px-6 py-3 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">${s.sinif}</span></td>
-                    <td class="px-6 py-3 whitespace-nowrap text-center text-sm text-gray-500"><i class="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-purple-500"></i></td>
-                </tr>
-            `;
-        });
-
-        document.getElementById('dashTotalStudent').textContent = totalStudents;
-        document.getElementById('dashPendingPayment').textContent = formatCurrency(totalAlacak);
-        studentTableBody.innerHTML = tableHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-400">Henüz öğrenci yok.</td></tr>';
-    
-        // onclick'te global fonksiyonları çağırmak için onları 'window' objesine eklememiz gerekir.
-        window.renderOgrenciDetaySayfasi = renderOgrenciDetaySayfasi; 
-        
-    });
-}
-
-function loadTodayAgenda() {
-    const listContainer = document.getElementById('dashAgendaList');
-    const todayStr = new Date().toISOString().split('T')[0];
-    const q = query(
-        collection(db, "koclar", currentUserId, "ajandam"),
-        where("tarih", "==", todayStr),
-        orderBy("baslangic")
-    );
-    
-    ajandaUnsubscribe = onSnapshot(q, (snapshot) => {
-        let count = 0, html = '';
-        snapshot.forEach(doc => {
-            const randevu = doc.data();
-            count++;
-            html += `
-                <div class="flex items-start p-3 bg-orange-50 rounded-lg border border-orange-100 mb-2 relative overflow-hidden group cursor-pointer hover:shadow-sm transition-shadow">
-                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-orange-400"></div>
-                    <div class="ml-2 flex-1">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-gray-800 text-sm">${randevu.ogrenciAd}</h4>
-                            <span class="text-xs font-mono text-orange-700 bg-orange-100 px-2 py-0.5 rounded">${randevu.baslangic} - ${randevu.bitis}</span>
-                        </div>
-                        <p class="text-xs text-gray-600 mt-1 line-clamp-1">${randevu.baslik}</p>
-                    </div>
-                </div>
-            `;
-        });
-        document.getElementById('dashTodayAppt').textContent = count;
-        listContainer.innerHTML = html || `<div class="flex flex-col items-center justify-center py-6 text-gray-400"><i class="fa-regular fa-calendar text-3xl mb-2 opacity-30"></i><p class="text-sm">Bugün için planlanmış randevu yok.</p></div>`;
     });
 }
 
@@ -481,16 +269,9 @@ function renderOgrenciSayfasi() {
     document.getElementById('showAddStudentModalButton').addEventListener('click', () => {
         document.getElementById('studentName').value = '';
         document.getElementById('studentSurname').value = '';
-        const defaultClass = '12. Sınıf';
-        document.getElementById('studentClass').value = defaultClass;
-        renderDersSecimi(defaultClass, studentDersSecimiContainer); // Dersleri yükle
+        document.getElementById('studentClass').value = '12. Sınıf';
         modalErrorMessage.classList.add('hidden');
         addStudentModal.style.display = 'block';
-    });
-
-    // Sınıf seçimi değiştikçe dersleri güncelle (Ekleme Modalı)
-    document.getElementById('studentClass').addEventListener('change', (e) => {
-        renderDersSecimi(e.target.value, studentDersSecimiContainer);
     });
     
     loadOgrenciler();
@@ -499,17 +280,24 @@ function renderOgrenciSayfasi() {
 function loadOgrenciler() {
     const studentListContainer = document.getElementById('studentListContainer');
     if (!studentListContainer) return;
+    
+    // Veriyi /koclar/{kocID}/ogrencilerim yolundan okuyoruz
     const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"));
     
-    studentUnsubscribe = onSnapshot(q, (querySnapshot) => {
+    onSnapshot(q, (querySnapshot) => {
         const students = [];
         querySnapshot.forEach((doc) => {
             students.push({ id: doc.id, ...doc.data() });
         });
         renderStudentList(students);
+
     }, (error) => {
         console.error("Öğrencileri yüklerken hata:", error);
-        studentListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Veri okuma izni alınamadı. Güvenlik kurallarınızı kontrol edin.</p>`;
+        if (error.code === 'permission-denied' || error.code === 'failed-precondition') {
+             studentListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Veri okuma izni alınamadı. Lütfen Firebase Güvenlik Kurallarınızı kontrol edin.</p>`;
+        } else {
+             studentListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Öğrenciler yüklenemedi. (Hata: ${error.message}).</p>`;
+        }
     });
 }
 
@@ -519,6 +307,7 @@ function renderStudentList(students) {
         studentListContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Henüz öğrenci eklememişsiniz. "Yeni Öğrenci Ekle" butonu ile başlayın.</p>`;
         return;
     }
+
     studentListContainer.innerHTML = `
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -526,18 +315,12 @@ function renderStudentList(students) {
                     <tr>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sınıf</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bakiye</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İlerleme</th>
                         <th scope="col" class="relative px-6 py-3"><span class="sr-only">Eylemler</span></th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    ${students.map(student => {
-                        const bakiye = (student.toplamBorc || 0) - (student.toplamOdenen || 0);
-                        let bakiyeClass = 'text-gray-500';
-                        if (bakiye > 0) bakiyeClass = 'text-red-600 font-medium';
-                        if (bakiye < 0) bakiyeClass = 'text-green-600 font-medium';
-                        
-                        return `
+                    ${students.map(student => `
                         <tr id="student-row-${student.id}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
@@ -554,15 +337,17 @@ function renderStudentList(students) {
                                     ${student.sinif}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm ${bakiyeClass}">
-                                ${formatCurrency(bakiye)}
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="w-32 bg-gray-200 rounded-full h-2.5">
+                                    <div class="bg-purple-600 h-2.5 rounded-full" style="width: 45%"></div>
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button data-id="${student.id}" data-ad="${student.ad} ${student.soyad}" class="profil-gor-button text-purple-600 hover:text-purple-900">Profili Gör</button>
                                 <button data-id="${student.id}" class="delete-student-button text-red-600 hover:text-red-900 ml-4">Sil</button>
                             </td>
                         </tr>
-                    `}).join('')}
+                    `).join('')}
                 </tbody>
             </table>
         </div>
@@ -592,66 +377,28 @@ function renderStudentList(students) {
     });
 }
 
-// === YARDIMCI: DERS SEÇİM LİSTESİ OLUŞTUR ===
-function renderDersSecimi(sinif, container, selectedDersler = []) {
-    container.innerHTML = '';
-    let dersler = [];
-    if (['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(sinif)) {
-        dersler = DERS_HAVUZU['ORTAOKUL'];
-    } else {
-        dersler = DERS_HAVUZU['LISE'];
-    }
-    dersler.forEach(ders => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'flex items-center';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = `ders-${ders.replace(/\s+/g, '-')}`;
-        checkbox.value = ders;
-        checkbox.className = 'student-ders-checkbox h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded';
-        
-        if (selectedDersler.length > 0) {
-            if (selectedDersler.includes(ders)) checkbox.checked = true;
-        } else {
-            checkbox.checked = true; // Varsayılan olarak hepsi seçili
-        }
-        const label = document.createElement('label');
-        label.htmlFor = checkbox.id;
-        label.className = 'ml-2 block text-sm text-gray-900 cursor-pointer';
-        label.textContent = ders;
-        wrapper.appendChild(checkbox);
-        wrapper.appendChild(label);
-        container.appendChild(wrapper);
-    });
-}
-
 async function saveNewStudent() {
     const ad = document.getElementById('studentName').value.trim();
     const soyad = document.getElementById('studentSurname').value.trim();
     const sinif = document.getElementById('studentClass').value;
-    
-    const selectedDersler = [];
-    studentDersSecimiContainer.querySelectorAll('.student-ders-checkbox:checked').forEach(cb => {
-        selectedDersler.push(cb.value);
-    });
 
     if (!ad || !soyad) {
         modalErrorMessage.textContent = "Ad ve Soyad alanları zorunludur.";
         modalErrorMessage.classList.remove('hidden');
         return;
     }
+
     try {
         saveStudentButton.disabled = true;
         saveStudentButton.textContent = "Kaydediliyor...";
-        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim"), {
+        
+        const docRef = await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim"), {
             ad: ad,
             soyad: soyad,
             sinif: sinif,
-            takipDersleri: selectedDersler,
-            olusturmaTarihi: serverTimestamp(),
-            toplamBorc: 0,
-            toplamOdenen: 0
+            olusturmaTarihi: serverTimestamp()
         });
+        
         addStudentModal.style.display = 'none';
     } catch (error) {
         console.error("Öğrenci ekleme hatası: ", error);
@@ -667,10 +414,6 @@ async function saveNewStudent() {
 // === 7. "ÖĞRENCİ DETAY" SAYFASI ===
 function renderOgrenciDetaySayfasi(studentId, studentName) {
     mainContentTitle.textContent = `${studentName} - Detay Profili`;
-    
-    // Sayfa değişti, tüm dinleyicileri temizle
-    cleanUpListeners();
-
     mainContentArea.innerHTML = `
         <div class="mb-6 flex justify-between items-center">
             <button id="geriDonOgrenciListesi" class="flex items-center text-sm text-gray-600 hover:text-purple-600 font-medium">
@@ -682,17 +425,14 @@ function renderOgrenciDetaySayfasi(studentId, studentName) {
             <div class="flex-shrink-0 h-16 w-16 bg-purple-100 text-purple-600 flex items-center justify-center rounded-full font-bold text-2xl" id="studentDetailAvatar">
                 ${studentName.split(' ').map(n => n[0]).join('')}
             </div>
-            <div class="text-center md:text-left flex-1">
+            <div class="text-center md:text-left">
                 <h2 class="text-3xl font-bold text-gray-800" id="studentDetailName">${studentName}</h2>
-                <p class="text-lg text-gray-500" id="studentDetailClass">Yükleniyor...</p>
+                <p class="text-lg text-gray-500" id="studentDetailClass"></p>
             </div>
             <div class="ml-0 md:ml-auto flex flex-col sm:flex-row gap-2">
-                <button id="showEditStudentModalButton" data-student-id="${studentId}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 border border-gray-200">Bilgileri Düzenle</button>
-                <button class="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 border border-purple-200">Mesaj Gönder</button>
-                <button id="btnStudentRandevuPlanla" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-200 border border-green-200 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Randevu Planla
-                </button>
+                <button id="showEditStudentModalButton" data-student-id="${studentId}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">Bilgileri Düzenle</button>
+                <button class="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-200">Mesaj Gönder</button>
+                <button class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-200">Randevu Planla</button>
             </div>
         </div>
         <div class="flex border-b border-gray-200 mb-6 overflow-x-auto no-scrollbar">
@@ -706,7 +446,6 @@ function renderOgrenciDetaySayfasi(studentId, studentName) {
     `;
 
     document.getElementById('geriDonOgrenciListesi').addEventListener('click', () => {
-        cleanUpListeners(); // Detaydan listeye dönerken de temizle
         renderOgrenciSayfasi();
     });
 
@@ -714,26 +453,12 @@ function renderOgrenciDetaySayfasi(studentId, studentName) {
         showEditStudentModal(e.currentTarget.dataset.studentId);
     });
 
-    // Randevu Planla Butonu
-    document.getElementById('btnStudentRandevuPlanla').addEventListener('click', async () => {
-        const modal = document.getElementById('addRandevuModal');
-        const selectId = 'randevuStudentId';
-        await populateStudentSelect(selectId);
-        const select = document.getElementById(selectId);
-        if(select) { select.value = studentId; }
-        document.getElementById('randevuBaslik').value = 'Birebir Koçluk Görüşmesi';
-        document.getElementById('randevuTarih').value = new Date().toISOString().split('T')[0];
-        document.getElementById('randevuBaslangic').value = '09:00';
-        document.getElementById('randevuBitis').value = '10:00';
-        document.getElementById('randevuNot').value = '';
-        document.getElementById('randevuModalErrorMessage').classList.add('hidden');
-        modal.style.display = 'block';
-    });
-
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', (e) => {
-            // Sekme değiştirirken de dinleyicileri temizle
-            cleanUpListeners(); 
+            if (soruTakibiUnsubscribe) { soruTakibiUnsubscribe(); soruTakibiUnsubscribe = null; }
+            if (hedeflerUnsubscribe) { hedeflerUnsubscribe(); hedeflerUnsubscribe = null; }
+            if (odevlerUnsubscribe) { odevlerUnsubscribe(); odevlerUnsubscribe = null; }
+            if (notlarUnsubscribe) { notlarUnsubscribe(); notlarUnsubscribe = null; }
             
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active', 'text-purple-600', 'border-purple-600', 'font-semibold');
@@ -768,15 +493,19 @@ async function renderOzetTab(studentId) {
     const tabContentArea = document.getElementById('tabContentArea');
     if (!tabContentArea) return;
     tabContentArea.innerHTML = `<p class="text-gray-600 p-4">Öğrenci detayları yükleniyor...</p>`;
+
     try {
         const studentDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId);
-        const docSnap = await getDoc(studentDocRef); // Tek seferlik okuma
+        const docSnap = await getDoc(studentDocRef);
+
         if (docSnap.exists()) {
             const studentData = docSnap.data();
+            
             const classElement = document.getElementById('studentDetailClass');
             if (classElement) {
                 classElement.textContent = `${studentData.sinif} Öğrencisi`;
             }
+            
             tabContentArea.innerHTML = `
                 <h3 class="text-xl font-semibold mb-4 text-gray-700">Öğrenci Özeti</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -789,10 +518,11 @@ async function renderOzetTab(studentId) {
                         <p class="text-lg font-semibold text-gray-800">${studentData.olusturmaTarihi ? studentData.olusturmaTarihi.toDate().toLocaleDateString('tr-TR') : 'Bilinmiyor'}</p>
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <p class="text-sm font-medium text-gray-500">Genel Bakiye</p>
-                        <p class="text-lg font-semibold text-gray-800 ${((studentData.toplamBorc || 0) - (studentData.toplamOdenen || 0)) > 0 ? 'text-red-600' : 'text-green-600'}">
-                            ${formatCurrency((studentData.toplamBorc || 0) - (studentData.toplamOdenen || 0))}
-                        </p>
+                        <p class="text-sm font-medium text-gray-500">Genel İlerleme</p>
+                        <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
+                            <div class="bg-purple-600 h-4 rounded-full" style="width: 45%"></div>
+                        </div>
+                        <p class="text-right text-sm text-gray-600 mt-1">45%</p>
                     </div>
                 </div>
             `;
@@ -809,6 +539,7 @@ async function renderOzetTab(studentId) {
 function renderDenemelerTab(studentId, studentName) {
     const tabContentArea = document.getElementById('tabContentArea');
     if (!tabContentArea) return;
+
     tabContentArea.innerHTML = `
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-semibold text-gray-700">${studentName} - Deneme Sınavları</h3>
@@ -821,6 +552,7 @@ function renderDenemelerTab(studentId, studentName) {
             <p class="text-gray-500 text-center py-4">Denemeler yükleniyor...</p>
         </div>
     `;
+
     document.getElementById('showAddDenemeModalButton').addEventListener('click', () => {
         denemeModalErrorMessage.classList.add('hidden');
         document.getElementById('denemeAdi').value = '';
@@ -830,12 +562,14 @@ function renderDenemelerTab(studentId, studentName) {
         currentStudentIdForDeneme.value = studentId;
         addDenemeModal.style.display = 'block';
     });
+
     loadDenemeler(studentId);
 }
 
 function renderDenemeNetInputs(tur) {
     const sinav = SINAV_DERSLERI[tur];
     let html = `<p class="text-gray-700 font-medium">Net Girişi (${tur})</p>`;
+
     if (tur === 'Diger') {
         html += `
             <div class="mt-4">
@@ -868,11 +602,9 @@ function renderDenemeNetInputs(tur) {
 function loadDenemeler(studentId) {
     const denemeListContainer = document.getElementById('denemeListContainer');
     if (!denemeListContainer) return;
-    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "denemeler"), orderBy("tarih", "desc"));
-    
-    // Burası için onSnapshot kullanabiliriz, ancak dinleyici temizliğine dikkat etmeliyiz.
-    // cleanUpListeners() zaten bunu yapıyor.
-    studentUnsubscribe = onSnapshot(q, (querySnapshot) => { // 'studentUnsubscribe' yerine 'denemeUnsubscribe' daha iyi olurdu, ama şimdilik böyle
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "denemeler"));
+
+    onSnapshot(q, (querySnapshot) => {
         const denemeler = [];
         querySnapshot.forEach((doc) => {
             denemeler.push({ id: doc.id, ...doc.data() });
@@ -883,3 +615,882 @@ function loadDenemeler(studentId) {
         denemeListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Denemeler yüklenemedi. (Hata: ${error.message}).</p>`;
     });
 }
+
+function renderDenemeList(denemeler, studentId) {
+    const denemeListContainer = document.getElementById('denemeListContainer');
+    if (denemeler.length === 0) {
+        denemeListContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Bu öğrenci için henüz deneme sonucu girilmemiş.</p>`;
+        return;
+    }
+    denemeListContainer.innerHTML = `
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sınav Adı</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tür</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam Net</th>
+                    <th class="relative px-6 py-3"><span class="sr-only">Eylemler</span></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                ${denemeler.map(deneme => {
+                    const toplamNetStr = (deneme.toplamNet || 0).toFixed(2);
+                    let turClass = 'bg-gray-100 text-gray-800';
+                    if (deneme.tur === 'TYT') turClass = 'bg-blue-100 text-blue-800';
+                    else if (deneme.tur === 'AYT') turClass = 'bg-red-100 text-red-800';
+                    else if (deneme.tur === 'LGS') turClass = 'bg-green-100 text-green-800';
+                    else if (deneme.tur === 'YDS') turClass = 'bg-yellow-100 text-yellow-800';
+                    return `
+                        <tr id="deneme-row-${deneme.id}">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${deneme.tarih || 'Bilinmiyor'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${deneme.ad}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${turClass}">${deneme.tur}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${toplamNetStr}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button data-id="${deneme.id}" class="text-purple-600 hover:text-purple-900">Düzenle</button>
+                                <button data-id="${deneme.id}" class="delete-deneme-button text-red-600 hover:text-red-900 ml-4">Sil</button>
+                            </td>
+                        </tr>
+                    `
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+    document.querySelectorAll('.delete-deneme-button').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const denemeId = e.target.dataset.id;
+            if (confirm("Bu deneme sonucunu silmek istediğinize emin misiniz?")) {
+                try {
+                    const denemeDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "denemeler", denemeId);
+                    await deleteDoc(denemeDocRef);
+                } catch (error) {
+                    console.error("Deneme silme hatası:", error);
+                }
+            }
+        });
+    });
+}
+
+async function saveNewDeneme() {
+    const studentId = currentStudentIdForDeneme.value;
+    const ad = document.getElementById('denemeAdi').value.trim();
+    const tarih = document.getElementById('denemeTarihi').value;
+    const tur = denemeTuruSelect.value;
+
+    if (!studentId || !ad || !tarih) {
+        denemeModalErrorMessage.textContent = "Sınav Adı ve Tarihi alanları zorunludur.";
+        denemeModalErrorMessage.classList.remove('hidden');
+        return;
+    }
+    let denemeVerisi = {
+        ad: ad,
+        tarih: tarih,
+        tur: tur,
+        eklenmeTarihi: serverTimestamp(),
+        netler: {},
+        toplamNet: 0
+    };
+    try {
+        saveDenemeButton.disabled = true;
+        saveDenemeButton.textContent = "Kaydediliyor...";
+        const sinav = SINAV_DERSLERI[tur];
+        if (tur === 'Diger') {
+            const toplamNet = parseFloat(document.getElementById('net-diger-toplam').value) || 0;
+            denemeVerisi.toplamNet = toplamNet;
+            denemeVerisi.netler['diger_toplam'] = { ad: 'Toplam Net', d: 0, y: 0, b: 0, net: toplamNet };
+        } else if (sinav) {
+            let toplamNetHesabi = 0;
+            const kural = sinav.netKural;
+            sinav.dersler.forEach(ders => {
+                const d = parseInt(document.getElementById(`net-${ders.id}-d`).value) || 0;
+                const y = parseInt(document.getElementById(`net-${ders.id}-y`).value) || 0;
+                const b = Math.max(0, ders.soru - (d + y));
+                let net = 0;
+                if (kural === 0) { net = d; }
+                else { net = d - (y / kural); }
+                denemeVerisi.netler[ders.id] = { ad: ders.ad, soru: ders.soru, d, y, b, net };
+                if (!isNaN(net)) {
+                    toplamNetHesabi += net;
+                }
+            });
+            denemeVerisi.toplamNet = toplamNetHesabi;
+        }
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "denemeler"), denemeVerisi);
+        addDenemeModal.style.display = 'none';
+    } catch (error) {
+        console.error("Deneme ekleme hatası: ", error);
+        denemeModalErrorMessage.textContent = `Bir hata oluştu: ${error.message}`;
+        denemeModalErrorMessage.classList.remove('hidden');
+    } finally {
+        saveDenemeButton.disabled = false;
+        saveDenemeButton.textContent = "Denemeyi Kaydet";
+    }
+}
+
+
+// === 7.3. SORU TAKİBİ SEKMESİ ===
+function getSoruTakibiDateRange(zaman, offset) {
+    const today = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    if (zaman === 'haftalik') {
+        const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1;
+        startDate.setDate(today.getDate() - dayOfWeek + (offset * 7));
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+    } else {
+        startDate = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+        endDate = new Date(today.getFullYear(), today.getMonth() + 1 + offset, 0);
+    }
+    const formatForUI = (date) => date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+    const formatForFirestore = (date) => date.toISOString().split('T')[0];
+    return {
+        start: formatForFirestore(startDate),
+        end: formatForFirestore(endDate),
+        uiText: `${formatForUI(startDate)} - ${formatForUI(endDate)}`
+    };
+}
+
+function renderDonutChart(percent, elementId) {
+    const container = document.getElementById(elementId);
+    if (!container) return;
+    const cleanPercent = Math.max(0, Math.min(100, percent || 0));
+    const radius = 40;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (cleanPercent / 100) * circumference;
+    container.innerHTML = `
+        <svg class="w-full h-full" viewBox="0 0 100 100">
+            <circle class="text-gray-200" stroke-width="12" stroke="currentColor" fill="transparent" r="${radius}" cx="50" cy="50" />
+            <circle class="text-purple-600"
+                stroke-width="12"
+                stroke-dasharray="${circumference}"
+                stroke-dashoffset="${offset}"
+                stroke-linecap="round"
+                stroke="currentColor"
+                fill="transparent"
+                r="${radius}"
+                cx="50"
+                cy="50"
+                transform="rotate(-90 50 50)"
+            />
+            <text x="50" y="50" font-family="sans-serif" font-size="20" fill="currentColor" text-anchor="middle" dy=".3em" class="font-bold text-purple-700">
+                ${cleanPercent.toFixed(0)}%
+            </text>
+        </svg>
+    `;
+}
+
+function renderSoruTakibiSummary(soruVerileri) {
+    let totalSoru = 0, totalDogru = 0, totalYanlis = 0;
+    soruVerileri.forEach(veri => {
+        const d = veri.dogru || 0;
+        const y = veri.yanlis || 0;
+        const b = veri.bos || 0;
+        totalDogru += d;
+        totalYanlis += y;
+        totalSoru += (d + y + b);
+    });
+    const basariOrani = (totalDogru + totalYanlis) === 0 ? 0 : (totalDogru / (totalDogru + totalYanlis)) * 100;
+    const summaryToplamSoruEl = document.getElementById('summaryToplamSoru');
+    const summaryBasariOraniEl = document.getElementById('summaryBasariOrani');
+    if(summaryToplamSoruEl) summaryToplamSoruEl.textContent = totalSoru;
+    if(summaryBasariOraniEl) summaryBasariOraniEl.textContent = `${basariOrani.toFixed(0)}%`;
+    renderDonutChart(basariOrani, 'summaryDonutChart');
+}
+
+function renderSoruTakibiTab(studentId, studentName) {
+    const tabContentArea = document.getElementById('tabContentArea');
+    if (!tabContentArea) return;
+    tabContentArea.innerHTML = `
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+            <div class="flex items-center p-1 bg-gray-200 rounded-lg">
+                <button data-zaman="haftalik" class="soru-zaman-toggle active px-3 py-1 text-sm font-semibold text-white bg-purple-600 rounded-md shadow">Haftalık</button>
+                <button data-zaman="aylik" class="soru-zaman-toggle px-3 py-1 text-sm font-semibold text-gray-600 rounded-md">Aylık</button>
+            </div>
+            <div class="flex items-center">
+                <button id="soru-tarih-geri" class="soru-tarih-nav p-2 text-gray-500 hover:text-purple-600 rounded-full" data-yon="-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <span id="soru-tarih-araligi" class="text-sm font-semibold text-gray-700 mx-2 w-28 text-center">Yükleniyor...</span>
+                <button id="soru-tarih-ileri" class="soru-tarih-nav p-2 text-gray-500 hover:text-purple-600 rounded-full" data-yon="1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+            <button id="showAddSoruModalButton" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center text-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Yeni Veri Ekle
+            </button>
+        </div>
+        <div id="soruTakibiSummary" class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+                <p class="text-sm font-medium text-gray-500">Toplam Çözülen Soru</p>
+                <p id="summaryToplamSoru" class="text-2xl md:text-3xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm">
+                <p class="text-sm font-medium text-gray-500">Genel Başarı Oranı</p>
+                <p id="summaryBasariOrani" class="text-2xl md:text-3xl font-bold text-purple-600">0%</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm flex justify-center items-center col-span-2 md:col-span-1">
+                <div id="summaryDonutChart" class="w-24 h-24"></div>
+            </div>
+        </div>
+        <div id="soruListContainer" class="bg-white p-4 rounded-lg shadow">
+            <p class="text-gray-500 text-center py-4">Soru verileri yükleniyor...</p>
+        </div>
+    `;
+    document.getElementById('showAddSoruModalButton').addEventListener('click', () => {
+        soruModalErrorMessage.classList.add('hidden');
+        document.getElementById('soruTarihi').value = new Date().toISOString().split('T')[0];
+        document.getElementById('soruDers').value = '';
+        document.getElementById('soruKonu').value = '';
+        document.getElementById('soruDogru').value = '';
+        document.getElementById('soruYanlis').value = '';
+        document.getElementById('soruBos').value = '';
+        currentStudentIdForSoruTakibi.value = studentId;
+        addSoruModal.style.display = 'block';
+    });
+    document.querySelectorAll('.soru-zaman-toggle').forEach(button => {
+        button.addEventListener('click', (e) => {
+            soruTakibiZaman = e.currentTarget.dataset.zaman;
+            soruTakibiOffset = 0;
+            document.querySelectorAll('.soru-zaman-toggle').forEach(btn => {
+                btn.classList.remove('active', 'bg-purple-600', 'text-white', 'shadow');
+                btn.classList.add('text-gray-600');
+            });
+            e.currentTarget.classList.add('active', 'bg-purple-600', 'text-white', 'shadow');
+            loadSoruTakibi(studentId);
+        });
+    });
+    document.querySelectorAll('.soru-tarih-nav').forEach(button => {
+        button.addEventListener('click', (e) => {
+            soruTakibiOffset += parseInt(e.currentTarget.dataset.yon);
+            loadSoruTakibi(studentId);
+        });
+    });
+    loadSoruTakibi(studentId);
+}
+
+function loadSoruTakibi(studentId) {
+    const soruListContainer = document.getElementById('soruListContainer');
+    if (!soruListContainer) return;
+    if (soruTakibiUnsubscribe) {
+        soruTakibiUnsubscribe();
+    }
+    const dateRange = getSoruTakibiDateRange(soruTakibiZaman, soruTakibiOffset);
+    const tarihAraligiEl = document.getElementById('soru-tarih-araligi');
+    if(tarihAraligiEl) tarihAraligiEl.textContent = dateRange.uiText;
+    const ileriButton = document.getElementById('soru-tarih-ileri');
+    if(ileriButton) ileriButton.disabled = (soruTakibiOffset >= 0);
+    const q = query(
+        collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "soruTakibi"),
+        where("tarih", ">=", dateRange.start),
+        where("tarih", "<=", dateRange.end),
+        orderBy("tarih", "desc")
+    );
+    soruTakibiUnsubscribe = onSnapshot(q, (querySnapshot) => {
+        const soruVerileri = [];
+        querySnapshot.forEach((doc) => {
+            soruVerileri.push({ id: doc.id, ...doc.data() });
+        });
+        renderSoruTakibiSummary(soruVerileri);
+        renderSoruTakibiList(soruVerileri, studentId);
+    }, (error) => {
+        console.error("Soru verilerini yüklerken hata:", error);
+        if (error.code === 'failed-precondition') {
+            soruListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Veriler yüklenemedi. Firestore index'i gerekiyor. Lütfen konsoldaki linki takip edin.</p>`;
+        } else {
+            soruListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Veriler yüklenemedi. (Hata: ${error.message}).</p>`;
+        }
+    });
+}
+
+function renderSoruTakibiList(soruVerileri, studentId) {
+    const soruListContainer = document.getElementById('soruListContainer');
+    if (soruVerileri.length === 0) {
+        soruListContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Seçili tarih aralığı için soru verisi bulunamadı.</p>`;
+        return;
+    }
+    soruListContainer.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ders</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Konu</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">D</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Y</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">B</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Başarı %</th>
+                        <th class="relative px-6 py-3"><span class="sr-only">Eylemler</span></th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${soruVerileri.map(veri => {
+                        const d = veri.dogru || 0;
+                        const y = veri.yanlis || 0;
+                        const b = veri.bos || 0;
+                        const toplam = d + y + b;
+                        const basari = (d + y) === 0 ? 0 : (d / (d+y)) * 100;
+                        return `
+                            <tr id="soru-row-${veri.id}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${veri.tarih || 'Bilinmiyor'}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${veri.ders}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${veri.konu}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">${d}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">${y}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${b}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">${toplam}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold ${basari > 70 ? 'text-green-700' : (basari > 0 ? 'text-orange-600' : 'text-gray-500')}">
+                                    ${basari > 0 ? basari.toFixed(0) + '%' : '-'}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button data-id="${veri.id}" class="delete-soru-button text-red-600 hover:text-red-900 ml-4">Sil</button>
+                                </td>
+                            </tr>
+                        `
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    document.querySelectorAll('.delete-soru-button').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const veriId = e.target.dataset.id;
+            if (confirm("Bu soru verisini silmek istediğinize emin misiniz?")) {
+                try {
+                    const soruDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "soruTakibi", veriId);
+                    await deleteDoc(soruDocRef);
+                } catch (error) {
+                    console.error("Soru verisi silme hatası:", error);
+                }
+            }
+        });
+    });
+}
+
+async function saveNewSoruTakibi() {
+    const studentId = currentStudentIdForSoruTakibi.value;
+    const tarih = document.getElementById('soruTarihi').value;
+    const ders = document.getElementById('soruDers').value.trim();
+    const konu = document.getElementById('soruKonu').value.trim();
+    const dogru = parseInt(document.getElementById('soruDogru').value) || 0;
+    const yanlis = parseInt(document.getElementById('soruYanlis').value) || 0;
+    const bos = parseInt(document.getElementById('soruBos').value) || 0;
+    if (!studentId || !tarih || !ders || !konu) {
+        soruModalErrorMessage.textContent = "Tarih, Ders ve Konu alanları zorunludur.";
+        soruModalErrorMessage.classList.remove('hidden');
+        return;
+    }
+    try {
+        saveSoruButton.disabled = true;
+        saveSoruButton.textContent = "Kaydediliyor...";
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "soruTakibi"), {
+            tarih: tarih,
+            ders: ders,
+            konu: konu,
+            dogru: dogru,
+            yanlis: yanlis,
+            bos: bos,
+            eklenmeTarihi: serverTimestamp()
+        });
+        addSoruModal.style.display = 'none';
+    } catch (error) {
+        console.error("Soru verisi ekleme hatası: ", error);
+        soruModalErrorMessage.textContent = `Bir hata oluştu: ${error.message}`;
+        soruModalErrorMessage.classList.remove('hidden');
+    } finally {
+        saveSoruButton.disabled = false;
+        saveSoruButton.textContent = "Veriyi Kaydet";
+    }
+}
+
+
+// === 7.4. HEDEFLER & ÖDEVLER SEKMESİ ===
+function renderHedeflerOdevlerTab(studentId, studentName) {
+    const tabContentArea = document.getElementById('tabContentArea');
+    if (!tabContentArea) return;
+    tabContentArea.innerHTML = `
+        <div class="flex border-b border-gray-200 mb-6 overflow-x-auto no-scrollbar">
+            <button data-subtab="hedefler" data-student-id="${studentId}" class="subtab-button active flex-shrink-0 py-3 px-5 text-purple-600 border-b-2 border-purple-600 font-semibold">🎯 Hedefler</button>
+            <button data-subtab="odevler" data-student-id="${studentId}" class="subtab-button flex-shrink-0 py-3 px-5 text-gray-500 hover:text-purple-600">📝 Ödevler</button>
+        </div>
+        <div id="subTabContentArea"></div>
+    `;
+    document.querySelectorAll('.subtab-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            if (hedeflerUnsubscribe) hedeflerUnsubscribe();
+            if (odevlerUnsubscribe) odevlerUnsubscribe();
+            document.querySelectorAll('.subtab-button').forEach(btn => {
+                btn.classList.remove('active', 'text-purple-600', 'border-purple-600', 'font-semibold');
+                btn.classList.add('text-gray-500');
+            });
+            e.currentTarget.classList.add('active', 'text-purple-600', 'border-purple-600', 'font-semibold');
+            const subTabId = e.currentTarget.dataset.subtab;
+            if (subTabId === 'hedefler') {
+                renderHedeflerSubTab(studentId, studentName);
+            } else {
+                renderOdevlerSubTab(studentId, studentName);
+            }
+        });
+    });
+    renderHedeflerSubTab(studentId, studentName);
+}
+
+function renderHedeflerSubTab(studentId, studentName) {
+    const subTabContentArea = document.getElementById('subTabContentArea');
+    if (!subTabContentArea) return;
+    subTabContentArea.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-700">${studentName} - Hedefler</h3>
+            <button id="showAddHedefModalButton" class="bg-green-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center text-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Yeni Hedef Ekle
+            </button>
+        </div>
+        <div id="hedefListContainer"><p class="text-gray-500 text-center py-4">Hedefler yükleniyor...</p></div>
+    `;
+    document.getElementById('showAddHedefModalButton').addEventListener('click', () => {
+        hedefModalErrorMessage.classList.add('hidden');
+        document.getElementById('hedefTitle').value = '';
+        document.getElementById('hedefBitisTarihi').value = '';
+        document.getElementById('hedefAciklama').value = '';
+        currentStudentIdForHedef.value = studentId;
+        addHedefModal.style.display = 'block';
+    });
+    loadHedefler(studentId);
+}
+
+function renderOdevlerSubTab(studentId, studentName) {
+    const subTabContentArea = document.getElementById('subTabContentArea');
+    if (!subTabContentArea) return;
+    subTabContentArea.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-700">${studentName} - Ödevler</h3>
+            <button id="showAddOdevModalButton" class="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center text-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Yeni Ödev Ekle
+            </button>
+        </div>
+        <div id="odevListContainer"><p class="text-gray-500 text-center py-4">Ödevler yükleniyor...</p></div>
+    `;
+    document.getElementById('showAddOdevModalButton').addEventListener('click', () => {
+        odevModalErrorMessage.classList.add('hidden');
+        document.getElementById('odevTitle').value = '';
+        document.getElementById('odevBitisTarihi').value = new Date().toISOString().split('T')[0];
+        document.getElementById('odevAciklama').value = '';
+        currentStudentIdForOdev.value = studentId;
+        addOdevModal.style.display = 'block';
+    });
+    loadOdevler(studentId);
+}
+
+function loadHedefler(studentId) {
+    const listContainer = document.getElementById('hedefListContainer');
+    if (!listContainer) return;
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "hedefler"), orderBy("olusturmaTarihi", "desc"));
+    hedeflerUnsubscribe = onSnapshot(q, (snapshot) => {
+        const hedefler = [];
+        snapshot.forEach(doc => hedefler.push({ id: doc.id, ...doc.data() }));
+        renderHedeflerList(hedefler, studentId);
+    }, (error) => console.error("Hedefler yüklenirken hata:", error));
+}
+
+function loadOdevler(studentId) {
+    const listContainer = document.getElementById('odevListContainer');
+    if (!listContainer) return;
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler"), orderBy("bitisTarihi", "asc"));
+    odevlerUnsubscribe = onSnapshot(q, (snapshot) => {
+        const odevler = [];
+        snapshot.forEach(doc => odevler.push({ id: doc.id, ...doc.data() }));
+        renderOdevlerList(odevler, studentId);
+    }, (error) => console.error("Ödevler yüklenirken hata:", error));
+}
+
+function renderHedeflerList(hedefler, studentId) {
+    const listContainer = document.getElementById('hedefListContainer');
+    if (hedefler.length === 0) {
+        listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Henüz hedef oluşturulmamış.</p>`;
+        return;
+    }
+    listContainer.innerHTML = `<div class="space-y-4">
+        ${hedefler.map(hedef => `
+            <div class="bg-white p-4 rounded-lg shadow-sm border ${hedef.durum === 'tamamlandi' ? 'border-green-200 bg-green-50' : 'border-gray-200'}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-semibold text-lg ${hedef.durum === 'tamamlandi' ? 'text-gray-500 line-through' : 'text-gray-800'}">${hedef.title}</h4>
+                        <p class="text-sm text-gray-600">${hedef.aciklama || ''}</p>
+                        ${hedef.bitisTarihi ? `<p class="text-xs text-gray-500 mt-1">Bitiş: ${hedef.bitisTarihi}</p>` : ''}
+                    </div>
+                    <div class="flex-shrink-0 ml-4 flex gap-2">
+                        <button data-id="${hedef.id}" data-status="${hedef.durum === 'tamamlandi' ? 'devam' : 'tamamlandi'}" class="toggle-hedef-button p-2 rounded-md ${hedef.durum === 'tamamlandi' ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : 'bg-green-100 text-green-600 hover:bg-green-200'}" title="${hedef.durum === 'tamamlandi' ? 'Geri Al' : 'Tamamla'}">
+                            ${hedef.durum === 'tamamlandi' ? 
+                                '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' :
+                                '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+                            }
+                        </button>
+                        <button data-id="${hedef.id}" class="delete-hedef-button p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200" title="Sil">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('')}
+    </div>`;
+    document.querySelectorAll('.toggle-hedef-button').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        const newStatus = e.currentTarget.dataset.status;
+        const hedefDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "hedefler", id);
+        updateDoc(hedefDocRef, { durum: newStatus });
+    }));
+    document.querySelectorAll('.delete-hedef-button').forEach(btn => btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.id;
+        if (confirm('Bu hedefi silmek istediğinize emin misiniz?')) {
+            const hedefDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "hedefler", id);
+            await deleteDoc(hedefDocRef);
+        }
+    }));
+}
+
+function renderOdevlerList(odevler, studentId) {
+    const listContainer = document.getElementById('odevListContainer');
+    if (odevler.length === 0) {
+        listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Henüz ödev oluşturulmamış.</p>`;
+        return;
+    }
+    listContainer.innerHTML = `<div class="space-y-4">
+        ${odevler.map(odev => {
+            const isGecikti = odev.durum !== 'tamamlandi' && odev.bitisTarihi < new Date().toISOString().split('T')[0];
+            return `
+            <div class="bg-white p-4 rounded-lg shadow-sm border ${odev.durum === 'tamamlandi' ? 'border-green-200 bg-green-50' : (isGecikti ? 'border-red-200 bg-red-50' : 'border-gray-200')}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-semibold text-lg ${odev.durum === 'tamamlandi' ? 'text-gray-500 line-through' : 'text-gray-800'}">${odev.title}</h4>
+                        <p class="text-sm text-gray-600">${odev.aciklama || ''}</p>
+                        <p class="text-xs ${isGecikti ? 'text-red-600 font-semibold' : 'text-gray-500'} mt-1">
+                            Bitiş: ${odev.bitisTarihi} ${isGecikti ? '(GECİKTİ)' : ''}
+                        </p>
+                    </div>
+                    <div class="flex-shrink-0 ml-4 flex gap-2">
+                        <button data-id="${odev.id}" data-status="${odev.durum === 'tamamlandi' ? 'devam' : 'tamamlandi'}" class="toggle-odev-button p-2 rounded-md ${odev.durum === 'tamamlandi' ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : 'bg-green-100 text-green-600 hover:bg-green-200'}" title="${odev.durum === 'tamamlandi' ? 'Geri Al' : 'Tamamla'}">
+                            ${odev.durum === 'tamamlandi' ? 
+                                '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' :
+                                '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+                            }
+                        </button>
+                        <button data-id="${odev.id}" class="delete-odev-button p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200" title="Sil">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `}).join('')}
+    </div>`;
+    document.querySelectorAll('.toggle-odev-button').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        const newStatus = e.currentTarget.dataset.status;
+        const odevDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler", id);
+        updateDoc(odevDocRef, { durum: newStatus });
+    }));
+    document.querySelectorAll('.delete-odev-button').forEach(btn => btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.id;
+        if (confirm('Bu ödevi silmek istediğinize emin misiniz?')) {
+            const odevDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler", id);
+            await deleteDoc(odevDocRef);
+        }
+    }));
+}
+
+async function saveNewHedef() {
+    const studentId = currentStudentIdForHedef.value;
+    const title = document.getElementById('hedefTitle').value.trim();
+    const bitisTarihi = document.getElementById('hedefBitisTarihi').value;
+    const aciklama = document.getElementById('hedefAciklama').value.trim();
+    if (!studentId || !title) {
+        hedefModalErrorMessage.textContent = "Hedef Başlığı zorunludur.";
+        hedefModalErrorMessage.classList.remove('hidden');
+        return;
+    }
+    try {
+        saveHedefButton.disabled = true;
+        saveHedefButton.textContent = "Kaydediliyor...";
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "hedefler"), {
+            title: title,
+            bitisTarihi: bitisTarihi || null,
+            aciklama: aciklama,
+            durum: "devam",
+            olusturmaTarihi: serverTimestamp()
+        });
+        addHedefModal.style.display = 'none';
+    } catch (error) {
+        console.error("Hedef ekleme hatası:", error);
+        hedefModalErrorMessage.textContent = `Bir hata oluştu: ${error.message}`;
+        hedefModalErrorMessage.classList.remove('hidden');
+    } finally {
+        saveHedefButton.disabled = false;
+        saveHedefButton.textContent = "Hedefi Kaydet";
+    }
+}
+
+async function saveNewOdev() {
+    const studentId = currentStudentIdForOdev.value;
+    const title = document.getElementById('odevTitle').value.trim();
+    const bitisTarihi = document.getElementById('odevBitisTarihi').value;
+    const aciklama = document.getElementById('odevAciklama').value.trim();
+    if (!studentId || !title || !bitisTarihi) {
+        odevModalErrorMessage.textContent = "Ödev Başlığı ve Bitiş Tarihi zorunludur.";
+        odevModalErrorMessage.classList.remove('hidden');
+        return;
+    }
+    try {
+        saveOdevButton.disabled = true;
+        saveOdevButton.textContent = "Kaydediliyor...";
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler"), {
+            title: title,
+            bitisTarihi: bitisTarihi,
+            aciklama: aciklama,
+            durum: "devam",
+            olusturmaTarihi: serverTimestamp()
+        });
+        addOdevModal.style.display = 'none';
+    } catch (error) {
+        console.error("Ödev ekleme hatası:", error);
+        odevModalErrorMessage.textContent = `Bir hata oluştu: ${error.message}`;
+        odevModalErrorMessage.classList.remove('hidden');
+    } finally {
+        saveOdevButton.disabled = false;
+        saveOdevButton.textContent = "Ödevi Kaydet";
+    }
+}
+
+
+// === 7.5. KOÇLUK NOTLARI SEKMESİ ===
+function renderKoclukNotlariTab(studentId, studentName) {
+    const tabContentArea = document.getElementById('tabContentArea');
+    if (!tabContentArea) return;
+    tabContentArea.innerHTML = `
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Koçluk Notları (Sadece Siz Görürsünüz)</h3>
+        <!-- YENİ HTML: Formu modal yerine doğrudan sayfaya ekle -->
+        <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+            <textarea id="newNotIcerik" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="${studentName} ile ilgili yeni bir not ekle..."></textarea>
+            <p id="newNotErrorMessage" class="text-sm text-red-600 hidden"></p>
+            <div class="flex justify-end mt-2">
+                <button id="saveNewNotButton" class="bg-purple-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-purple-700">Notu Kaydet</button>
+            </div>
+        </div>
+        <!-- Not Listesi -->
+        <div id="notListContainer">
+            <p class="text-gray-500 text-center py-4">Notlar yükleniyor...</p>
+        </div>
+    `;
+    
+    // Butonu bağla
+    document.getElementById('saveNewNotButton').addEventListener('click', () => {
+        saveNewKoclukNotu(studentId);
+    });
+    
+    // Notları yükle
+    loadKoclukNotlari(studentId);
+}
+
+function loadKoclukNotlari(studentId) {
+    const listContainer = document.getElementById('notListContainer');
+    if (!listContainer) return;
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "koclukNotlari"), orderBy("tarih", "desc"));
+    notlarUnsubscribe = onSnapshot(q, (snapshot) => {
+        const notlar = [];
+        snapshot.forEach(doc => notlar.push({ id: doc.id, ...doc.data() }));
+        renderKoclukNotlariList(notlar, studentId);
+    }, (error) => console.error("Koçluk notları yüklenirken hata:", error));
+}
+
+function renderKoclukNotlariList(notlar, studentId) {
+    const listContainer = document.getElementById('notListContainer');
+    if (notlar.length === 0) {
+        listContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Henüz koçluk notu eklenmemiş.</p>`;
+        return;
+    }
+    listContainer.innerHTML = `<div class="space-y-4">
+        ${notlar.map(not => `
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-sm font-semibold text-gray-700">${not.tarih.toDate().toLocaleString('tr-TR', { dateStyle: 'long', timeStyle: 'short' })}</p>
+                    <button data-id="${not.id}" class="delete-not-button p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-100" title="Notu Sil">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <p class="text-gray-800 whitespace-pre-wrap">${not.icerik}</p>
+            </div>
+        `).join('')}
+    </div>`;
+    
+    // Sil butonlarını bağla
+    document.querySelectorAll('.delete-not-button').forEach(btn => btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.id;
+        if (confirm('Bu koçluk notunu silmek istediğinize emin misiniz?')) {
+            const notDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "koclukNotlari", id);
+            await deleteDoc(notDocRef);
+        }
+    }));
+}
+
+async function saveNewKoclukNotu(studentId) {
+    const icerikEl = document.getElementById('newNotIcerik');
+    const errorEl = document.getElementById('newNotErrorMessage');
+    const saveButton = document.getElementById('saveNewNotButton');
+    const icerik = icerikEl.value.trim();
+    if (!icerik) {
+        errorEl.textContent = "Not içeriği boş olamaz.";
+        errorEl.classList.remove('hidden');
+        return;
+    }
+    errorEl.classList.add('hidden');
+    try {
+        saveButton.disabled = true;
+        saveButton.textContent = "Kaydediliyor...";
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "koclukNotlari"), {
+            icerik: icerik,
+            tarih: serverTimestamp()
+        });
+        icerikEl.value = ""; // Formu temizle
+    } catch (error) {
+        console.error("Koçluk notu ekleme hatası:", error);
+        errorEl.textContent = `Bir hata oluştu: ${error.message}`;
+        errorEl.classList.remove('hidden');
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Notu Kaydet";
+    }
+}
+
+
+// === 7.6. ÖĞRENCİ DÜZENLEME FONKSİYONLARI ===
+async function showEditStudentModal(studentId) {
+    editModalErrorMessage.classList.add('hidden');
+    try {
+        const studentDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId);
+        const docSnap = await getDoc(studentDocRef);
+        if (docSnap.exists()) {
+            const studentData = docSnap.data();
+            editStudentName.value = studentData.ad;
+            editStudentSurname.value = studentData.soyad;
+            editStudentClass.value = studentData.sinif;
+            editStudentId.value = studentId;
+            editStudentModal.style.display = 'block';
+        } else {
+            alert("Öğrenci verisi bulunamadı.");
+        }
+    } catch (error) {
+        console.error("Öğrenci verisi çekerken hata: ", error);
+        alert("Veri yüklenirken bir hata oluştu.");
+    }
+}
+
+async function saveStudentChanges() {
+    const studentId = editStudentId.value;
+    const ad = editStudentName.value.trim();
+    const soyad = editStudentSurname.value.trim();
+    const sinif = editStudentClass.value;
+    if (!studentId || !ad || !soyad) {
+        editModalErrorMessage.textContent = "Ad ve Soyad alanları zorunludur.";
+        editModalErrorMessage.classList.remove('hidden');
+        return;
+    }
+    try {
+        saveStudentChangesButton.disabled = true;
+        saveStudentChangesButton.textContent = "Kaydediliyor...";
+        const studentDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId);
+        await updateDoc(studentDocRef, {
+            ad: ad,
+            soyad: soyad,
+            sinif: sinif
+        });
+        editStudentModal.style.display = 'none';
+        const headerName = document.getElementById('studentDetailName');
+        if (headerName && headerName.textContent !== `${ad} ${soyad}`) {
+            mainContentTitle.textContent = `${ad} ${soyad} - Detay Profili`;
+            headerName.textContent = `${ad} ${soyad}`;
+            document.getElementById('studentDetailAvatar').textContent = `${ad[0] || ''}${soyad[0] || ''}`;
+            document.getElementById('studentDetailClass').textContent = `${sinif} Öğrencisi`;
+        }
+    } catch (error) {
+        console.error("Öğrenci güncelleme hatası: ", error);
+        editModalErrorMessage.textContent = `Bir hata oluştu: ${error.message}`;
+        editModalErrorMessage.classList.remove('hidden');
+    } finally {
+        saveStudentChangesButton.disabled = false;
+        saveStudentChangesButton.textContent = "Değişiklikleri Kaydet";
+    }
+}
+
+// === 7.7. DİĞER SEKMELER (Placeholder) ===
+function renderPlaceholderTab(tabId) {
+     const tabContentArea = document.getElementById('tabContentArea');
+     if (!tabContentArea) return;
+     tabContentArea.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow text-center">
+            <h2 class="text-xl font-semibold text-gray-700">${tabId}</h2>
+            <p class="mt-2 text-gray-500">Bu sekme yapım aşamasındadır.</p>
+        </div>
+     `;
+}
+
+
+// === 8. DİĞER SAYFALAR (Placeholder) ===
+function renderPlaceholderSayfasi(sayfaAdi) {
+    mainContentTitle.textContent = sayfaAdi;
+    mainContentArea.innerHTML = `
+        <div class="bg-white p-10 rounded-lg shadow text-center">
+            <h2 class="text-2xl font-semibold text-gray-700">${sayfaAdi}</h2>
+            <p class="mt-4 text-gray-500">Bu bölüm şu anda yapım aşamasındadır.</p>
+        </div>
+    `;
+}
+
+
+// === 9. MODAL KONTROLLERİ ===
+closeModalButton.addEventListener('click', () => { addStudentModal.style.display = 'none'; });
+cancelModalButton.addEventListener('click', () => { addStudentModal.style.display = 'none'; });
+saveStudentButton.addEventListener('click', saveNewStudent);
+
+closeEditModalButton.addEventListener('click', () => { editStudentModal.style.display = 'none'; });
+cancelEditModalButton.addEventListener('click', () => { editStudentModal.style.display = 'none'; });
+saveStudentChangesButton.addEventListener('click', saveStudentChanges);
+
+closeDenemeModalButton.addEventListener('click', () => { addDenemeModal.style.display = 'none'; });
+cancelDenemeModalButton.addEventListener('click', () => { addDenemeModal.style.display = 'none'; });
+saveDenemeButton.addEventListener('click', saveNewDeneme);
+
+closeSoruModalButton.addEventListener('click', () => { addSoruModal.style.display = 'none'; });
+cancelSoruModalButton.addEventListener('click', () => { addSoruModal.style.display = 'none'; });
+saveSoruButton.addEventListener('click', saveNewSoruTakibi);
+
+closeHedefModalButton.addEventListener('click', () => { addHedefModal.style.display = 'none'; });
+cancelHedefModalButton.addEventListener('click', () => { addHedefModal.style.display = 'none'; });
+saveHedefButton.addEventListener('click', saveNewHedef);
+
+closeOdevModalButton.addEventListener('click', () => { addOdevModal.style.display = 'none'; });
+cancelOdevModalButton.addEventListener('click', () => { addOdevModal.style.display = 'none'; });
+saveOdevButton.addEventListener('click', saveNewOdev);
+
+closeNotModalButton.addEventListener('click', () => { addNotModal.style.display = 'none'; });
+cancelNotModalButton.addEventListener('click', () => { addNotModal.style.display = 'none'; });
+saveNotButton.addEventListener('click', (e) => {
+    // Bu butonu, not sekmesi oluşturulurken dinamik olarak bağlıyoruz.
+    // O yüzden burada 'saveNewKoclukNotu' çağırmıyoruz.
+    // Bu sadece modalı kapatmak için. (Not: Bu butonu modal'dan sildik, renderKoclukNotlariTab içine taşıdık)
+});
+
+denemeTuruSelect.addEventListener('change', (e) => {
+    renderDenemeNetInputs(e.target.value);
+});
+
+
+// === 10. UYGULAMAYI BAŞLAT ===
+main();

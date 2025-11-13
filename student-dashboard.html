@@ -1,90 +1,66 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Öğrenci Girişi - Koçluk Sistemi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .hidden { display: none; }
-    </style>
-</head>
-<body class="bg-gray-50 flex items-center justify-center h-screen">
+<!-- ... (Mevcut kodlar) ... -->
 
-    <div class="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden md:max-w-lg">
-        <!-- Üst Başlık Alanı -->
-        <div class="bg-indigo-600 p-8 text-center">
-            <h1 class="text-3xl font-bold text-white">Öğrenci Paneli</h1>
-            <p class="text-indigo-200 mt-2">Gelişimini takip et, hedeflerine ulaş.</p>
+        <!-- 4. SEKMESİ: PROFİL (Mevcut, ID'sini değiştirmedim ama yerini kaydırdım) -->
+        
+        <!-- YENİ: 5. SEKMESİ: MESAJLAR -->
+        <div id="tab-messages" class="tab-content hidden flex flex-col h-full pb-20"> <!-- h-full önemli -->
+            <!-- Koç Bilgisi Header -->
+            <div class="bg-white p-4 border-b border-gray-200 flex items-center gap-3 shadow-sm shrink-0">
+                <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                    <i class="fa-solid fa-user-tie"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 text-sm">Koçum</h3>
+                    <p class="text-xs text-green-500 flex items-center gap-1">
+                        <span class="w-2 h-2 bg-green-500 rounded-full"></span> Çevrimiçi
+                    </p>
+                </div>
+            </div>
+
+            <!-- Mesaj Listesi -->
+            <div id="studentMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+                <!-- JS ile dolacak -->
+            </div>
+
+            <!-- Mesaj Yazma (Alt kısma yapışık) -->
+            <div class="p-3 bg-white border-t border-gray-200 shrink-0">
+                <form id="studentChatForm" class="flex gap-2">
+                    <input type="text" id="studentMessageInput" placeholder="Koçuna bir şeyler yaz..." class="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm" autocomplete="off">
+                    <button type="submit" class="bg-indigo-600 text-white rounded-full w-11 h-11 flex items-center justify-center shadow-lg active:scale-95">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
         </div>
 
-        <div class="p-8">
-            <!-- Hata Mesajı -->
-            <div id="authErrorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <span class="block sm:inline" id="authErrorText">Bir hata oluştu.</span>
-            </div>
+    </main>
 
-            <!-- GİRİŞ FORM -->
-            <div id="loginForm">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Giriş Yap</h2>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="loginEmail">E-posta Adresi</label>
-                        <input class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500" id="loginEmail" type="email" placeholder="ornek@ogrenci.com">
-                    </div>
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="loginPassword">Şifre</label>
-                        <input class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500" id="loginPassword" type="password" placeholder="********">
-                    </div>
-                    
-                    <button id="loginButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200">
-                        Giriş Yap
-                    </button>
-                </div>
-
-                <div class="mt-6 text-center">
-                    <p class="text-sm text-gray-600">Hesabın yok mu? <a href="#" id="showSignup" class="text-indigo-600 font-bold hover:text-indigo-800">Hemen Kaydol</a></p>
-                </div>
-            </div>
-
-            <!-- KAYIT FORM (Başlangıçta Gizli) -->
-            <div id="signupForm" class="hidden">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Öğrenci Hesabı Oluştur</h2>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="signupEmail">E-posta Adresi</label>
-                        <input class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500" id="signupEmail" type="email" placeholder="ornek@ogrenci.com">
-                    </div>
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="signupPassword">Şifre</label>
-                        <input class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500" id="signupPassword" type="password" placeholder="********">
-                    </div>
-                    
-                    <!-- ÖNEMLİ: Koç Kodu Alanı -->
-                    <div class="bg-yellow-50 p-3 rounded-md border border-yellow-200">
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="kocDavetKodu">Koç Davet Kodu</label>
-                        <input class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500" id="kocDavetKodu" type="text" placeholder="Koçunuzdan aldığınız kodu girin">
-                        <p class="text-xs text-gray-500 mt-1">Bu kodu koçunuzdan istemelisiniz (Örn: Koç ID'si).</p>
-                    </div>
-                    
-                    <button id="signupButton" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200">
-                        Kaydol ve Başla
-                    </button>
-                </div>
-
-                <div class="mt-6 text-center">
-                    <p class="text-sm text-gray-600">Zaten hesabın var mı? <a href="#" id="showLogin" class="text-indigo-600 font-bold hover:text-indigo-800">Giriş Yap</a></p>
-                </div>
-            </div>
-
+    <!-- ALT NAVİGASYON (GÜNCELLENDİ - Mesajlar Eklendi) -->
+    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-20">
+        <div class="flex justify-around items-center h-16">
+            <button class="nav-btn active flex flex-col items-center justify-center w-full h-full text-indigo-600" data-target="tab-home">
+                <i class="fa-solid fa-house text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Ana Sayfa</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500" data-target="tab-homework">
+                <i class="fa-solid fa-list-check text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Ödevler</span>
+            </button>
+            <!-- YENİ: Mesajlar Butonu (Ortada) -->
+            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500 relative" data-target="tab-messages">
+                <i class="fa-solid fa-comment-dots text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Mesajlar</span>
+                <!-- Bildirim Noktası (İlerde JS ile yönetilebilir) -->
+                <span class="absolute top-3 right-4 w-2 h-2 bg-red-500 rounded-full hidden" id="msgNotificationDot"></span>
+            </button>
+            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500" data-target="tab-stats">
+                <i class="fa-solid fa-chart-pie text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Analiz</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500" data-target="tab-profile">
+                <i class="fa-solid fa-user text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Profil</span>
+            </button>
         </div>
-    </div>
-
-    <!-- JavaScript Modülü -->
-    <script type="module" src="student-auth.js"></script>
-</body>
-</html>
+    </nav>
+<!-- ... -->

@@ -209,6 +209,8 @@ let islemGecmisiUnsubscribe = null;
 let soruTakibiZaman = 'haftalik'; 
 let soruTakibiOffset = 0; 
 
+// ... (app.js dosyasının üst kısmı aynı) ...
+
 // 4. Ana Uygulama Fonksiyonu (Başlatıcı)
 async function main() {
     // Firebase'i başlat
@@ -225,11 +227,15 @@ async function main() {
             currentUserId = user.uid;
             console.log("Koç giriş yaptı, UID:", currentUserId);
             
+            // DÜZELTME: Hata oluşsa bile arayüzü göstermek için
+            // bu iki satırı EN BAŞA taşıdık.
+            loadingSpinner.style.display = 'none';
+            appContainer.style.display = 'flex';
+            
+            // Artık arayüzü ve verileri yükleyebiliriz
             updateUIForLoggedInUser(user);
             renderAnaSayfa(); // Ana Sayfa ile başla
             
-            loadingSpinner.style.display = 'none';
-            appContainer.style.display = 'flex';
         } else {
             // KULLANICI GİRİŞ YAPMAMIŞ
             console.log("Giriş yapan kullanıcı yok, login.html'e yönlendiriliyor.");
@@ -237,8 +243,6 @@ async function main() {
         }
     });
 }
-
-// === 5. Arayüz Güncelleme ve Navigasyon ===
 
 // Aktif olan tüm veritabanı dinleyicilerini (snapshotları) temizler.
 function cleanUpListeners() {
@@ -253,8 +257,6 @@ function cleanUpListeners() {
     if (islemGecmisiUnsubscribe) { islemGecmisiUnsubscribe(); islemGecmisiUnsubscribe = null; }
     console.log("Tüm aktif dinleyiciler temizlendi.");
 }
-
-
 function updateUIForLoggedInUser(user) {
     if (user) {
         const displayName = user.email ? user.email.split('@')[0] : "Koç";

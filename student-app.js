@@ -1,169 +1,87 @@
-// 1. Firebase Kütüphanelerini içeri aktar
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-    getAuth, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    doc, 
-    setDoc,
-    serverTimestamp
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// ... (Mevcut kodlar) ...
 
-// --- FİREBASE AYARLARI (BURAYI KENDİ BİLGİLERİNİZLE DOLDURUN) ---
-const firebaseConfig = {
-  apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
-  authDomain: "kocluk-99ad2.firebaseapp.com",
-  projectId: "kocluk-99ad2",
-  storageBucket: "kocluk-99ad2.firebasestorage.app",
-  messagingSenderId: "784379379600",
-  appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
-};
+// --- MESAJLAŞMA (YENİ EKLENDİ) ---
+let studentChatUnsubscribe = null;
 
-// 2. Firebase Başlat
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// Global Canvas App ID'si (Sabit varsayıyoruz veya configden alıyoruz)
-const appId = "kocluk-sistemi"; // Burası sabit kalabilir, veri yapısı için
-
-// 3. DOM Elementleri
-const loginForm = document.getElementById('loginForm');
-const signupForm = document.getElementById('signupForm');
-const showSignupLink = document.getElementById('showSignup');
-const showLoginLink = document.getElementById('showLogin');
-const authErrorMessage = document.getElementById('authErrorMessage');
-const authErrorText = document.getElementById('authErrorText');
-
-// Butonlar
-const loginButton = document.getElementById('loginButton');
-const signupButton = document.getElementById('signupButton');
-
-// Giriş Kontrolü (Zaten giriş yaptıysa panele at)
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        console.log("Öğrenci zaten giriş yapmış, yönlendiriliyor...");
-        window.location.href = "student-dashboard.html"; // Öğrenci paneli
-    }
+// Sekme değiştirme dinleyicisi (Mesajlar sekmesine geçince yükle)
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const targetId = e.currentTarget.dataset.target;
+        if (targetId === 'tab-messages') {
+            loadStudentMessages();
+        }
+    });
 });
 
-// Form Geçişleri
-showSignupLink.addEventListener('click', (e) => {
+// Mesaj Gönderme
+document.getElementById('studentChatForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    loginForm.classList.add('hidden');
-    signupForm.classList.remove('hidden');
-    hideError();
-});
-
-showLoginLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    signupForm.classList.add('hidden');
-    loginForm.classList.remove('hidden');
-    hideError();
-});
-
-// --- GİRİŞ YAPMA İŞLEMİ ---
-loginButton.addEventListener('click', async () => {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-
-    if (!email || !password) {
-        showError("Lütfen e-posta ve şifrenizi girin.");
-        return;
-    }
-
-    try {
-        loginButton.disabled = true;
-        loginButton.textContent = "Giriş Yapılıyor...";
-        
-        await signInWithEmailAndPassword(auth, email, password);
-        // Başarılı ise onAuthStateChanged tetiklenir ve yönlendirme yapar
-        
-    } catch (error) {
-        console.error("Giriş Hatası:", error);
-        handleAuthError(error);
-        loginButton.disabled = false;
-        loginButton.textContent = "Giriş Yap";
-    }
-});
-
-// --- KAYIT OLMA İŞLEMİ ---
-signupButton.addEventListener('click', async () => {
-    const email = document.getElementById('signupEmail').value;
-    const password = document.getElementById('signupPassword').value;
-    const kocDavetKodu = document.getElementById('kocDavetKodu').value.trim();
-
-    if (!email || !password) {
-        showError("Lütfen tüm alanları doldurun.");
-        return;
-    }
+    const input = document.getElementById('studentMessageInput');
+    const text = input.value.trim();
     
-    if (!kocDavetKodu) {
-        showError("Koç Davet Kodu zorunludur. Lütfen koçunuzdan isteyin.");
-        return;
-    }
+    if (!text) return;
 
     try {
-        signupButton.disabled = true;
-        signupButton.textContent = "Hesap Oluşturuluyor...";
+        input.value = ''; // Temizle
+        // Mesajı koçun altındaki öğrenci dökümanına ekle
+        await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), {
+            text: text,
+            gonderen: 'ogrenci', // Öğrenci gönderiyor
+            tarih: serverTimestamp()
+        });
+        
+        // Scroll en alta
+        const container = document.getElementById('studentMessagesContainer');
+        container.scrollTop = container.scrollHeight;
 
-        // 1. Firebase Auth ile kullanıcı oluştur
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+    } catch (error) {
+        console.error("Mesaj hatası:", error);
+        showToast("Mesaj gönderilemedi");
+    }
+});
 
-        // 2. Öğrencinin hangi koça ait olduğunu kaydet
-        // Yol: artifacts/{appId}/users/{studentUid}/settings/profile
-        await setDoc(doc(db, "artifacts", appId, "users", user.uid, "settings", "profile"), {
-            email: email,
-            kocId: kocDavetKodu, // ÖNEMLİ: Koçun ID'sini buraya kaydediyoruz
-            rol: "ogrenci",
-            kayitTarihi: serverTimestamp()
+function loadStudentMessages() {
+    if (studentChatUnsubscribe) return; // Zaten dinleniyorsa tekrar başlatma
+
+    const container = document.getElementById('studentMessagesContainer');
+    const q = query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"),
+        orderBy("tarih", "asc")
+    );
+
+    studentChatUnsubscribe = onSnapshot(q, (snapshot) => {
+        container.innerHTML = '';
+        
+        if (snapshot.empty) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-gray-400 space-y-2 opacity-60">
+                    <i class="fa-regular fa-comments text-4xl"></i>
+                    <p class="text-sm">Koçunla sohbete başla</p>
+                </div>
+            `;
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const msg = doc.data();
+            const isMe = msg.gonderen === 'ogrenci';
+            
+            const div = document.createElement('div');
+            div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'}`;
+            
+            // Koç mesajları beyaz/gri, Öğrenci mesajları mavi/indigo
+            div.innerHTML = `
+                <div class="max-w-[80%] px-4 py-2.5 rounded-2xl shadow-sm text-sm ${isMe ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'}">
+                    <p>${msg.text}</p>
+                    <p class="text-[10px] mt-1 ${isMe ? 'text-indigo-200 text-right' : 'text-gray-400'}">
+                        ${msg.tarih ? new Date(msg.tarih.toDate()).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'}) : ''}
+                    </p>
+                </div>
+            `;
+            container.appendChild(div);
         });
 
-        console.log("Öğrenci hesabı oluşturuldu ve koç ile eşleştirildi.");
-        // Yönlendirme onAuthStateChanged ile yapılacak
-
-    } catch (error) {
-        console.error("Kayıt Hatası:", error);
-        handleAuthError(error);
-        signupButton.disabled = false;
-        signupButton.textContent = "Kaydol ve Başla";
-    }
-});
-
-// Hata Gösterme Yardımcıları
-function showError(message) {
-    authErrorText.textContent = message;
-    authErrorMessage.classList.remove('hidden');
-}
-
-function hideError() {
-    authErrorMessage.classList.add('hidden');
-}
-
-function handleAuthError(error) {
-    let message = "Bir hata oluştu.";
-    switch (error.code) {
-        case "auth/invalid-email":
-            message = "Geçersiz e-posta adresi.";
-            break;
-        case "auth/user-not-found":
-        case "auth/invalid-credential":
-            message = "E-posta veya şifre hatalı.";
-            break;
-        case "auth/wrong-password":
-            message = "Hatalı şifre.";
-            break;
-        case "auth/email-already-in-use":
-            message = "Bu e-posta adresi zaten kullanımda.";
-            break;
-        case "auth/weak-password":
-            message = "Şifre çok zayıf (en az 6 karakter).";
-            break;
-    }
-    showError(message);
+        // En alta kaydır
+        container.scrollTop = container.scrollHeight;
+    });
 }

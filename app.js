@@ -26,12 +26,12 @@ import {
    SENİN FIREBASE AYARLARIN (DEĞİŞTİR)
 ===================================================================== */
 const firebaseConfig = {
-    apiKey: "SENİN-API-KEY",
-    authDomain: "SENİN.firebaseapp.com",
-    projectId: "SENİN",
-    storageBucket: "SENİN.appspot.com",
-    messagingSenderId: "SAYI",
-    appId: "SENİN-APP-ID"
+apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
+  authDomain: "kocluk-99ad2.firebaseapp.com",
+  projectId: "kocluk-99ad2",
+  storageBucket: "kocluk-99ad2.firebasestorage.app",
+  messagingSenderId: "784379379600",
+  appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
 };
 
 const app = initializeApp(firebaseConfig);

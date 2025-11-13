@@ -19,9 +19,9 @@ import {
     deleteDoc,
     orderBy,
     serverTimestamp,
-    limit, // Gerekli importlar (Dashboard için eklendi)
-    increment, // Gerekli importlar (Muhasebe için eklendi)
-    getDocs // Gerekli importlar (Muhasebe için eklendi)
+    limit,
+    increment,
+    getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =================================================================
@@ -204,6 +204,10 @@ let ajandaUnsubscribe = null;
 let muhasebeUnsubscribe = null;
 let chatUnsubscribe = null;
 let islemGecmisiUnsubscribe = null;
+
+// Soru Takibi için Global Durum
+let soruTakibiZaman = 'haftalik'; 
+let soruTakibiOffset = 0; 
 
 // 4. Ana Uygulama Fonksiyonu (Başlatıcı)
 async function main() {
@@ -405,7 +409,7 @@ function loadDashboardStats() {
             if (bakiye > 0) totalAlacak += bakiye;
             
             tableHtml += `
-                <tr class="hover:bg-gray-50 transition-colors group cursor-pointer" onclick="document.getElementById('mainContentArea').dataset.studentId='${doc.id}'; document.getElementById('mainContentArea').dataset.studentName='${s.ad} ${s.soyad}'; renderOgrenciDetaySayfasi('${doc.id}', '${s.ad} ${s.soyad}');">
+                <tr class="hover:bg-gray-50 transition-colors group cursor-pointer dash-student-link" data-id="${doc.id}" data-name="${s.ad} ${s.soyad}">
                     <td class="px-6 py-3 whitespace-nowrap"><div class="flex items-center"><div class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-bold mr-3 group-hover:bg-purple-100 group-hover:text-purple-600">${s.ad[0]}${s.soyad[0]}</div><div><div class="text-sm font-medium text-gray-900">${s.ad} ${s.soyad}</div></div></div></td>
                     <td class="px-6 py-3 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">${s.sinif}</span></td>
                     <td class="px-6 py-3 whitespace-nowrap text-center text-sm text-gray-500"><i class="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-purple-500"></i></td>
@@ -417,8 +421,14 @@ function loadDashboardStats() {
         document.getElementById('dashPendingPayment').textContent = formatCurrency(totalAlacak);
         studentTableBody.innerHTML = tableHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-400">Henüz öğrenci yok.</td></tr>';
     
-        // onclick'te global fonksiyonları çağırmak için onları 'window' objesine eklememiz gerekir.
-        window.renderOgrenciDetaySayfasi = renderOgrenciDetaySayfasi; 
+        // Dashboard'dan öğrenci profiline gitmek için Event Listener
+        studentTableBody.querySelectorAll('.dash-student-link').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const studentId = e.currentTarget.dataset.id;
+                const studentName = e.currentTarget.dataset.name;
+                renderOgrenciDetaySayfasi(studentId, studentName);
+            });
+        });
         
     });
 }
@@ -870,9 +880,7 @@ function loadDenemeler(studentId) {
     if (!denemeListContainer) return;
     const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "denemeler"), orderBy("tarih", "desc"));
     
-    // Burası için onSnapshot kullanabiliriz, ancak dinleyici temizliğine dikkat etmeliyiz.
-    // cleanUpListeners() zaten bunu yapıyor.
-    studentUnsubscribe = onSnapshot(q, (querySnapshot) => { // 'studentUnsubscribe' yerine 'denemeUnsubscribe' daha iyi olurdu, ama şimdilik böyle
+    studentUnsubscribe = onSnapshot(q, (querySnapshot) => { // 'studentUnsubscribe' kullanılıyor
         const denemeler = [];
         querySnapshot.forEach((doc) => {
             denemeler.push({ id: doc.id, ...doc.data() });

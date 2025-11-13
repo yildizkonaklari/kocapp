@@ -354,7 +354,77 @@
             </div>
         </div>
     </div>
+    
+    <!-- === "YENİ TAHSİLAT EKLE" MODALI (Pop-up) (YENİ) === -->
+    <div id="addTahsilatModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-2xl font-semibold text-green-700">Yeni Tahsilat Ekle</h3>
+                <button id="closeTahsilatModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="tahsilatStudentId" class="block text-sm font-medium text-gray-700">Öğrenci Seçin</label>
+                    <select id="tahsilatStudentId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                        <!-- JS ile doldurulacak -->
+                    </select>
+                </div>
+                <div>
+                    <label for="tahsilatTutar" class="block text-sm font-medium text-gray-700">Tutar (TL)</label>
+                    <input type="number" id="tahsilatTutar" placeholder="0.00" min="0" step="0.01" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div>
+                    <label for="tahsilatTarih" class="block text-sm font-medium text-gray-700">Tarih</label>
+                    <input type="date" id="tahsilatTarih" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div>
+                    <label for="tahsilatAciklama" class="block text-sm font-medium text-gray-700">Açıklama / Yöntem</label>
+                    <input type="text" id="tahsilatAciklama" placeholder="Örn: Kasım ayı ödemesi (EFT)" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+                <p id="tahsilatModalErrorMessage" class="text-sm text-red-600 hidden"></p>
+            </div>
+            <div class="flex justify-end pt-4 mt-4 border-t">
+                <button id="cancelTahsilatModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</button>
+                <button id="saveTahsilatButton" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Tahsilatı Kaydet</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- === "YENİ BORÇ/HİZMET EKLE" MODALI (Pop-up) (YENİ) === -->
+    <div id="addBorcModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-2xl font-semibold text-blue-700">Yeni Hizmet Tanımla</h3>
+                <button id="closeBorcModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="borcStudentId" class="block text-sm font-medium text-gray-700">Öğrenci Seçin</label>
+                    <select id="borcStudentId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <!-- JS ile doldurulacak -->
+                    </select>
+                </div>
+                <div>
+                    <label for="borcTutar" class="block text-sm font-medium text-gray-700">Hizmet Tutarı (TL)</label>
+                    <input type="number" id="borcTutar" placeholder="0.00" min="0" step="0.01" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="borcTarih" class="block text-sm font-medium text-gray-700">Tarih</label>
+                    <input type="date" id="borcTarih" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="borcAciklama" class="block text-sm font-medium text-gray-700">Hizmet Adı / Açıklama</label>
+                    <input type="text" id="borcAciklama" placeholder="Örn: Aralık Ayı Koçluk Ücreti" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <p id="borcModalErrorMessage" class="text-sm text-red-600 hidden"></p>
+            </div>
+            <div class="flex justify-end pt-4 mt-4 border-t">
+                <button id="cancelBorcModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</button>
+                <button id="saveBorcButton" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Borcu Kaydet</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- 4. TÜM JAVASCRIPT KODLARI (Tüm mantık app.js dosyasına taşınacak) -->
     <script type="module" src="app.js"></script>
 

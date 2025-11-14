@@ -7,6 +7,7 @@ import { getDocs, collection, query, orderBy } from "https://www.gstatic.com/fir
 
 // 2. SABİTLER (CONSTANTS)
 
+// Sınav türlerine göre dersleri ve kuralları tanımlar
 export const SINAV_DERSLERI = {
     'TYT': {
         netKural: 4,
@@ -62,6 +63,7 @@ export const SINAV_DERSLERI = {
     }
 };
 
+// Sınıf seviyelerine göre ders havuzlarını tanımlar
 export const DERS_HAVUZU = {
     'ORTAOKUL': [
         "Türkçe", "Matematik", "Fen Bilimleri", 
@@ -125,22 +127,22 @@ export function formatDateTR(dateStr) {
     const [year, month, day] = dateStr.split('-');
     return `${day}.${month}.${year}`;
 }
-// ... (SABİTLER VE DİĞER FONKSİYONLAR AYNI) ...
+
 /**
  * ID'si verilen bir select (dropdown) elementini öğrenci listesiyle doldurur.
  * @param {object} db - Firestore veritabanı referansı
  * @param {string} currentUserId - Giriş yapmış koçun UID'si
- * @param {string} appId - Uygulama ID'si (YENİ EKLENDİ)
+ * @param {string} appId - Uygulama ID'si (GÜNCELLENDİ)
  * @param {string} selectId - Doldurulacak <select> elementinin ID'si
  */
-export async function populateStudentSelect(db, currentUserId, appId, selectId) { // appId parametresi eklendi
+export async function populateStudentSelect(db, currentUserId, appId, selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
     
     select.innerHTML = '<option value="">Öğrenciler yükleniyor...</option>';
     
     try {
-        // GÜNCELLENDİ: Hatalı yol 'koclar' yerine 'artifacts' ile başlayan doğru yol kullanıldı
+        // DÜZELTME: Veritabanı yolu 'koclar' yerine 'artifacts' olarak güncellendi.
         const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
         const snapshot = await getDocs(q);
         
@@ -162,7 +164,7 @@ export async function populateStudentSelect(db, currentUserId, appId, selectId) 
         select.innerHTML = '<option value="">Hata oluştu</option>';
     }
 }
-    
+
 /**
  * Sınıf seçimine göre ders listesi checkbox'larını oluşturur.
  * @param {string} sinif - Seçilen sınıf (örn: "8. Sınıf", "12. Sınıf")
@@ -184,9 +186,12 @@ export function renderDersSecimi(sinif, container, selectedDersler = []) {
         const wrapper = document.createElement('div');
         wrapper.className = 'flex items-center';
         
+        // ID'leri daha benzersiz hale getirelim (add ve edit modalları için)
+        const uniqueId = `ders-${ders.replace(/[^a-zA-Z0-9]/g, '-')}-${container.id}`;
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.id = `ders-${ders.replace(/[^a-zA-Z0-9]/g, '-')}-${container.id}`; // Benzersiz ID
+        checkbox.id = uniqueId;
         checkbox.value = ders;
         checkbox.className = 'student-ders-checkbox h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded';
         
@@ -197,7 +202,7 @@ export function renderDersSecimi(sinif, container, selectedDersler = []) {
         }
 
         const label = document.createElement('label');
-        label.htmlFor = checkbox.id;
+        label.htmlFor = uniqueId;
         label.className = 'ml-2 block text-sm text-gray-900 cursor-pointer';
         label.textContent = ders;
 

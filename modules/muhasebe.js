@@ -115,7 +115,7 @@ function loadMuhasebeVerileri(db, currentUserId, appId) {
     const listContainer = document.getElementById("muhasebeListContainer");
     
     // Öğrencileri dinle (Bakiyeler öğrenci dökümanında tutulacak)
-    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"), orderBy("ad"));
+    const q = query(collection(db, "artifacts", currentUserId, "ogrencilerim"), orderBy("ad"));
     
     activeListeners.muhasebeUnsubscribe = onSnapshot(q, (snapshot) => {
         const students = [];
@@ -202,7 +202,7 @@ function loadIslemGecmisi(db, currentUserId, appId) {
     
     // Son 10 işlem
     const q = query(
-        collection(db, "koclar", currentUserId, "muhasebe"), 
+        collection(db, "artifacts", currentUserId, "muhasebe"), 
         orderBy("tarih", "desc"), 
         limit(10)
     );
@@ -279,7 +279,7 @@ export async function saveNewBorc(db, currentUserId, appId) {
         saveButton.textContent = "Kaydediliyor...";
 
         // 1. Merkezi Muhasebe Koleksiyonuna Ekle
-        await addDoc(collection(db, "koclar", currentUserId, "muhasebe"), {
+        await addDoc(collection(db, "artifacts", currentUserId, "muhasebe"), {
             ogrenciId: studentId,
             ogrenciAd: studentName,
             tur: 'borc',
@@ -330,7 +330,7 @@ export async function saveNewTahsilat(db, currentUserId, appId) {
         saveButton.textContent = "Kaydediliyor...";
 
         // 1. Merkezi Muhasebe Koleksiyonuna Ekle
-        await addDoc(collection(db, "koclar", currentUserId, "muhasebe"), {
+        await addDoc(collection(db, "artifacts", currentUserId, "muhasebe"), {
             ogrenciId: studentId,
             ogrenciAd: studentName,
             tur: 'tahsilat',

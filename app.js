@@ -130,7 +130,7 @@ function updateUIForLoggedInUser(user) {
             const pageId = link.id.split('-')[1];
             
             // İlgili modülün render fonksiyonunu çağır
-            switch(pageId) {
+    switch(pageId) {
                 case 'anasayfa':
                     renderAnaSayfa(db, currentUserId, appId);
                     break;
@@ -147,7 +147,10 @@ function updateUIForLoggedInUser(user) {
                     renderMesajlarSayfasi(db, currentUserId, appId);
                     break;
                 default:
-                    renderPlaceholderSayfasi(link.textContent.trim());
+                    // helpers.js'den
+                    import('./modules/helpers.js').then(module => {
+                        module.renderPlaceholderSayfasi(link.textContent.trim());
+                    });
                     break;
             }
         });

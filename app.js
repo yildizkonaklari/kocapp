@@ -10,9 +10,24 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // 2. Modülleri ve Yardımcıları İçeri Aktar
-import { cleanUpListeners, populateStudentSelect, DERS_HAVUZU, SINAV_DERSLERI, renderDersSecimi } from './modules/helpers.js';
+import { 
+    cleanUpListeners, 
+    populateStudentSelect, 
+    renderDersSecimi, 
+    renderPlaceholderSayfasi 
+} from './modules/helpers.js';
 import { renderAnaSayfa } from './modules/anasayfa.js';
-import { renderOgrenciSayfasi, saveNewStudent, saveStudentChanges } from './modules/ogrencilerim.js';
+import { 
+    renderOgrenciSayfasi, 
+    renderOgrenciDetaySayfasi, 
+    saveNewStudent, 
+    saveStudentChanges, 
+    saveNewDeneme, 
+    renderDenemeNetInputs, 
+    saveNewSoruTakibi, 
+    saveNewHedef, 
+    saveNewOdev 
+} from './modules/ogrencilerim.js';
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
 import { renderMuhasebeSayfasi, saveNewBorc, saveNewTahsilat } from './modules/muhasebe.js';
 import { renderMesajlarSayfasi } from './modules/mesajlar.js';
@@ -41,15 +56,12 @@ const logoutButton = document.getElementById("logoutButton");
 let auth;
 let db;
 let currentUserId = null;
-const appId = "kocluk-sistemi";
+const appId = "kocluk-sistemi"; // Bu, student-auth.js ile eşleşmeli
 
 // Global window objesine modül fonksiyonlarını ekle (HTML inline onclick'leri için)
-// Bu, modül yapısında gereklidir.
+// Bu, modül yapısında gereklidir, özellikle dashboard'dan profile geçiş için.
 window.renderOgrenciDetaySayfasi = (id, name) => {
-    // ogrencilerim.js'den import edilen fonksiyonu çağır
-    import('./modules/ogrencilerim.js').then(module => {
-        module.renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
-    });
+    renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
 };
 
 
@@ -68,13 +80,18 @@ async function main() {
             currentUserId = user.uid;
             console.log("Koç giriş yaptı, UID:", currentUserId);
             
+            // "Yükleniyor..." ekranını gizle ve ana paneli göster
             loadingSpinner.style.display = 'none';
             appContainer.style.display = 'flex';
             
+            // Arayüzü ve menüleri ayarla
             updateUIForLoggedInUser(user);
+            
             // Ana Sayfa ile başla (anasayfa.js modülünden)
             renderAnaSayfa(db, currentUserId, appId);
+            
         } else {
+            // KULLANICI GİRİŞ YAPMAMIŞ
             console.log("Giriş yapan kullanıcı yok, login.html'e yönlendiriliyor.");
             window.location.href = 'login.html';
         }
@@ -92,6 +109,7 @@ function updateUIForLoggedInUser(user) {
         userAvatar.textContent = displayName[0].toUpperCase();
     }
     
+    // Çıkış Butonu
     logoutButton.addEventListener('click', () => {
         signOut(auth).then(() => {
             console.log("Çıkış yapıldı.");
@@ -103,8 +121,9 @@ function updateUIForLoggedInUser(user) {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            cleanUpListeners(); // helpers.js'den
+            cleanUpListeners(); // helpers.js'den (Tüm dinleyicileri temizle)
 
+            // Aktif menü öğesini ayarla
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold'));
             link.classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
             
@@ -128,14 +147,15 @@ function updateUIForLoggedInUser(user) {
                     renderMesajlarSayfasi(db, currentUserId, appId);
                     break;
                 default:
-                    // helpers.js'den
-                    import('./modules/helpers.js').then(module => {
-                        module.renderPlaceholderSayfasi(link.textContent.trim());
-                    });
+                    renderPlaceholderSayfasi(link.textContent.trim());
                     break;
             }
         });
     });
+
+    // Varsayılan olarak Ana Sayfa'yı aktif yap
+    document.getElementById('nav-ogrencilerim').classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
+    document.getElementById('nav-anasayfa').classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
 }
 
 
@@ -163,47 +183,37 @@ document.getElementById('editStudentClass').addEventListener('change', (e) => {
 // Deneme Modalı
 document.getElementById('closeDenemeModalButton').addEventListener('click', () => { document.getElementById('addDenemeModal').style.display = 'none'; });
 document.getElementById('cancelDenemeModalButton').addEventListener('click', () => { document.getElementById('addDenemeModal').style.display = 'none'; });
-document.getElementById('saveDenemeButton').addEventListener('click', () => {
-    import('./modules/ogrencilerim.js').then(module => module.saveNewDeneme(db, currentUserId, appId));
-});
-document.getElementById('denemeTuru').addEventListener('change', (e) => {
-    import('./modules/ogrencilerim.js').then(module => module.renderDenemeNetInputs(e.target.value));
-});
+document.getElementById('saveDenemeButton').addEventListener('click', () => saveNewDeneme(db, currentUserId, appId));
+document.getElementById('denemeTuru').addEventListener('change', (e) => renderDenemeNetInputs(e.target.value));
 
 // Soru Takibi Modalı
 document.getElementById('closeSoruModalButton').addEventListener('click', () => { document.getElementById('addSoruModal').style.display = 'none'; });
 document.getElementById('cancelSoruModalButton').addEventListener('click', () => { document.getElementById('addSoruModal').style.display = 'none'; });
-document.getElementById('saveSoruButton').addEventListener('click', () => {
-    import('./modules/ogrencilerim.js').then(module => module.saveNewSoruTakibi(db, currentUserId, appId));
-});
+document.getElementById('saveSoruButton').addEventListener('click', () => saveNewSoruTakibi(db, currentUserId, appId));
 
 // Hedef Modalı
 document.getElementById('closeHedefModalButton').addEventListener('click', () => { document.getElementById('addHedefModal').style.display = 'none'; });
 document.getElementById('cancelHedefModalButton').addEventListener('click', () => { document.getElementById('addHedefModal').style.display = 'none'; });
-document.getElementById('saveHedefButton').addEventListener('click', () => {
-    import('./modules/ogrencilerim.js').then(module => module.saveNewHedef(db, currentUserId, appId));
-});
+document.getElementById('saveHedefButton').addEventListener('click', () => saveNewHedef(db, currentUserId, appId));
 
 // Ödev Modalı
 document.getElementById('closeOdevModalButton').addEventListener('click', () => { document.getElementById('addOdevModal').style.display = 'none'; });
 document.getElementById('cancelOdevModalButton').addEventListener('click', () => { document.getElementById('addOdevModal').style.display = 'none'; });
-document.getElementById('saveOdevButton').addEventListener('click', () => {
-    import('./modules/ogrencilerim.js').then(module => module.saveNewOdev(db, currentUserId, appId));
-});
+document.getElementById('saveOdevButton').addEventListener('click', () => saveNewOdev(db, currentUserId, appId));
 
 // Randevu Modalı
 document.getElementById('closeRandevuModalButton').addEventListener('click', () => { document.getElementById('addRandevuModal').style.display = 'none'; });
 document.getElementById('cancelRandevuModalButton').addEventListener('click', () => { document.getElementById('addRandevuModal').style.display = 'none'; });
-document.getElementById('saveRandevuButton').addEventListener('click', () => saveNewRandevu(db, currentUserId, appId)); // ajanda.js'den
+document.getElementById('saveRandevuButton').addEventListener('click', () => saveNewRandevu(db, currentUserId, appId));
 
 // Muhasebe Modalları
 document.getElementById('closeTahsilatModalButton').addEventListener("click", () => document.getElementById('addTahsilatModal').style.display = "none");
 document.getElementById('cancelTahsilatModalButton').addEventListener("click", () => document.getElementById('addTahsilatModal').style.display = "none");
-document.getElementById('saveTahsilatButton').addEventListener("click", () => saveNewTahsilat(db, currentUserId, appId)); // muhasebe.js'den
+document.getElementById('saveTahsilatButton').addEventListener("click", () => saveNewTahsilat(db, currentUserId, appId));
 
 document.getElementById('closeBorcModalButton').addEventListener("click", () => document.getElementById('addBorcModal').style.display = "none");
 document.getElementById('cancelBorcModalButton').addEventListener("click", () => document.getElementById('addBorcModal').style.display = "none");
-document.getElementById('saveBorcButton').addEventListener("click", () => saveNewBorc(db, currentUserId, appId)); // muhasebe.js'den
+document.getElementById('saveBorcButton').addEventListener("click", () => saveNewBorc(db, currentUserId, appId));
 
 // === 7. UYGULAMAYI BAŞLAT ===
 main();

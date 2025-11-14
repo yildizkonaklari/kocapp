@@ -86,7 +86,8 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
 
     // Buton Bağlantıları (Modalları açmak için)
     document.getElementById("showAddBorcButton").addEventListener("click", async () => {
-        await populateStudentSelect(db, currentUserId, "borcStudentId");
+        // DÜZELTME: appId parametresi populateStudentSelect'e iletiliyor.
+        await populateStudentSelect(db, currentUserId, appId, "borcStudentId"); 
         document.getElementById("borcTutar").value = "";
         document.getElementById("borcAciklama").value = "";
         document.getElementById("borcTarih").value = new Date().toISOString().split('T')[0];
@@ -95,7 +96,8 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
     });
 
     document.getElementById("showAddTahsilatButton").addEventListener("click", async () => {
-        await populateStudentSelect(db, currentUserId, "tahsilatStudentId");
+        // DÜZELTME: appId parametresi populateStudentSelect'e iletiliyor.
+        await populateStudentSelect(db, currentUserId, appId, "tahsilatStudentId"); 
         document.getElementById("tahsilatTutar").value = "";
         document.getElementById("tahsilatAciklama").value = "";
         document.getElementById("tahsilatTarih").value = new Date().toISOString().split('T')[0];
@@ -114,8 +116,8 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
 function loadMuhasebeVerileri(db, currentUserId, appId) {
     const listContainer = document.getElementById("muhasebeListContainer");
     
-    // Öğrencileri dinle (Bakiyeler öğrenci dökümanında tutulacak)
-    const q = query(collection(db, "artifacts", appId, 'users', currentUserId, "ogrencilerim"), orderBy("ad"));
+    // DÜZELTME: Veritabanı yolu 'koclar' yerine 'artifacts' olarak güncellendi.
+    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
     
     activeListeners.muhasebeUnsubscribe = onSnapshot(q, (snapshot) => {
         const students = [];
@@ -141,7 +143,7 @@ function loadMuhasebeVerileri(db, currentUserId, appId) {
         
     }, (error) => {
         console.error("Muhasebe verileri yüklenirken hata:", error);
-        if(listContainer) listContainer.innerHTML = `<p class="text-red-500 text-center py-8">Veri yüklenemedi: ${error.message}</p>`;
+        if(listContainer) listContainer.innerHTML = `<p class="text-red-500 text-center py-8">Veri yüklenemedi: ${error.message}. Güvenlik kurallarınızı kontrol edin.</p>`;
     });
 }
 
@@ -200,9 +202,9 @@ function renderMuhasebeList(students) {
 function loadIslemGecmisi(db, currentUserId, appId) {
     const container = document.getElementById("transactionLogContainer");
     
-    // Son 10 işlem
+    // DÜZELTME: Veritabanı yolu 'koclar' yerine 'artifacts' olarak güncellendi.
     const q = query(
-        collection(db, "artifacts", appId, 'users', currentUserId, "muhasebe"), 
+        collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), 
         orderBy("tarih", "desc"), 
         limit(10)
     );
@@ -279,7 +281,8 @@ export async function saveNewBorc(db, currentUserId, appId) {
         saveButton.textContent = "Kaydediliyor...";
 
         // 1. Merkezi Muhasebe Koleksiyonuna Ekle
-        await addDoc(collection(db, "artifacts", appId 'users', currentUserId, "muhasebe"), {
+        // DÜZELTME: Veritabanı yolu 'koclar' yerine 'artifacts' olarak güncellendi.
+        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), {
             ogrenciId: studentId,
             ogrenciAd: studentName,
             tur: 'borc',
@@ -289,8 +292,9 @@ export async function saveNewBorc(db, currentUserId, appId) {
             eklenmeZamani: serverTimestamp()
         });
 
-        // 2. Öğrenci Bakiyesini Güncelle (toplamBorc artır)
-        const studentRef = doc(db, "artifacts", appId, 'users', currentUserId, "ogrencilerim", studentId);
+        // 2. Öğrenci Bakiyesini Güncelle
+        // DÜZELTME: Veritabanı yolu 'koclar' yerine 'artifacts' olarak güncellendi.
+        const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
         await updateDoc(studentRef, {
             toplamBorc: increment(tutar)
         });
@@ -330,7 +334,8 @@ export async function saveNewTahsilat(db, currentUserId, appId) {
         saveButton.textContent = "Kaydediliyor...";
 
         // 1. Merkezi Muhasebe Koleksiyonuna Ekle
-        await addDoc(collection(db, "artifacts", appId, 'users',  currentUserId, "muhasebe"), {
+        // DÜZELTME: Veritabanı yolu 'koclar' yerine 'artifacts' olarak güncellendi.
+        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), {
             ogrenciId: studentId,
             ogrenciAd: studentName,
             tur: 'tahsilat',
@@ -340,8 +345,9 @@ export async function saveNewTahsilat(db, currentUserId, appId) {
             eklenmeZamani: serverTimestamp()
         });
 
-        // 2. Öğrenci Bakiyesini Güncelle (toplamOdenen artır)
-        const studentRef = doc(db, "artifacts", appId, 'users', currentUserId, "ogrencilerim", studentId);
+        // 2. Öğrenci Bakiyesini Güncelle
+        // DÜZELTME: Veritabanı yolu 'koclar' yerine 'artifacts' olarak güncellendi.
+        const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
         await updateDoc(studentRef, {
             toplamOdenen: increment(tutar)
         });

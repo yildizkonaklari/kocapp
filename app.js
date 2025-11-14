@@ -16,6 +16,7 @@ import {
     renderDersSecimi, 
     renderPlaceholderSayfasi 
 } from './modules/helpers.js';
+
 import { renderAnaSayfa } from './modules/anasayfa.js';
 import { 
     renderOgrenciSayfasi, 
@@ -26,7 +27,8 @@ import {
     renderDenemeNetInputs, 
     saveNewSoruTakibi, 
     saveNewHedef, 
-    saveNewOdev 
+    saveNewOdev,
+    saveNewKoclukNotu // ogrencilerim.js'den eksik import eklendi
 } from './modules/ogrencilerim.js';
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
 import { renderMuhasebeSayfasi, saveNewBorc, saveNewTahsilat } from './modules/muhasebe.js';
@@ -61,6 +63,7 @@ const appId = "kocluk-sistemi"; // Bu, student-auth.js ile eşleşmeli
 // Global window objesine modül fonksiyonlarını ekle (HTML inline onclick'leri için)
 // Bu, modül yapısında gereklidir, özellikle dashboard'dan profile geçiş için.
 window.renderOgrenciDetaySayfasi = (id, name) => {
+    // ogrencilerim.js'den import edilen fonksiyonu çağır
     renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
 };
 
@@ -72,7 +75,7 @@ async function main() {
     auth = getAuth(app);
     db = getFirestore(app);
     
-    setLogLevel('debug');
+    setLogLevel('debug'); // Hata ayıklama için
 
     // GİRİŞ KORUMASI (Auth Guard)
     onAuthStateChanged(auth, (user) => {
@@ -130,7 +133,7 @@ function updateUIForLoggedInUser(user) {
             const pageId = link.id.split('-')[1];
             
             // İlgili modülün render fonksiyonunu çağır
-    switch(pageId) {
+            switch(pageId) {
                 case 'anasayfa':
                     renderAnaSayfa(db, currentUserId, appId);
                     break;
@@ -147,10 +150,7 @@ function updateUIForLoggedInUser(user) {
                     renderMesajlarSayfasi(db, currentUserId, appId);
                     break;
                 default:
-                    // helpers.js'den
-                    import('./modules/helpers.js').then(module => {
-                        module.renderPlaceholderSayfasi(link.textContent.trim());
-                    });
+                    renderPlaceholderSayfasi(link.textContent.trim());
                     break;
             }
         });
@@ -168,12 +168,12 @@ function updateUIForLoggedInUser(user) {
 // Öğrenci Ekleme Modalı
 document.getElementById('closeModalButton').addEventListener('click', () => { document.getElementById('addStudentModal').style.display = 'none'; });
 document.getElementById('cancelModalButton').addEventListener('click', () => { document.getElementById('addStudentModal').style.display = 'none'; });
-document.getElementById('saveStudentButton').addEventListener('click', () => saveNewStudent(db, currentUserId, appId)); // ogrencilerim.js'den
+document.getElementById('saveStudentButton').addEventListener('click', () => saveNewStudent(db, currentUserId, appId));
 
 // Öğrenci Düzenleme Modalı
 document.getElementById('closeEditModalButton').addEventListener('click', () => { document.getElementById('editStudentModal').style.display = 'none'; });
 document.getElementById('cancelEditModalButton').addEventListener('click', () => { document.getElementById('editStudentModal').style.display = 'none'; });
-document.getElementById('saveStudentChangesButton').addEventListener('click', () => saveStudentChanges(db, currentUserId, appId)); // ogrencilerim.js'den
+document.getElementById('saveStudentChangesButton').addEventListener('click', () => saveStudentChanges(db, currentUserId, appId));
 
 // Sınıf seçimi değiştikçe dersleri güncelle (Her iki modal için)
 document.getElementById('studentClass').addEventListener('change', (e) => {

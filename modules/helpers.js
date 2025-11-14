@@ -125,22 +125,23 @@ export function formatDateTR(dateStr) {
     const [year, month, day] = dateStr.split('-');
     return `${day}.${month}.${year}`;
 }
-
+// ... (SABİTLER VE DİĞER FONKSİYONLAR AYNI) ...
 /**
  * ID'si verilen bir select (dropdown) elementini öğrenci listesiyle doldurur.
- * @param {string} selectId - Doldurulacak <select> elementinin ID'si
  * @param {object} db - Firestore veritabanı referansı
  * @param {string} currentUserId - Giriş yapmış koçun UID'si
- * @param {string} appId - Uygulama ID'si
+ * @param {string} appId - Uygulama ID'si (YENİ EKLENDİ)
+ * @param {string} selectId - Doldurulacak <select> elementinin ID'si
  */
-export async function populateStudentSelect(db, currentUserId, appId, selectId) {
+export async function populateStudentSelect(db, currentUserId, appId, selectId) { // appId parametresi eklendi
     const select = document.getElementById(selectId);
     if (!select) return;
     
     select.innerHTML = '<option value="">Öğrenciler yükleniyor...</option>';
     
     try {
-        const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"), orderBy("ad"));
+        // GÜNCELLENDİ: Hatalı yol 'koclar' yerine 'artifacts' ile başlayan doğru yol kullanıldı
+        const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
         const snapshot = await getDocs(q);
         
         select.innerHTML = '<option value="" disabled selected>Öğrenci seçin</option>';
@@ -161,7 +162,7 @@ export async function populateStudentSelect(db, currentUserId, appId, selectId) 
         select.innerHTML = '<option value="">Hata oluştu</option>';
     }
 }
-
+    
 /**
  * Sınıf seçimine göre ders listesi checkbox'larını oluşturur.
  * @param {string} sinif - Seçilen sınıf (örn: "8. Sınıf", "12. Sınıf")

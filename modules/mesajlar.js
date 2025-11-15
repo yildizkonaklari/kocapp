@@ -13,8 +13,9 @@ import {
     getDocs // Öğrenci listesini çekmek için
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// helpers.js dosyamızdan ortak fonksiyonları import ediyoruz
 import { 
-    activeListeners // helpers.js'den import ediyoruz
+    activeListeners 
 } from './helpers.js';
 
 // --- 2. ANA FONKSİYON: MESAJLAR SAYFASI ---
@@ -75,50 +76,55 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
 async function loadChatStudentList(db, currentUserId, appId) {
     const listContainer = document.getElementById('chatStudentList');
     
-    // Öğrenci listesini bir kez çek (getDocs)
-    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"), orderBy("ad"));
-    const snapshot = await getDocs(q);
+    // DÜZELTME: Veritabanı yolu 'koclar' -> 'artifacts'
+    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
     
-    if (snapshot.empty) {
-        listContainer.innerHTML = '<p class="text-gray-400 text-center text-sm py-4">Öğrenci bulunamadı.</p>';
-        return;
-    }
+    try {
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            listContainer.innerHTML = '<p class="text-gray-400 text-center text-sm py-4">Öğrenci bulunamadı.</p>';
+            return;
+        }
 
-    listContainer.innerHTML = '';
-    
-    snapshot.forEach(doc => {
-        const s = doc.data();
-        const div = document.createElement('div');
-        div.className = 'chat-student-item flex items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-purple-50 transition-colors';
-        div.dataset.id = doc.id;
-        div.dataset.name = `${s.ad} ${s.soyad}`;
+        listContainer.innerHTML = '';
         
-        div.innerHTML = `
-            <div class="relative">
-                <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-sm">
-                    ${s.ad[0]}${s.soyad[0]}
-                </div>
-                <!-- Okunmamış mesaj varsa buraya kırmızı nokta eklenebilir (Gelişmiş özellik) -->
-            </div>
-            <div class="ml-3 overflow-hidden">
-                <p class="text-sm font-medium text-gray-900 truncate">${s.ad} ${s.soyad}</p>
-                <p class="text-xs text-gray-500 truncate">${s.sinif}</p>
-            </div>
-            <i class="fa-solid fa-chevron-right ml-auto text-gray-300 text-xs"></i>
-        `;
-        
-        // Öğrenciye tıklandığında sohbeti yükle
-        div.addEventListener('click', () => {
-            // Aktif stili değiştir
-            document.querySelectorAll('.chat-student-item').forEach(el => el.classList.remove('bg-purple-100', 'border-l-4', 'border-purple-600'));
-            div.classList.add('bg-purple-100', 'border-l-4', 'border-purple-600');
-            div.classList.remove('border-b');
+        snapshot.forEach(doc => {
+            const s = doc.data();
+            const div = document.createElement('div');
+            div.className = 'chat-student-item flex items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-purple-50 transition-colors';
+            div.dataset.id = doc.id;
+            div.dataset.name = `${s.ad} ${s.soyad}`;
             
-            loadChatMessages(db, currentUserId, appId, doc.id, `${s.ad} ${s.soyad}`);
+            div.innerHTML = `
+                <div class="relative">
+                    <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold text-sm">
+                        ${s.ad[0] || '?'}${s.soyad[0] || ''}
+                    </div>
+                </div>
+                <div class="ml-3 overflow-hidden">
+                    <p class="text-sm font-medium text-gray-900 truncate">${s.ad} ${s.soyad}</p>
+                    <p class="text-xs text-gray-500 truncate">${s.sinif}</p>
+                </div>
+                <i class="fa-solid fa-chevron-right ml-auto text-gray-300 text-xs"></i>
+            `;
+            
+            // Öğrenciye tıklandığında sohbeti yükle
+            div.addEventListener('click', () => {
+                // Aktif stili değiştir
+                document.querySelectorAll('.chat-student-item').forEach(el => el.classList.remove('bg-purple-100', 'border-l-4', 'border-purple-600'));
+                div.classList.add('bg-purple-100', 'border-l-4', 'border-purple-600');
+                div.classList.remove('border-b');
+                
+                loadChatMessages(db, currentUserId, appId, doc.id, `${s.ad} ${s.soyad}`);
+            });
+            
+            listContainer.appendChild(div);
         });
-        
-        listContainer.appendChild(div);
-    });
+    } catch (error) {
+        console.error("Sohbet için öğrenci listesi yüklenirken hata:", error);
+        listContainer.innerHTML = `<p class="text-red-500 text-center text-sm py-4">Öğrenciler yüklenemedi. Kuralları kontrol edin.</p>`;
+    }
 }
 
 /**
@@ -167,12 +173,14 @@ function loadChatMessages(db, currentUserId, appId, studentId, studentName) {
 
         try {
             messageInput.value = ''; // Hemen temizle (Hızlı hissettir)
-            await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "mesajlar"), {
+            
+            // DÜZELTME: Veritabanı yolu
+            await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar"), {
                 text: text,
                 gonderen: 'koc', // Biz (koç) gönderiyoruz
                 tarih: serverTimestamp()
             });
-            // Scroll en alta
+            
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
             console.error("Mesaj gönderme hatası:", error);
@@ -185,8 +193,9 @@ function loadChatMessages(db, currentUserId, appId, studentId, studentName) {
     // Önceki öğrencinin sohbet dinleyicisini kapat
     if (activeListeners.chatUnsubscribe) activeListeners.chatUnsubscribe();
 
+    // DÜZELTME: Veritabanı yolu
     const q = query(
-        collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "mesajlar"),
+        collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar"),
         orderBy("tarih", "asc")
     );
 

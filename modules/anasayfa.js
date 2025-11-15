@@ -1,7 +1,8 @@
 // === ANA SAYFA (DASHBOARD) MODÜLÜ ===
 
 import { collection, query, where, orderBy, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { activeListeners, formatCurrency } from './helpers.js';
+// DÜZELTME: helpers.js'den import edilen fonksiyonlar
+import { activeListeners, formatCurrency, renderDersSecimi, populateStudentSelect } from './helpers.js';
 
 /**
  * Ana Sayfa (Dashboard) arayüzünü çizer ve verileri yükler.
@@ -9,14 +10,15 @@ import { activeListeners, formatCurrency } from './helpers.js';
  * @param {string} currentUserId - Giriş yapmış koçun UID'si
  * @param {string} appId - Uygulama ID'si
  */
-export async function renderAnaSayfa(db, currentUserId, appId) {
+export function renderAnaSayfa(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");
     
     mainContentTitle.textContent = "Kontrol Paneli";
     
-    // İskeleti Oluştur
+    // 1. İskeleti Oluştur
     mainContentArea.innerHTML = `
+        <!-- Hoşgeldin Banner -->
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg mb-8 flex justify-between items-center">
             <div>
                 <h2 class="text-2xl font-bold mb-1">Hoş geldin, Hocam! 👋</h2>
@@ -27,6 +29,8 @@ export async function renderAnaSayfa(db, currentUserId, appId) {
                 <p class="text-sm text-purple-200" id="dashDateFull">--</p>
             </div>
         </div>
+
+        <!-- KPI Kartları (Özet Bilgiler) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-users"></i></div>
@@ -41,7 +45,11 @@ export async function renderAnaSayfa(db, currentUserId, appId) {
                 <div><p class="text-sm text-gray-500 font-medium">Bekleyen Alacak</p><h3 class="text-2xl font-bold text-gray-800" id="dashPendingPayment">...</h3></div>
             </div>
         </div>
+
+        <!-- Ana İçerik Izgarası -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- SOL KOLON (Geniş): BUGÜNKÜ PROGRAM -->
             <div class="lg:col-span-2 space-y-6">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -55,6 +63,8 @@ export async function renderAnaSayfa(db, currentUserId, appId) {
                     <div class="overflow-x-auto"><table class="min-w-full text-sm text-left"><thead class="bg-gray-50 text-gray-500 font-medium"><tr><th class="px-6 py-3">Öğrenci</th><th class="px-6 py-3">Sınıf</th><th class="px-6 py-3 text-center">İşlem</th></tr></thead><tbody id="dashStudentTableBody" class="divide-y divide-gray-100"></tbody></table></div>
                 </div>
             </div>
+
+            <!-- SAĞ KOLON (Dar): HIZLI EYLEMLER ve DUYURULAR -->
             <div class="space-y-6">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <h3 class="font-bold text-gray-800 mb-4">Hızlı İşlemler</h3>
@@ -68,45 +78,49 @@ export async function renderAnaSayfa(db, currentUserId, appId) {
         </div>
     `;
 
-    // --- TARİH BİLGİSİ ---
+    // --- 2. TARİH BİLGİSİ ---
     const now = new Date();
     const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
     const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
     document.getElementById('dashDateDay').textContent = days[now.getDay()];
     document.getElementById('dashDateFull').textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
 
-    // --- HIZLI EYLEM BUTONLARI ---
+    // --- 3. HIZLI EYLEM BUTONLARI ---
     document.getElementById('btnDashAddStudent').addEventListener('click', () => {
         document.getElementById('studentName').value = '';
         document.getElementById('studentSurname').value = '';
         document.getElementById('studentClass').value = '12. Sınıf';
         document.getElementById('modalErrorMessage').classList.add('hidden');
-        // renderDersSecimi import edilmeli
-        import('./helpers.js').then(helpers => {
-            helpers.renderDersSecimi('12. Sınıf', document.getElementById('studentDersSecimiContainer'));
-        });
+        renderDersSecimi('12. Sınıf', document.getElementById('studentDersSecimiContainer'));
         document.getElementById('addStudentModal').style.display = 'block';
     });
     
-    document.getElementById('btnDashAddRandevu').addEventListener('click', () => {
-        import('./helpers.js').then(helpers => {
-            helpers.populateStudentSelect(db, currentUserId, appId, 'randevuStudentId');
-        });
+    document.getElementById('btnDashAddRandevu').addEventListener('click', async () => {
+        // DÜZELTME: populateStudentSelect'e 'appId' iletildi
+        await populateStudentSelect(db, currentUserId, appId, 'randevuStudentId');
+        document.getElementById('randevuBaslik').value = 'Birebir Koçluk';
+        document.getElementById('randevuTarih').value = new Date().toISOString().split('T')[0];
+        document.getElementById('randevuBaslangic').value = '09:00';
+        document.getElementById('randevuBitis').value = '10:00';
         document.getElementById('addRandevuModal').style.display = 'block';
     });
     
     document.getElementById('btnDashGoAjanda').addEventListener('click', () => document.getElementById('nav-ajandam').click());
     document.getElementById('btnDashGoMesajlar').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
 
-    // --- VERİLERİ YÜKLE ---
+    // --- 4. VERİLERİ YÜKLE ---
     loadDashboardStats(db, currentUserId, appId);
     loadTodayAgenda(db, currentUserId, appId);
 }
 
-// 1. İstatistikler ve Öğrenci Listesi
+/**
+ * Dashboard'daki KPI kartlarını ve öğrenci özet listesini yükler.
+ */
 function loadDashboardStats(db, currentUserId, appId) {
     const studentTableBody = document.getElementById('dashStudentTableBody');
-    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"), orderBy("ad"));
+    
+    // DÜZELTME: Veritabanı yolu 'koclar' -> 'artifacts'
+    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
     
     activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
         let totalStudents = 0, totalAlacak = 0, tableHtml = '';
@@ -134,26 +148,28 @@ function loadDashboardStats(db, currentUserId, appId) {
             button.addEventListener('click', (e) => {
                 const studentId = e.currentTarget.dataset.id;
                 const studentName = e.currentTarget.dataset.name;
-                // `renderOgrenciDetaySayfasi` global scope'da (app.js) tanımlı olmalı VEYA
-                // bu fonksiyonu app.js'den import edip buraya özel bağlamalıyız.
-                // Şimdilik app.js'de window'a eklediğimizi varsayıyoruz.
-                if (window.renderOgrenciDetaySayfasi) {
-                    window.renderOgrenciDetaySayfasi(studentId, studentName);
-                } else {
-                    console.error("renderOgrenciDetaySayfasi fonksiyonu bulunamadı.");
-                }
+                // `renderOgrenciDetaySayfasi` global scope'da (app.js) tanımlı
+                window.renderOgrenciDetaySayfasi(studentId, studentName);
             });
         });
         
+    }, (error) => {
+        console.error("Dashboard istatistikleri yüklenirken hata:", error);
+        document.getElementById('dashTotalStudent').textContent = 'Hata';
+        document.getElementById('dashPendingPayment').textContent = 'Hata';
     });
 }
 
-// 2. Bugünkü Ajanda
+/**
+ * Dashboard'daki "Bugünkü Programım" listesini yükler.
+ */
 function loadTodayAgenda(db, currentUserId, appId) {
     const listContainer = document.getElementById('dashAgendaList');
     const todayStr = new Date().toISOString().split('T')[0];
+    
+    // DÜZELTME: Veritabanı yolu 'koclar' -> 'artifacts'
     const q = query(
-        collection(db, "koclar", currentUserId, "ajandam"),
+        collection(db, "artifacts", appId, "users", currentUserId, "ajandam"),
         where("tarih", "==", todayStr),
         orderBy("baslangic")
     );
@@ -178,5 +194,9 @@ function loadTodayAgenda(db, currentUserId, appId) {
         });
         document.getElementById('dashTodayAppt').textContent = count;
         listContainer.innerHTML = html || `<div class="flex flex-col items-center justify-center py-6 text-gray-400"><i class="fa-regular fa-calendar text-3xl mb-2 opacity-30"></i><p class="text-sm">Bugün için planlanmış randevu yok.</p></div>`;
+    
+    }, (error) => {
+        console.error("Bugünkü ajanda yüklenirken hata:", error);
+        listContainer.innerHTML = `<p class="text-red-500 text-center py-4">Ajanda yüklenemedi.</p>`;
     });
 }

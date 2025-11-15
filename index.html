@@ -374,6 +374,65 @@
 
     <!-- === "YENİ RANDEVU EKLE" MODALI (Pop-up) === -->
     <div id="addRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+    <!-- === "RANDEVU DETAY/DÜZENLE" MODALI (YENİ EKLENDİ) === -->
+    <div id="editRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+            <input type="hidden" id="editRandevuId">
+            <input type="hidden" id="editRandevuStudentId">
+            
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-2xl font-semibold" id="editRandevuTitle">Randevu Detayları</h3>
+                <button id="closeEditRandevuModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="editRandevuBaslik" class="block text-sm font-medium text-gray-700">Başlık</label>
+                    <input type="text" id="editRandevuBaslik" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label for="editRandevuTarih" class="block text-sm font-medium text-gray-700">Tarih</label>
+                        <input type="date" id="editRandevuTarih" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label for="editRandevuBaslangic" class="block text-sm font-medium text-gray-700">Başlangıç</label>
+                        <input type="time" id="editRandevuBaslangic" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label for="editRandevuBitis" class="block text-sm font-medium text-gray-700">Bitiş</label>
+                        <input type="time" id="editRandevuBitis" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="editRandevuNot" class="block text-sm font-medium text-gray-700">Notlar</label>
+                    <textarea id="editRandevuNot" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" placeholder="Görüşme notları..."></textarea>
+                </div>
+                <p id="editRandevuModalErrorMessage" class="text-sm text-red-600 hidden"></p>
+            </div>
+
+            <!-- Eylem Butonları -->
+            <div class="flex justify-between items-center pt-4 mt-4 border-t">
+                <!-- Sol Taraf: Durum ve Sil -->
+                <div class="flex gap-2">
+                    <button id="btnToggleRandevuDurum" class="bg-green-100 text-green-700 px-3 py-2 rounded-md hover:bg-green-200 text-sm font-medium flex items-center" title="Yapıldı olarak işaretle">
+                        <i class="fa-solid fa-check mr-2"></i>
+                        <span>Yapıldı</span>
+                    </button>
+                    <button id="btnDeleteRandevu" class="bg-red-100 text-red-700 px-3 py-2 rounded-md hover:bg-red-200 text-sm font-medium" title="Randevuyu Sil">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <!-- Sağ Taraf: Kaydet -->
+                <div class="flex gap-2">
+                    <button id="cancelEditRandevuModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">İptal</button>
+                    <button id="saveRandevuChangesButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Değişiklikleri Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ... (Kalan Muhasebe Modalları ve <script> etiketleri) ... -->
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
                 <h3 class="text-2xl font-semibold">Yeni Randevu Planla</h3>

@@ -1,5 +1,7 @@
 // === AJANDA MODÜLÜ ===
-// ... (imports) ...
+// Bu dosya, koçun "Ajandam" sayfasıyla ilgili tüm fonksiyonları yönetir.
+
+// 1. GEREKLİ IMPORTLAR
 import { 
     doc, 
     addDoc, 
@@ -14,21 +16,29 @@ import {
     getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// helpers.js dosyamızdan ortak fonksiyonları import ediyoruz
 import { 
     activeListeners, 
     formatDateTR, 
-    populateStudentSelect
+    populateStudentSelect 
 } from './helpers.js';
 
 
-// --- ANA FONKSİYON: AJANDA SAYFASI ---
+// --- 2. ANA FONKSİYON: AJANDA SAYFASI ---
+
+/**
+ * "Ajandam" sayfasının ana HTML iskeletini çizer ve ilgili fonksiyonları tetikler.
+ * @param {object} db - Firestore veritabanı referansı
+ * @param {string} currentUserId - Giriş yapmış koçun UID'si
+ * @param {string} appId - Uygulama ID'si
+ */
 export function renderAjandaSayfasi(db, currentUserId, appId) {
-    // ... (renderAjandaSayfasi HTML iskeleti aynı) ...
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");
     
     mainContentTitle.textContent = "Ajandam";
     
+    // HTML iskeletini oluştur
     mainContentArea.innerHTML = `
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <h2 class="text-xl font-semibold text-gray-700">Randevu Takvimi</h2>
@@ -38,30 +48,44 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
             </button>
         </div>
         
+        <!-- Randevu Listeleri -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Gelecek Randevular -->
             <div id="gelecekRandevular" class="bg-white p-4 rounded-lg shadow">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Gelecek Randevular</h3>
-                <div id="gelecekRandevuList" class="space-y-3 max-h-96 overflow-y-auto"><p class="text-center text-gray-400 py-4">Yükleniyor...</p></div>
+                <div id="gelecekRandevuList" class="space-y-3 max-h-96 overflow-y-auto">
+                    <p class="text-center text-gray-400 py-4">Yükleniyor...</p>
+                </div>
             </div>
             
+            <!-- Geçmiş Randevular -->
             <div id="gecmisRandevular" class="bg-white p-4 rounded-lg shadow">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">Geçmiş Randevular</h3>
-                <div id="gecmisRandevuList" class="space-y-3 max-h-96 overflow-y-auto"><p class="text-center text-gray-400 py-4">Yükleniyor...</p></div>
+                <div id="gecmisRandevuList" class="space-y-3 max-h-96 overflow-y-auto">
+                    <p class="text-center text-gray-400 py-4">Yükleniyor...</p>
+                </div>
             </div>
         </div>
     `;
 
+    // "Yeni Randevu Ekle" butonunu modal'a bağla
     document.getElementById('showAddRandevuModalButton').addEventListener('click', async () => {
-        await populateStudentSelect(db, currentUserId, 'randevuStudentId');
+        // DÜZELTME: populateStudentSelect fonksiyonuna 'appId' eklendi
+        await populateStudentSelect(db, currentUserId, appId, 'randevuStudentId');
+        
+        // Formu temizle ve varsayılanları ayarla
         document.getElementById('randevuBaslik').value = 'Birebir Koçluk';
         document.getElementById('randevuTarih').value = new Date().toISOString().split('T')[0];
         document.getElementById('randevuBaslangic').value = '09:00';
         document.getElementById('randevuBitis').value = '10:00';
         document.getElementById('randevuNot').value = '';
         document.getElementById('randevuModalErrorMessage').classList.add('hidden');
+        
+        // Modalı göster
         document.getElementById('addRandevuModal').style.display = 'block';
     });
     
+    // Ajanda verilerini yükle
     loadAjanda(db, currentUserId, appId);
 }
 
@@ -72,11 +96,12 @@ function loadAjanda(db, currentUserId, appId) {
     const gelecekList = document.getElementById('gelecekRandevuList');
     const gecmisList = document.getElementById('gecmisRandevuList');
     
+    // Geçerli tarih (YYYY-MM-DD formatında)
     const todayStr = new Date().toISOString().split('T')[0];
     
-    // Veritabanı Yolu DÜZELTİLDİ: 'koclar/{kocID}/ajandam' olmalı
+    // DÜZELTME: Veritabanı yolu 'koclar' -> 'artifacts'
     const q = query(
-        collection(db, "koclar", currentUserId, "ajandam"), 
+        collection(db, "artifacts", appId, "users", currentUserId, "ajandam"), 
         orderBy("tarih", "desc"), 
         orderBy("baslangic", "desc")
     );
@@ -87,6 +112,7 @@ function loadAjanda(db, currentUserId, appId) {
         
         snapshot.forEach(doc => {
             const randevu = { id: doc.id, ...doc.data() };
+            // Tarihi bugünden büyük veya eşit olanlar "Gelecek" listesine
             if (randevu.tarih >= todayStr) {
                 gelecek.push(randevu);
             } else {
@@ -94,7 +120,8 @@ function loadAjanda(db, currentUserId, appId) {
             }
         });
 
-        gelecek.reverse(); // Gelecek randevularını (15 Kasım, 16 Kasım) şeklinde sırala
+        // Gelecek randevuları ASC (eskiden yeniye) sırala (Önceki sıralama desc idi, ters çeviriyoruz)
+        gelecek.reverse(); 
 
         renderAjandaList(gelecekList, gelecek, false, db, currentUserId, appId);
         renderAjandaList(gecmisList, gecmis, true, db, currentUserId, appId);
@@ -102,11 +129,10 @@ function loadAjanda(db, currentUserId, appId) {
     }, (error) => {
         console.error("Ajanda yüklenirken hata:", error);
         
-        // GÜNCELLENDİ: Hata yönetimi
         let errorMsg = "Veri yüklenemedi. Lütfen internet bağlantınızı kontrol edin.";
         if (error.code === 'failed-precondition') {
+            // Bu hata, Firebase'in bileşik index (composite index) istediğini gösterir.
             errorMsg = "Veritabanı index'i gerekiyor. Lütfen Firebase konsolundan 'ajandam' koleksiyonu için (tarih-desc, baslangic-desc) index'i oluşturun.";
-            // Hata mesajını konsola daha net yazdır
             console.error("Eksik Firestore İndeksi! Lütfen konsolda görünen linke tıklayarak indeksi oluşturun.", error.message);
         }
         
@@ -119,7 +145,6 @@ function loadAjanda(db, currentUserId, appId) {
  * Gelen randevu listesini HTML olarak çizer.
  */
 function renderAjandaList(container, randevular, isGecmis, db, currentUserId, appId) {
-    // ... (Bu fonksiyonun içeriği aynı kalacak) ...
     if (!container) return;
     
     if (randevular.length === 0) {
@@ -141,12 +166,13 @@ function renderAjandaList(container, randevular, isGecmis, db, currentUserId, ap
         </div>
     `).join('');
 
+    // Sil butonlarına event listener ekle
     container.querySelectorAll('.delete-randevu-button').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const id = e.currentTarget.dataset.id;
             if (confirm('Bu randevuyu silmek istediğinize emin misiniz?')) {
-                // Veritabanı yolu DÜZELTİLDİ:
-                await deleteDoc(doc(db, "koclar", currentUserId, "ajandam", id));
+                // DÜZELTME: Veritabanı yolu
+                await deleteDoc(doc(db, "artifacts", appId, "users", currentUserId, "ajandam", id));
             }
         });
     });
@@ -154,9 +180,10 @@ function renderAjandaList(container, randevular, isGecmis, db, currentUserId, ap
 
 /**
  * "Yeni Randevu Ekle" modalından gelen veriyi Firestore'a kaydeder.
+ * app.js tarafından çağrılır.
  */
 export async function saveNewRandevu(db, currentUserId, appId) {
-    // ... (Bu fonksiyonun içeriği aynı kalacak) ...
+    // Modal elementlerinden verileri al
     const studentId = document.getElementById('randevuStudentId').value;
     const studentName = document.getElementById('randevuStudentId').options[document.getElementById('randevuStudentId').selectedIndex].text;
     const baslik = document.getElementById('randevuBaslik').value.trim();
@@ -178,8 +205,8 @@ export async function saveNewRandevu(db, currentUserId, appId) {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
         
-        // Veritabanı yolu DÜZELTİLDİ:
-        await addDoc(collection(db, "koclar", currentUserId, "ajandam"), {
+        // DÜZELTME: Veritabanı yolu
+        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ajandam"), {
             studentId, 
             ogrenciAd: studentName, 
             baslik, 

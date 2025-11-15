@@ -6,15 +6,33 @@ import {
     signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
-    getFirestore
+    getFirestore,
+    doc, 
+    getDoc, 
+    setDoc,
+    addDoc,
+    updateDoc,
+    collection, 
+    query, 
+    where,
+    onSnapshot,
+    deleteDoc,
+    orderBy,
+    serverTimestamp,
+    limit,
+    increment,
+    getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // 2. Modülleri ve Yardımcıları İçeri Aktar
+// DÜZELTME: Import yollarına './' eklendi
 import { 
     cleanUpListeners, 
     populateStudentSelect, 
     renderDersSecimi, 
-    renderPlaceholderSayfasi 
+    renderPlaceholderSayfasi,
+    formatCurrency,
+    formatDateTR
 } from './modules/helpers.js';
 
 import { renderAnaSayfa } from './modules/anasayfa.js';
@@ -28,7 +46,7 @@ import {
     saveNewSoruTakibi, 
     saveNewHedef, 
     saveNewOdev,
-    saveNewKoclukNotu // ogrencilerim.js'den eksik import eklendi
+    saveNewKoclukNotu
 } from './modules/ogrencilerim.js';
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
 import { renderMuhasebeSayfasi, saveNewBorc, saveNewTahsilat } from './modules/muhasebe.js';
@@ -63,7 +81,6 @@ const appId = "kocluk-sistemi"; // Bu, student-auth.js ile eşleşmeli
 // Global window objesine modül fonksiyonlarını ekle (HTML inline onclick'leri için)
 // Bu, modül yapısında gereklidir, özellikle dashboard'dan profile geçiş için.
 window.renderOgrenciDetaySayfasi = (id, name) => {
-    // ogrencilerim.js'den import edilen fonksiyonu çağır
     renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
 };
 

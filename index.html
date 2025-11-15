@@ -12,8 +12,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- 3. Özel Stiller -->
-    <link rel="stylesheet" href="style.css">
-    
+    <style>
+        /* Kaydırma Çubuğu (Scrollbar) Yardımcı Sınıfı */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE ve Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        /* Soru Takibi Donut Grafik Animasyonu */
+        #summaryDonutChart circle:nth-child(2) {
+            transition: stroke-dashoffset 0.5s ease-out;
+        }
+        /* Radyo buton seçiliyken etiket stili */
+        .has-[:checked] {
+            border-color: #7c3aed; /* purple-500 */
+            background-color: #f5f3ff; /* purple-50 */
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
 
@@ -85,10 +102,9 @@
 
     <!-- ===================================================================== -->
     <!-- === TÜM MODALLAR (Pop-up Pencereler) === -->
-    <!-- (Önceki sürümlerdeki tüm modal HTML'leri buraya gelecek) -->
     <!-- ===================================================================== -->
 
-    <!-- === "YENİ ÖĞRENCİ EKLE" MODALI === -->
+    <!-- === "YENİ ÖĞRENCİ EKLE" MODALI (Pop-up) === -->
     <div id="addStudentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-20">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -133,7 +149,7 @@
         </div>
     </div>
 
-    <!-- === "ÖĞRENCİ BİLGİLERİNİ DÜZENLE" MODALI === -->
+    <!-- === "ÖĞRENCİ BİLGİLERİNİ DÜZENLE" MODALI (Pop-up) === -->
     <div id="editStudentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -179,7 +195,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ DENEME EKLE" MODALI === -->
+    <!-- === "YENİ DENEME EKLE" MODALI (Pop-up) === -->
     <div id="addDenemeModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -220,7 +236,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ SORU VERİSİ EKLE" MODALI === -->
+    <!-- === "YENİ SORU VERİSİ EKLE" MODALI (Pop-up) === -->
     <div id="addSoruModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -266,7 +282,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ HEDEF EKLE" MODALI === -->
+    <!-- === "YENİ HEDEF EKLE" MODALI (Pop-up) === -->
     <div id="addHedefModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -296,7 +312,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ ÖDEV EKLE" MODALI === -->
+    <!-- === "YENİ ÖDEV EKLE" MODALI (Pop-up) === -->
     <div id="addOdevModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -356,7 +372,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ RANDEVU EKLE" MODALI === -->
+    <!-- === "YENİ RANDEVU EKLE" MODALI (Pop-up) === -->
     <div id="addRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -401,7 +417,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ TAHSİLAT EKLE" MODALI === -->
+    <!-- === "YENİ TAHSİLAT EKLE" MODALI (Pop-up) === -->
     <div id="addTahsilatModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -434,7 +450,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ BORÇ/HİZMET EKLE" MODALI === -->
+    <!-- === "YENİ BORÇ/HİZMET EKLE" MODALI (Pop-up) === -->
     <div id="addBorcModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -471,7 +487,7 @@
     <!-- === ANA JAVASCRIPT DOSYASI === -->
     <!-- ===================================================================== -->
     
-    <!-- DÜZELTME: Artık tek bir app.js dosyası çağırıyoruz -->
+    <!-- Sadece tek bir app.js dosyası çağırıyoruz -->
     <script type="module" src="app.js"></script>
 
 </body>

@@ -6,7 +6,7 @@
 import { 
     doc, getDoc, addDoc, updateDoc, collection, query, 
     onSnapshot, deleteDoc, orderBy, where, serverTimestamp,
-    increment
+    increment // increment'i muhasebe için (veya gerekirse) ekleyebiliriz, şimdilik dursun
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // helpers.js dosyamızdan ortak fonksiyonları ve sabitleri import ediyoruz
@@ -15,10 +15,8 @@ import {
     formatCurrency, 
     formatDateTR, 
     SINAV_DERSLERI, 
-    DERS_HAVUZU, // DERS_HAVUZU import edildi
     renderDersSecimi,
-    cleanUpListeners,
-    populateStudentSelect // populateStudentSelect import edildi
+    cleanUpListeners
 } from './helpers.js';
 
 // 2. MODÜL İÇİ GLOBAL DEĞİŞKENLER
@@ -76,8 +74,7 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
     // Arama kutusu (basit filtreleme)
     document.getElementById('searchStudentInput').addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        // Arama yaparken thead'i gizlememek için 'tr' yerine 'tbody tr' seç
-        document.querySelectorAll('#studentListContainer tbody tr').forEach(row => {
+        document.querySelectorAll('#studentListContainer tr').forEach(row => {
             const rowText = row.textContent.toLowerCase();
             row.style.display = rowText.includes(searchTerm) ? '' : 'none';
         });
@@ -94,15 +91,14 @@ function loadOgrenciler(db, currentUserId, appId) {
     const studentListContainer = document.getElementById('studentListContainer');
     if (!studentListContainer) return;
     
-    // DÜZELTME: Veritabanı yolu 'koclar' -> 'artifacts'
-    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"));
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"));
     
     activeListeners.studentUnsubscribe = onSnapshot(q, (querySnapshot) => {
         const students = [];
         querySnapshot.forEach((doc) => {
             students.push({ id: doc.id, ...doc.data() });
         });
-        renderStudentList(students, db, currentUserId, appId);
+        renderStudentList(students, db, currentUserId, appId); // db vs. geçilmeli
     }, (error) => {
         console.error("Öğrencileri yüklerken hata:", error);
         studentListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Veri okuma izni alınamadı. Güvenlik kurallarınızı kontrol edin.</p>`;
@@ -173,8 +169,7 @@ function renderStudentList(students, db, currentUserId, appId) {
             const studentId = e.target.dataset.id;
             if (confirm("Bu öğrenciyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.")) {
                 try {
-                    // DÜZELTME: Veritabanı yolu
-                    const studentDocRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
+                    const studentDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId);
                     await deleteDoc(studentDocRef);
                 } catch (error) {
                     console.error("Silme hatası:", error);
@@ -217,16 +212,14 @@ export async function saveNewStudent(db, currentUserId, appId) {
     try {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
-        
-        // DÜZELTME: Veritabanı yolu
-        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim"), {
             ad: ad,
             soyad: soyad,
             sinif: sinif,
-            takipDersleri: selectedDersler, // Dersleri kaydet
+            takipDersleri: selectedDersler,
             olusturmaTarihi: serverTimestamp(),
-            toplamBorc: 0, // Muhasebe için varsayılan
-            toplamOdenen: 0 // Muhasebe için varsayılan
+            toplamBorc: 0,
+            toplamOdenen: 0
         });
         document.getElementById('addStudentModal').style.display = 'none';
     } catch (error) {
@@ -311,8 +304,8 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         const modal = document.getElementById('addRandevuModal');
         const selectId = 'randevuStudentId';
         
-        // DÜZELTME: populateStudentSelect'e appId iletildi
-        await populateStudentSelect(db, currentUserId, appId, selectId);
+        // helpers.js'den populateStudentSelect'i import etmemiz lazım (ettik)
+        await populateStudentSelect(db, currentUserId, selectId);
         
         document.getElementById(selectId).value = studentId;
         document.getElementById('randevuBaslik').value = 'Birebir Koçluk Görüşmesi';
@@ -350,7 +343,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
                 case 'hedefler': renderHedeflerOdevlerTab(db, currentUserId, appId, studentId, studentName); break;
                 case 'notlar': renderKoclukNotlariTab(db, currentUserId, appId, studentId, studentName); break;
                 default: 
-                    renderPlaceholderTab(tabId); // Bu fonksiyonun helpers'a taşınması gerekebilir
+                    import('./helpers.js').then(module => module.renderPlaceholderSayfasi(tabId));
                     break;
             }
         });
@@ -365,9 +358,8 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
     if (!tabContentArea) return;
     tabContentArea.innerHTML = `<p class="text-gray-600 p-4">Öğrenci detayları yükleniyor...</p>`;
     try {
-        // DÜZELTME: Veritabanı yolu
-        const studentDocRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
-        const docSnap = await getDoc(studentDocRef);
+        const studentDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId);
+        const docSnap = await getDoc(studentDocRef); // Tek seferlik okuma
         if (docSnap.exists()) {
             const studentData = docSnap.data();
             const classElement = document.getElementById('studentDetailClass');
@@ -442,8 +434,7 @@ export function renderDenemeNetInputs(tur) {
 function loadDenemeler(db, currentUserId, appId, studentId) {
     const container = document.getElementById('denemeListContainer');
     if (!container) return;
-    // DÜZELTME: Veritabanı yolu
-    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "denemeler"), orderBy("tarih", "desc"));
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "denemeler"), orderBy("tarih", "desc"));
     
     activeListeners.denemeUnsubscribe = onSnapshot(q, (snapshot) => {
         const denemeler = [];
@@ -502,8 +493,7 @@ function renderDenemeList(denemeler, db, currentUserId, appId, studentId) {
             const denemeId = e.target.dataset.id;
             if (confirm("Bu deneme sonucunu silmek istediğinize emin misiniz?")) {
                 try {
-                    // DÜZELTME: Veritabanı yolu
-                    const denemeDocRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "denemeler", denemeId);
+                    const denemeDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "denemeler", denemeId);
                     await deleteDoc(denemeDocRef);
                 } catch (error) {
                     console.error("Deneme silme hatası:", error);
@@ -549,8 +539,8 @@ export async function saveNewDeneme(db, currentUserId, appId) {
             const kural = sinav.netKural;
             
             for (const ders of sinav.dersler) {
-                const d = parseInt(document.getElementById(`net-${ders.id}-d`)?.value) || 0;
-                const y = parseInt(document.getElementById(`net-${ders.id}-y`)?.value) || 0;
+                const d = parseInt(document.getElementById(`net-${ders.id}-d`).value) || 0;
+                const y = parseInt(document.getElementById(`net-${ders.id}-y`).value) || 0;
                 const b = Math.max(0, ders.soru - (d + y));
                 
                 let net = 0;
@@ -565,8 +555,7 @@ export async function saveNewDeneme(db, currentUserId, appId) {
             denemeVerisi.toplamNet = toplamNetHesabi;
         }
 
-        // DÜZELTME: Veritabanı yolu
-        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "denemeler"), denemeVerisi);
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "denemeler"), denemeVerisi);
         document.getElementById('addDenemeModal').style.display = 'none';
         
     } catch (error) {
@@ -583,6 +572,7 @@ export async function saveNewDeneme(db, currentUserId, appId) {
 // --- 4.3. SORU TAKİBİ SEKMESİ ---
 
 function getSoruTakibiDateRange(zaman, offset) {
+    // ... (helpers.js'ye taşındı ama burada da tutabiliriz, şimdilik kalsın)
     const today = new Date();
     let startDate = new Date();
     let endDate = new Date();
@@ -610,6 +600,7 @@ function getSoruTakibiDateRange(zaman, offset) {
 }
 
 function renderDonutChart(percent, elementId) {
+    // ... (Bu da helpers.js'ye taşınabilir)
     const container = document.getElementById(elementId);
     if (!container) return;
     const cleanPercent = Math.max(0, Math.min(100, percent || 0));
@@ -705,9 +696,8 @@ function loadSoruTakibi(db, currentUserId, appId, studentId) {
     document.getElementById('soru-tarih-araligi').textContent = dateRange.uiText;
     document.getElementById('soru-tarih-ileri').disabled = (soruTakibiOffset >= 0);
     
-    // DÜZELTME: Veritabanı yolu
     const q = query(
-        collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "soruTakibi"),
+        collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "soruTakibi"),
         where("tarih", ">=", dateRange.start),
         where("tarih", "<=", dateRange.end),
         orderBy("tarih", "desc")
@@ -784,8 +774,7 @@ function renderSoruTakibiList(soruVerileri, db, currentUserId, appId, studentId)
     document.querySelectorAll('.approve-soru-button').forEach(button => {
         button.addEventListener('click', async (e) => {
             const veriId = e.currentTarget.dataset.id;
-            // DÜZELTME: Veritabanı yolu
-            const soruDocRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "soruTakibi", veriId);
+            const soruDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "soruTakibi", veriId);
             await updateDoc(soruDocRef, { onayDurumu: 'onaylandi' });
         });
     });
@@ -794,8 +783,7 @@ function renderSoruTakibiList(soruVerileri, db, currentUserId, appId, studentId)
         button.addEventListener('click', async (e) => {
             const veriId = e.currentTarget.dataset.id;
             if (confirm("Bu soru verisini silmek/reddetmek istediğinize emin misiniz?")) {
-                // DÜZELTME: Veritabanı yolu
-                const soruDocRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "soruTakibi", veriId);
+                const soruDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "soruTakibi", veriId);
                 await deleteDoc(soruDocRef);
             }
         });
@@ -822,9 +810,7 @@ export async function saveNewSoruTakibi(db, currentUserId, appId) {
     try {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
-        
-        // DÜZELTME: Veritabanı yolu
-        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "soruTakibi"), {
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "soruTakibi"), {
             tarih, ders, konu, dogru, yanlis, bos,
             onayDurumu: 'onaylandi', // Koç girdiği için direkt onaylı
             eklenmeTarihi: serverTimestamp()
@@ -930,8 +916,7 @@ function renderOdevlerSubTab(db, currentUserId, appId, studentId, studentName) {
 function loadHedefler(db, currentUserId, appId, studentId) {
     const c = document.getElementById('hedefListContainer');
     if (!c) return;
-    // DÜZELTME: Veritabanı yolu
-    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "hedefler"), orderBy("olusturmaTarihi", "desc"));
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "hedefler"), orderBy("olusturmaTarihi", "desc"));
     activeListeners.hedeflerUnsubscribe = onSnapshot(q, (snapshot) => {
         const d = [];
         snapshot.forEach(doc => d.push({ id: doc.id, ...doc.data() }));
@@ -942,8 +927,7 @@ function loadHedefler(db, currentUserId, appId, studentId) {
 function loadOdevler(db, currentUserId, appId, studentId) {
     const c = document.getElementById('odevListContainer');
     if (!c) return;
-    // DÜZELTME: Veritabanı yolu
-    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "odevler"), orderBy("bitisTarihi", "asc"));
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler"), orderBy("bitisTarihi", "asc"));
     activeListeners.odevlerUnsubscribe = onSnapshot(q, (snapshot) => {
         const d = [];
         snapshot.forEach(doc => d.push({ id: doc.id, ...doc.data() }));
@@ -977,13 +961,13 @@ function renderHedeflerList(hedefler, db, currentUserId, appId, studentId) {
     c.querySelectorAll('.toggle-hedef-button').forEach(btn => btn.addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.id;
         const newStatus = e.currentTarget.dataset.status;
-        const ref = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "hedefler", id);
+        const ref = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "hedefler", id);
         updateDoc(ref, { durum: newStatus });
     }));
     c.querySelectorAll('.delete-hedef-button').forEach(btn => btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id;
         if (confirm('Bu hedefi silmek istediğinize emin misiniz?')) {
-            const ref = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "hedefler", id);
+            const ref = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "hedefler", id);
             await deleteDoc(ref);
         }
     }));
@@ -1030,13 +1014,13 @@ function renderOdevlerList(odevler, db, currentUserId, appId, studentId) {
     c.querySelectorAll('.toggle-odev-button').forEach(btn => btn.addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.id;
         const newStatus = e.currentTarget.dataset.status;
-        const ref = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "odevler", id);
+        const ref = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler", id);
         updateDoc(ref, { durum: newStatus });
     }));
     c.querySelectorAll('.delete-odev-button').forEach(btn => btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id;
         if (confirm('Bu ödevi silmek istediğinize emin misiniz?')) {
-            const ref = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "odevler", id);
+            const ref = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler", id);
             await deleteDoc(ref);
         }
     }));
@@ -1057,8 +1041,7 @@ export async function saveNewHedef(db, currentUserId, appId) {
     try {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
-        // DÜZELTME: Veritabanı yolu
-        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "hedefler"), {
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "hedefler"), {
             title, bitisTarihi: bitisTarihi || null, aciklama,
             durum: "devam",
             olusturmaTarihi: serverTimestamp()
@@ -1105,11 +1088,8 @@ export async function saveNewOdev(db, currentUserId, appId) {
             olusturmaTarihi: serverTimestamp()
         };
         
-        // DÜZELTME: Veritabanı yolu
-        const odevCollectionRef = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "odevler");
-
         if (tur === 'serbest') {
-            batchPromises.push(addDoc(odevCollectionRef, {
+            batchPromises.push(addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler"), {
                 ...baseData,
                 baslangicTarihi: baslangicTarihi,
                 bitisTarihi: bitisTarihi
@@ -1119,7 +1099,7 @@ export async function saveNewOdev(db, currentUserId, appId) {
             const end = new Date(new Date(bitisTarihi).setUTCHours(0,0,0,0));
             while (current <= end) {
                 const dateStr = current.toISOString().split('T')[0];
-                batchPromises.push(addDoc(odevCollectionRef, {
+                batchPromises.push(addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler"), {
                     ...baseData,
                     baslangicTarihi: dateStr,
                     bitisTarihi: dateStr
@@ -1137,7 +1117,7 @@ export async function saveNewOdev(db, currentUserId, appId) {
                     weekEnd = new Date(end);
                 }
                 const weekEndStr = weekEnd.toISOString().split('T')[0];
-                batchPromises.push(addDoc(odevCollectionRef, {
+                batchPromises.push(addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "odevler"), {
                     ...baseData,
                     baslangicTarihi: weekStartStr,
                     bitisTarihi: weekEndStr
@@ -1187,8 +1167,7 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId, studentName
 function loadKoclukNotlari(db, currentUserId, appId, studentId) {
     const c = document.getElementById('notListContainer');
     if (!c) return;
-    // DÜZELTME: Veritabanı yolu
-    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "koclukNotlari"), orderBy("tarih", "desc"));
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "koclukNotlari"), orderBy("tarih", "desc"));
     activeListeners.notlarUnsubscribe = onSnapshot(q, (snapshot) => {
         const d = [];
         snapshot.forEach(doc => d.push({ id: doc.id, ...doc.data() }));
@@ -1206,7 +1185,7 @@ function renderKoclukNotlariList(notlar, db, currentUserId, appId, studentId) {
         ${notlar.map(not => `
             <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                 <div class="flex justify-between items-center mb-2">
-                    <p class="text-sm font-semibold text-gray-700">${not.tarih ? not.tarih.toDate().toLocaleString('tr-TR', { dateStyle: 'long', timeStyle: 'short' }) : '...'}</p>
+                    <p class="text-sm font-semibold text-gray-700">${not.tarih.toDate().toLocaleString('tr-TR', { dateStyle: 'long', timeStyle: 'short' })}</p>
                     <button data-id="${not.id}" class="delete-not-button p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-100" title="Notu Sil">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
@@ -1219,8 +1198,7 @@ function renderKoclukNotlariList(notlar, db, currentUserId, appId, studentId) {
     c.querySelectorAll('.delete-not-button').forEach(btn => btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id;
         if (confirm('Bu koçluk notunu silmek istediğinize emin misiniz?')) {
-            // DÜZELTME: Veritabanı yolu
-            const ref = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "koclukNotlari", id);
+            const ref = doc(db, "koclar", currentUserId, "ogrencilerim", studentId, "koclukNotlari", id);
             await deleteDoc(ref);
         }
     }));
@@ -1242,8 +1220,7 @@ export async function saveNewKoclukNotu(db, currentUserId, appId, studentId) {
     try {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
-        // DÜZELTME: Veritabanı yolu
-        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "koclukNotlari"), {
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim", studentId, "koclukNotlari"), {
             icerik: icerik,
             tarih: serverTimestamp()
         });
@@ -1266,8 +1243,7 @@ async function showEditStudentModal(db, currentUserId, appId, studentId) {
     errorEl.classList.add('hidden');
     
     try {
-        // DÜZELTME: Veritabanı yolu
-        const studentDocRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
+        const studentDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId);
         const docSnap = await getDoc(studentDocRef);
         if (docSnap.exists()) {
             const studentData = docSnap.data();
@@ -1310,8 +1286,7 @@ export async function saveStudentChanges(db, currentUserId, appId) {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
         
-        // DÜZELTME: Veritabanı yolu
-        const studentDocRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
+        const studentDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId);
         await updateDoc(studentDocRef, {
             ad, soyad, sinif,
             takipDersleri: selectedDersler
@@ -1321,7 +1296,6 @@ export async function saveStudentChanges(db, currentUserId, appId) {
         
         // Arayüzü canlı güncelle
         const headerName = document.getElementById('studentDetailName');
-        // Eğer o an detay sayfasındaysak (başlıktan anla)
         if (headerName && document.getElementById('mainContentTitle').textContent.includes("Detay Profili")) {
              renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, `${ad} ${soyad}`);
         }

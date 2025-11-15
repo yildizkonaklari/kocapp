@@ -13,20 +13,6 @@ import {
     serverTimestamp,
     getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// ... (imports) ...
-import { 
-    activeListeners, 
-    formatDateTR, 
-    populateStudentSelect
-} from './helpers.js';
-
-
-// --- ANA FONKSİYON: AJANDA SAYFASI ---
-export function renderAjandaSayfasi(db, currentUserId, appId) { // appId buraya geliyor
-    // ... (HTML iskeleti aynı) ...
-    serverTimestamp,
-    getDocs
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { 
     activeListeners, 
@@ -66,9 +52,7 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
     `;
 
     document.getElementById('showAddRandevuModalButton').addEventListener('click', async () => {
-        // DÜZELTME: populateStudentSelect fonksiyonuna 'appId' eklendi
-        await populateStudentSelect(db, currentUserId, appId, 'randevuStudentId');
-        
+        await populateStudentSelect(db, currentUserId, 'randevuStudentId');
         document.getElementById('randevuBaslik').value = 'Birebir Koçluk';
         document.getElementById('randevuTarih').value = new Date().toISOString().split('T')[0];
         document.getElementById('randevuBaslangic').value = '09:00';
@@ -78,21 +62,21 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
         document.getElementById('addRandevuModal').style.display = 'block';
     });
     
-    loadAjanda(db, currentUserId, appId); // appId buraya da iletiliyor
+    loadAjanda(db, currentUserId, appId);
 }
 
 /**
  * Firestore'dan ajanda verilerini çeker ve listelere ayırır.
  */
-function loadAjanda(db, currentUserId, appId) { // appId buraya da iletiliyor
+function loadAjanda(db, currentUserId, appId) {
     const gelecekList = document.getElementById('gelecekRandevuList');
     const gecmisList = document.getElementById('gecmisRandevuList');
     
     const todayStr = new Date().toISOString().split('T')[0];
     
-    // Veritabanı Yolu DÜZELTİLDİ: 'koclar' -> 'artifacts'
+    // Veritabanı Yolu DÜZELTİLDİ: 'koclar/{kocID}/ajandam' olmalı
     const q = query(
-        collection(db, "artifacts", appId, "users", currentUserId, "ajandam"), 
+        collection(db, "koclar", currentUserId, "ajandam"), 
         orderBy("tarih", "desc"), 
         orderBy("baslangic", "desc")
     );
@@ -162,14 +146,14 @@ function renderAjandaList(container, randevular, isGecmis, db, currentUserId, ap
             const id = e.currentTarget.dataset.id;
             if (confirm('Bu randevuyu silmek istediğinize emin misiniz?')) {
                 // Veritabanı yolu DÜZELTİLDİ:
-                await deleteDoc(doc(db, "artifacts", appId, "users", currentUserId, "ajandam", id));
+                await deleteDoc(doc(db, "koclar", currentUserId, "ajandam", id));
             }
         });
     });
 }
 
 /**
- * app.js tarafından çağrılır.
+ * "Yeni Randevu Ekle" modalından gelen veriyi Firestore'a kaydeder.
  */
 export async function saveNewRandevu(db, currentUserId, appId) {
     // ... (Bu fonksiyonun içeriği aynı kalacak) ...
@@ -195,7 +179,7 @@ export async function saveNewRandevu(db, currentUserId, appId) {
         saveButton.textContent = "Kaydediliyor...";
         
         // Veritabanı yolu DÜZELTİLDİ:
-        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ajandam"), {
+        await addDoc(collection(db, "koclar", currentUserId, "ajandam"), {
             studentId, 
             ogrenciAd: studentName, 
             baslik, 

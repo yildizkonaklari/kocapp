@@ -33,3 +33,88 @@
 .fixed.inset-0 {
     transition: opacity 0.2s ease-in-out;
 }
+/* ... (Mevcut stilleriniz) ... */
+
+/* === YENİ: AJANDA TAKVİM STİLLERİ === */
+
+#calendarGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background-color: #e5e7eb; /* gray-200 */
+    border: 1px solid #e5e7eb; /* gray-200 */
+    overflow: hidden; /* Köşeler için */
+}
+
+.calendar-header {
+    background-color: #f9fafb; /* gray-50 */
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 0.75rem; /* 12px */
+    font-weight: 600;
+    color: #4b5563; /* gray-600 */
+}
+
+.calendar-day {
+    position: relative;
+    min-height: 100px;
+    padding: 0.5rem;
+    background-color: #ffffff; /* white */
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.calendar-day:hover {
+    background-color: #f9fafb; /* gray-50 */
+}
+
+.calendar-day.other-month {
+    background-color: #f3f4f6; /* gray-100 */
+    color: #9ca3af; /* gray-400 */
+    cursor: not-allowed;
+}
+
+.calendar-day.today {
+    background-color: #fefce8; /* yellow-50 */
+}
+
+.calendar-day .day-number {
+    font-size: 0.875rem; /* 14px */
+    font-weight: 500;
+}
+
+.calendar-day.today .day-number {
+    background-color: #8b5cf6; /* purple-600 */
+    color: white;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    font-weight: bold;
+}
+
+/* Randevu Noktaları */
+.appointment-dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 0.5rem;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+}
+.dot-blue { background-color: #3b82f6; } /* blue-500 */
+.dot-red { background-color: #ef4444; } /* red-500 */
+.dot-green { background-color: #22c55e; } /* green-500 */
+
+/* Seçili Gün Stili */
+.calendar-day.selected {
+    background-color: #eef2ff; /* indigo-50 */
+    border: 2px solid #6366f1; /* indigo-500 */
+    padding: calc(0.5rem - 2px); /* Border kalınlığını telafi et */
+}

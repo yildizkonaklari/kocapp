@@ -6,33 +6,15 @@ import {
     signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
-    getFirestore,
-    doc, 
-    getDoc, 
-    setDoc,
-    addDoc,
-    updateDoc,
-    collection, 
-    query, 
-    where,
-    onSnapshot,
-    deleteDoc,
-    orderBy,
-    serverTimestamp,
-    limit,
-    increment,
-    getDocs
+    getFirestore
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // 2. Modülleri ve Yardımcıları İçeri Aktar
-// DÜZELTME: Import yollarına './' eklendi
 import { 
     cleanUpListeners, 
     populateStudentSelect, 
     renderDersSecimi, 
-    renderPlaceholderSayfasi,
-    formatCurrency,
-    formatDateTR
+    renderPlaceholderSayfasi
 } from './modules/helpers.js';
 
 import { renderAnaSayfa } from './modules/anasayfa.js';
@@ -100,7 +82,8 @@ async function main() {
             currentUserId = user.uid;
             console.log("Koç giriş yaptı, UID:", currentUserId);
             
-            // "Yükleniyor..." ekranını gizle ve ana paneli göster
+            // DÜZELTME: Hata oluşsa bile arayüzü göstermek için
+            // bu iki satırı EN BAŞA taşıdık.
             loadingSpinner.style.display = 'none';
             appContainer.style.display = 'flex';
             
@@ -150,6 +133,7 @@ function updateUIForLoggedInUser(user) {
             const pageId = link.id.split('-')[1];
             
             // İlgili modülün render fonksiyonunu çağır
+            // TÜM ÇAĞRILARA appId EKLENDİ
             switch(pageId) {
                 case 'anasayfa':
                     renderAnaSayfa(db, currentUserId, appId);

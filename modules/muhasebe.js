@@ -16,14 +16,15 @@ import {
     getDocs // populateStudentSelect için
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// ... (imports) ...
 import { 
     activeListeners, 
     formatCurrency, 
     populateStudentSelect // helpers.js'den import ediyoruz
 } from './helpers.js';
 
-
 // --- 2. ANA FONKSİYON: MUHASEBE SAYFASI ---
+export function renderMuhasebeSayfasi(db, currentUserId, appId) { // appId'nin buraya geldiğinden eminiz
 
 /**
  * "Muhasebe & Finans" sayfasının ana HTML iskeletini çizer ve verileri yükler.
@@ -256,11 +257,6 @@ function loadIslemGecmisi(db, currentUserId, appId) {
 
 
 // --- 3. EXPORT EDİLEN MODAL KAYDETME FONKSİYONLARI ---
-
-/**
- * "Yeni Borç/Hizmet Ekle" modalından gelen veriyi kaydeder.
- * app.js tarafından çağrılır.
- */
 export async function saveNewBorc(db, currentUserId, appId) {
     const studentId = document.getElementById("borcStudentId").value;
     const tutar = parseFloat(document.getElementById("borcTutar").value);
@@ -310,10 +306,6 @@ export async function saveNewBorc(db, currentUserId, appId) {
     }
 }
 
-/**
- * "Yeni Tahsilat Ekle" modalından gelen veriyi kaydeder.
- * app.js tarafından çağrılır.
- */
 export async function saveNewTahsilat(db, currentUserId, appId) {
     const studentId = document.getElementById("tahsilatStudentId").value;
     const tutar = parseFloat(document.getElementById("tahsilatTutar").value);

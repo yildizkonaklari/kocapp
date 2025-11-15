@@ -137,7 +137,10 @@ export function formatDateTR(dateStr) {
  */
 export async function populateStudentSelect(db, currentUserId, appId, selectId) {
     const select = document.getElementById(selectId);
-    if (!select) return;
+    if (!select) {
+        console.error(`populateStudentSelect: '${selectId}' ID'li element bulunamadı.`);
+        return;
+    }
     
     select.innerHTML = '<option value="">Öğrenciler yükleniyor...</option>';
     
@@ -172,7 +175,10 @@ export async function populateStudentSelect(db, currentUserId, appId, selectId) 
  * @param {string[]} [selectedDersler=[]] - (Düzenleme modu için) Önceden seçilmiş dersler
  */
 export function renderDersSecimi(sinif, container, selectedDersler = []) {
-    if (!container) return;
+    if (!container) {
+        console.error("renderDersSecimi: Ders konteyneri bulunamadı.");
+        return;
+    }
     container.innerHTML = '';
     let dersler = [];
     

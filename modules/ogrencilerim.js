@@ -10,7 +10,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // helpers.js dosyamızdan ortak fonksiyonları ve sabitleri import ediyoruz
-// ... (imports) ...
 import { 
     activeListeners, 
     formatCurrency, 
@@ -20,7 +19,218 @@ import {
     cleanUpListeners
 } from './helpers.js';
 
-// ... (renderOgrenciSayfasi ve alt fonksiyonları aynı) ...
+// 2. MODÜL İÇİ GLOBAL DEĞİŞKENLER
+let soruTakibiZaman = 'haftalik'; 
+let soruTakibiOffset = 0; 
+
+// --- 3. ANA FONKSİYON: ÖĞRENCİ LİSTESİ SAYFASI ---
+
+/**
+ * "Öğrencilerim" sayfasının ana HTML iskeletini çizer ve ilgili fonksiyonları tetikler.
+ * @param {object} db - Firestore veritabanı referansı
+ * @param {string} currentUserId - Giriş yapmış koçun UID'si
+ * @param {string} appId - Uygulama ID'si (Veritabanı yolu için)
+ */
+export function renderOgrenciSayfasi(db, currentUserId, appId) {
+    const mainContentTitle = document.getElementById("mainContentTitle");
+    const mainContentArea = document.getElementById("mainContentArea");
+    
+    if (!currentUserId) return;
+    mainContentTitle.textContent = "Öğrencilerim";
+    mainContentArea.innerHTML = `
+        <!-- Üst Kontrol Paneli -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <!-- Arama Kutusu -->
+            <div class="relative w-full md:w-1/3">
+                <input type="text" id="searchStudentInput" placeholder="Öğrenci ara (Ad, Soyad...)" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+            <!-- Yeni Ekle Butonu -->
+            <button id="showAddStudentModalButton" class="w-full md:w-auto bg-purple-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Yeni Öğrenci Ekle
+            </button>
+        </div>
+        <!-- Öğrenci Listesi Alanı -->
+        <div id="studentListContainer" class="bg-white p-4 rounded-lg shadow">
+            <p class="text-gray-500 text-center py-4">Öğrenciler yükleniyor...</p>
+        </div>
+    `;
+    
+    // Event Listener'lar
+    document.getElementById('showAddStudentModalButton').addEventListener('click', () => {
+        document.getElementById('studentName').value = '';
+        document.getElementById('studentSurname').value = '';
+        const defaultClass = '12. Sınıf';
+        document.getElementById('studentClass').value = defaultClass;
+        // renderDersSecimi'ni helpers.js'den çağır
+        renderDersSecimi(defaultClass, document.getElementById('studentDersSecimiContainer'));
+        document.getElementById('modalErrorMessage').classList.add('hidden');
+        document.getElementById('addStudentModal').style.display = 'block';
+    });
+
+    // Arama kutusu (basit filtreleme)
+    document.getElementById('searchStudentInput').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('#studentListContainer tr').forEach(row => {
+            const rowText = row.textContent.toLowerCase();
+            row.style.display = rowText.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    // Verileri yükle
+    loadOgrenciler(db, currentUserId, appId);
+}
+
+/**
+ * Firestore'dan öğrenci listesini gerçek zamanlı olarak yükler.
+ */
+function loadOgrenciler(db, currentUserId, appId) {
+    const studentListContainer = document.getElementById('studentListContainer');
+    if (!studentListContainer) return;
+    
+    const q = query(collection(db, "koclar", currentUserId, "ogrencilerim"));
+    
+    activeListeners.studentUnsubscribe = onSnapshot(q, (querySnapshot) => {
+        const students = [];
+        querySnapshot.forEach((doc) => {
+            students.push({ id: doc.id, ...doc.data() });
+        });
+        renderStudentList(students, db, currentUserId, appId); // db vs. geçilmeli
+    }, (error) => {
+        console.error("Öğrencileri yüklerken hata:", error);
+        studentListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Veri okuma izni alınamadı. Güvenlik kurallarınızı kontrol edin.</p>`;
+    });
+}
+
+/**
+ * Öğrenci listesini HTML tablosu olarak çizer.
+ */
+function renderStudentList(students, db, currentUserId, appId) {
+    const studentListContainer = document.getElementById('studentListContainer');
+    if (students.length === 0) {
+        studentListContainer.innerHTML = `<p class="text-gray-500 text-center py-4">Henüz öğrenci eklememişsiniz. "Yeni Öğrenci Ekle" butonu ile başlayın.</p>`;
+        return;
+    }
+    studentListContainer.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ad Soyad</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sınıf</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bakiye</th>
+                        <th scope="col" class="relative px-6 py-3"><span class="sr-only">Eylemler</span></th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${students.map(student => {
+                        const bakiye = (student.toplamBorc || 0) - (student.toplamOdenen || 0);
+                        let bakiyeClass = 'text-gray-500';
+                        if (bakiye > 0) bakiyeClass = 'text-red-600 font-medium';
+                        if (bakiye < 0) bakiyeClass = 'text-green-600 font-medium';
+                        
+                        return `
+                        <tr id="student-row-${student.id}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10 bg-purple-100 text-purple-600 flex items-center justify-center rounded-full font-bold">
+                                        ${student.ad[0] || ''}${student.soyad[0] || ''}
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">${student.ad} ${student.soyad}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    ${student.sinif}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm ${bakiyeClass}">
+                                ${formatCurrency(bakiye)}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button data-id="${student.id}" data-ad="${student.ad} ${student.soyad}" class="profil-gor-button text-purple-600 hover:text-purple-900">Profili Gör</button>
+                                <button data-id="${student.id}" class="delete-student-button text-red-600 hover:text-red-900 ml-4">Sil</button>
+                            </td>
+                        </tr>
+                    `}).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    // Sil butonları
+    document.querySelectorAll('.delete-student-button').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const studentId = e.target.dataset.id;
+            if (confirm("Bu öğrenciyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.")) {
+                try {
+                    const studentDocRef = doc(db, "koclar", currentUserId, "ogrencilerim", studentId);
+                    await deleteDoc(studentDocRef);
+                } catch (error) {
+                    console.error("Silme hatası:", error);
+                    alert("Öğrenci silinirken bir hata oluştu.");
+                }
+            }
+        });
+    });
+
+    // Profil Gör butonları
+    document.querySelectorAll('.profil-gor-button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const studentId = e.target.dataset.id;
+            const studentName = e.target.dataset.ad;
+            renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, studentName);
+        });
+    });
+}
+
+/**
+ * "Yeni Öğrenci Ekle" modalından gelen veriyi Firestore'a kaydeder.
+ * app.js tarafından çağrılır.
+ */
+export async function saveNewStudent(db, currentUserId, appId) {
+    const ad = document.getElementById('studentName').value.trim();
+    const soyad = document.getElementById('studentSurname').value.trim();
+    const sinif = document.getElementById('studentClass').value;
+    
+    const selectedDersler = [];
+    document.getElementById('studentDersSecimiContainer').querySelectorAll('.student-ders-checkbox:checked').forEach(cb => {
+        selectedDersler.push(cb.value);
+    });
+
+    if (!ad || !soyad) {
+        document.getElementById('modalErrorMessage').textContent = "Ad ve Soyad alanları zorunludur.";
+        document.getElementById('modalErrorMessage').classList.remove('hidden');
+        return;
+    }
+    const saveButton = document.getElementById('saveStudentButton');
+    try {
+        saveButton.disabled = true;
+        saveButton.textContent = "Kaydediliyor...";
+        await addDoc(collection(db, "koclar", currentUserId, "ogrencilerim"), {
+            ad: ad,
+            soyad: soyad,
+            sinif: sinif,
+            takipDersleri: selectedDersler,
+            olusturmaTarihi: serverTimestamp(),
+            toplamBorc: 0,
+            toplamOdenen: 0
+        });
+        document.getElementById('addStudentModal').style.display = 'none';
+    } catch (error) {
+        console.error("Öğrenci ekleme hatası: ", error);
+        document.getElementById('modalErrorMessage').textContent = `Bir hata oluştu: ${error.message}`;
+        document.getElementById('modalErrorMessage').classList.remove('hidden');
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Kaydet";
+    }
+}
 
 // --- 4. ÖĞRENCİ DETAY SAYFASI ---
 export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, studentName) {
@@ -1093,4 +1303,5 @@ export async function saveStudentChanges(db, currentUserId, appId) {
         saveButton.disabled = false;
         saveButton.textContent = "Değişiklikleri Kaydet";
     }
-}
+    
+

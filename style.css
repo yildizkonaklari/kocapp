@@ -33,7 +33,6 @@
 .fixed.inset-0 {
     transition: opacity 0.2s ease-in-out;
 }
-/* ... (Mevcut stilleriniz: .no-scrollbar, #summaryDonutChart, .has-[:checked]) ... */
 
 /* === YENİ: AJANDA TAKVİM STİLLERİ (Görseldeki gibi) === */
 

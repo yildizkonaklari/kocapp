@@ -3,7 +3,12 @@ import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/1
 import { 
     getAuth, 
     onAuthStateChanged,
-    signOut
+    signOut,
+    updateProfile, // YENİ
+    sendPasswordResetEmail, // YENİ
+    EmailAuthProvider, // YENİ
+    reauthenticateWithCredential, // YENİ
+    deleteUser // YENİ
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     getFirestore
@@ -53,6 +58,15 @@ const userAvatar = document.getElementById("userAvatar");
 const userName = document.getElementById("userName");
 const userEmail = document.getElementById("userEmail");
 const logoutButton = document.getElementById("logoutButton");
+const userProfileArea = document.getElementById("userProfileArea"); // index.html'deki profil alanına bu ID'yi eklemeliyiz.
+// YENİ: Profil Modalı Elementleri
+const profileModal = document.getElementById("profileModal");
+const closeProfileModalButton = document.getElementById("closeProfileModalButton");
+const btnSaveName = document.getElementById("btnSaveName");
+const btnResetPassword = document.getElementById("btnResetPassword");
+const btnDeleteAccount = document.getElementById("btnDeleteAccount");
+const profileError = document.getElementById("profileError");
+
 
 // 3. Global Değişkenler
 let auth;
@@ -102,14 +116,23 @@ async function main() {
 }
 
 // === 5. Arayüz Güncelleme ve ANA NAVİGASYON ===
-
 function updateUIForLoggedInUser(user) {
     if (user) {
-        const displayName = user.email ? user.email.split('@')[0] : "Koç";
+        // GÜNCELLENDİ: 'displayName' (Ad Soyad) kullan
+        const displayName = user.displayName ? user.displayName : (user.email ? user.email.split('@')[0] : "Koç");
         const displayEmail = user.email || "E-posta yok";
+        
         userName.textContent = displayName;
         userEmail.textContent = displayEmail;
-        userAvatar.textContent = displayName[0].toUpperCase();
+        userAvatar.textContent = displayName.substring(0, 2).toUpperCase();
+
+        // YENİ: Profil alanını tıklanabilir yap
+        // Not: index.html'deki profil alanına id="userProfileArea" eklediğinizden emin olun
+        const userProfileArea = document.getElementById("userProfileArea"); // Bu ID'yi <nav> içindeki profil div'ine ekleyin
+        if (userProfileArea) {
+            userProfileArea.style.cursor = "pointer";
+            userProfileArea.addEventListener('click', () => showProfileModal(user));
+        }
     }
     
     // Çıkış Butonu
@@ -161,7 +184,130 @@ function updateUIForLoggedInUser(user) {
     document.getElementById('nav-ogrencilerim').classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
     document.getElementById('nav-anasayfa').classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
 }
+// === YENİ BÖLÜM: PROFİL YÖNETİMİ ===
 
+/**
+ * Profil Ayarları modalını açar ve doldurur
+ */
+function showProfileModal(user) {
+    profileError.classList.add('hidden');
+    document.getElementById('profileDisplayName').value = user.displayName || '';
+    document.getElementById('deleteConfirmPassword').value = '';
+    
+    // Tabları varsayılan (Hesap) hale getir
+    document.querySelector('.profile-tab-button[data-tab="hesap"]').click();
+    
+    profileModal.style.display = 'block';
+}
+
+/**
+ * Koçun görünen adını (displayName) günceller
+ */
+async function handleProfileSave() {
+    const newName = document.getElementById('profileDisplayName').value.trim();
+    if (!newName) {
+        profileError.textContent = "Ad Soyad boş olamaz.";
+        profileError.classList.remove('hidden');
+        return;
+    }
+    
+    btnSaveName.disabled = true;
+    btnSaveName.textContent = "Kaydediliyor...";
+
+    try {
+        await updateProfile(auth.currentUser, {
+            displayName: newName
+        });
+        
+        // Kenar çubuğundaki adı ve avatarı anında güncelle
+        userName.textContent = newName;
+        userAvatar.textContent = newName.substring(0, 2).toUpperCase();
+        
+        profileError.classList.add('hidden');
+        // Başarı mesajı (opsiyonel)
+        alert("Profiliniz güncellendi!");
+        profileModal.style.display = 'none';
+
+    } catch (error) {
+        console.error("Profil güncelleme hatası:", error);
+        profileError.textContent = "Hata: " + error.message;
+        profileError.classList.remove('hidden');
+    } finally {
+        btnSaveName.disabled = false;
+        btnSaveName.textContent = "Adı Kaydet";
+    }
+}
+
+/**
+ * Koçun e-postasına şifre sıfırlama linki gönderir
+ */
+async function handlePasswordReset() {
+    btnResetPassword.disabled = true;
+    btnResetPassword.textContent = "Gönderiliyor...";
+    try {
+        await sendPasswordResetEmail(auth, auth.currentUser.email);
+        alert("Şifre sıfırlama e-postası gönderildi. Lütfen e-posta kutunuzu (ve spam) kontrol edin.");
+        profileError.classList.add('hidden');
+    } catch (error) {
+        console.error("Şifre sıfırlama hatası:", error);
+        profileError.textContent = "Hata: " + error.message;
+        profileError.classList.remove('hidden');
+    } finally {
+        btnResetPassword.disabled = false;
+        btnResetPassword.textContent = "Şifre Sıfırlama E-postası Gönder";
+    }
+}
+
+/**
+ * Koçun hesabını silmek için önce yeniden kimlik doğrulaması yapar
+ */
+async function handleAccountDelete() {
+    const password = document.getElementById('deleteConfirmPassword').value;
+    if (!password) {
+        profileError.textContent = "Hesabınızı silmek için mevcut şifrenizi girmelisiniz.";
+        profileError.classList.remove('hidden');
+        return;
+    }
+    
+    if (!confirm("EMİN MİSİNİZ?\n\nTüm koçluk verileriniz (öğrenciler, notlar, randevular, mesajlar) kalıcı olarak silinecektir. Bu işlem geri alınamaz!")) {
+        return;
+    }
+
+    btnDeleteAccount.disabled = true;
+    btnDeleteAccount.textContent = "Siliniyor...";
+    profileError.classList.add('hidden');
+
+    try {
+        // 1. Kimlik bilgisini oluştur
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+        
+        // 2. Yeniden kimlik doğrula
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        
+        // 3. Kimlik doğrulama başarılıysa, hesabı sil
+        // ÖNEMLİ: Hesabı silmeden önce Firestore'daki /koclar/{kocID} klasörünü
+        // silmek için bir Cloud Function yazmanız gerekir.
+        // deleteUser() fonksiyonu sadece Auth kaydını siler, veritabanı verilerini silmez.
+        // Şimdilik sadece Auth'u siliyoruz:
+        
+        await deleteUser(auth.currentUser);
+        
+        alert("Hesabınız başarıyla silindi.");
+        window.location.href = 'login.html'; // Silindikten sonra giriş sayfasına at
+        
+    } catch (error) {
+        console.error("Hesap silme hatası:", error);
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            profileError.textContent = "Hata: Mevcut şifre yanlış.";
+        } else {
+            profileError.textContent = "Hata: " + error.message;
+        }
+        profileError.classList.remove('hidden');
+    } finally {
+        btnDeleteAccount.disabled = false;
+        btnDeleteAccount.textContent = "Hesabımı Kalıcı Olarak Sil";
+    }
+}
 
 // === 6. MODAL KONTROLLERİ (Event Listeners) ===
 // Bu kısım app.js'de kalmalı çünkü modallar index.html'de
@@ -218,6 +364,33 @@ document.getElementById('saveTahsilatButton').addEventListener("click", () => sa
 document.getElementById('closeBorcModalButton').addEventListener("click", () => document.getElementById('addBorcModal').style.display = "none");
 document.getElementById('cancelBorcModalButton').addEventListener("click", () => document.getElementById('addBorcModal').style.display = "none");
 document.getElementById('saveBorcButton').addEventListener("click", () => saveNewBorc(db, currentUserId, appId));
+// YENİ: Profil Modalı Listener'ları
+closeProfileModalButton.addEventListener('click', () => { profileModal.style.display = 'none'; });
+btnSaveName.addEventListener('click', handleProfileSave);
+btnResetPassword.addEventListener('click', handlePasswordReset);
+btnDeleteAccount.addEventListener('click', handleAccountDelete);
 
+// Profil Modalı Sekme Geçişleri
+document.querySelectorAll('.profile-tab-button').forEach(button => {
+    button.addEventListener('click', (e) => {
+        // Tüm butonlardan 'active' stilini kaldır
+        document.querySelectorAll('.profile-tab-button').forEach(btn => {
+            btn.classList.remove('active', 'bg-purple-100', 'text-purple-700');
+            btn.classList.add('text-gray-500', 'hover:bg-gray-200');
+        });
+        // Tıklanan butona 'active' stilini ekle
+        e.currentTarget.classList.add('active', 'bg-purple-100', 'text-purple-700');
+        e.currentTarget.classList.remove('text-gray-500', 'hover:bg-gray-200');
+        
+        const tabId = e.currentTarget.dataset.tab;
+        
+        // Tüm içerikleri gizle
+        document.querySelectorAll('.profile-tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        // İlgili içeriği göster
+        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+    });
+});
 // === 7. UYGULAMAYI BAŞLAT ===
 main();

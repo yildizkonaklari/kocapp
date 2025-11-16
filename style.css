@@ -33,88 +33,87 @@
 .fixed.inset-0 {
     transition: opacity 0.2s ease-in-out;
 }
-/* ... (Mevcut stilleriniz) ... */
+/* ... (Mevcut stilleriniz: .no-scrollbar, #summaryDonutChart, .has-[:checked]) ... */
 
-/* === YENİ: AJANDA TAKVİM STİLLERİ === */
+/* === YENİ: AJANDA TAKVİM STİLLERİ (Görseldeki gibi) === */
 
 #calendarGrid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 1px;
-    background-color: #e5e7eb; /* gray-200 */
-    border: 1px solid #e5e7eb; /* gray-200 */
-    overflow: hidden; /* Köşeler için */
+    /* `gap: 1px;` ve `bg-color` kaldırıldı, hücreler arası boşluk olacak */
 }
 
 .calendar-header {
-    background-color: #f9fafb; /* gray-50 */
-    padding: 0.5rem;
     text-align: center;
-    font-size: 0.75rem; /* 12px */
-    font-weight: 600;
+    font-size: 0.875rem; /* 14px */
+    font-weight: 500;
     color: #4b5563; /* gray-600 */
+    padding-bottom: 0.75rem; /* 12px */
 }
 
 .calendar-day {
     position: relative;
-    min-height: 100px;
-    padding: 0.5rem;
-    background-color: #ffffff; /* white */
+    height: 100px; /* Sabit yükseklik, daha iyi görünüm için */
+    padding: 0.5rem; /* 8px */
+    background-color: #ffffff;
+    border: 1px solid #f3f4f6; /* gray-100 */
     transition: background-color 0.2s;
     cursor: pointer;
 }
 
 .calendar-day:hover {
-    background-color: #f9fafb; /* gray-50 */
+    background-color: #f5f3ff; /* purple-50 */
+    border-color: #ddd6fe; /* purple-200 */
 }
 
 .calendar-day.other-month {
-    background-color: #f3f4f6; /* gray-100 */
-    color: #9ca3af; /* gray-400 */
+    background-color: #f9fafb; /* gray-50 */
+    color: #d1d5db; /* gray-300 */
     cursor: not-allowed;
-}
-
-.calendar-day.today {
-    background-color: #fefce8; /* yellow-50 */
 }
 
 .calendar-day .day-number {
     font-size: 0.875rem; /* 14px */
     font-weight: 500;
+    color: #374151; /* gray-700 */
 }
 
+/* Bugünün Tarihi (Görseldeki gibi belirgin) */
 .calendar-day.today .day-number {
-    background-color: #8b5cf6; /* purple-600 */
+    background-color: #6d28d9; /* violet-700 (daha koyu) */
     color: white;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 9999px;
-    font-weight: bold;
+    font-weight: 700;
+    margin-left: -2px; /* Hizalama */
 }
 
 /* Randevu Noktaları */
 .appointment-dots {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 5px; /* Noktalar arası boşluk */
     margin-top: 0.5rem;
+    padding-left: 2px;
 }
 
 .dot {
-    width: 8px;
-    height: 8px;
+    width: 10px; /* Daha büyük noktalar */
+    height: 10px;
     border-radius: 9999px;
+    border: 1px solid rgba(0,0,0,0.05);
 }
-.dot-blue { background-color: #3b82f6; } /* blue-500 */
-.dot-red { background-color: #ef4444; } /* red-500 */
-.dot-green { background-color: #22c55e; } /* green-500 */
+.dot-blue { background-color: #3b82f6; } /* Gelecek */
+.dot-red { background-color: #ef4444; } /* Geçmiş */
+.dot-green { background-color: #22c55e; } /* Tamamlandı */
 
-/* Seçili Gün Stili */
+/* Seçili Gün Stili (Kullanıcı tıkladığında) */
 .calendar-day.selected {
     background-color: #eef2ff; /* indigo-50 */
     border: 2px solid #6366f1; /* indigo-500 */
-    padding: calc(0.5rem - 2px); /* Border kalınlığını telafi et */
+    padding: calc(0.5rem - 2px);
 }

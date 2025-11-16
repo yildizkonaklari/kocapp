@@ -371,9 +371,76 @@
             </div>
         </div>
     </div>
+<!-- ... (Önceki kodlar ve diğer tüm modallar) ... -->
 
-    <!-- === "YENİ RANDEVU EKLE" MODALI (Pop-up) === -->
+    <!-- === "YENİ RANDEVU EKLE" MODALI (GÜNCELLENDİ) === -->
     <div id="addRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+            
+            <!-- GÜNCELLENDİ: O GÜNÜN MEVCUT RANDEVU LİSTESİ -->
+            <div id="dailyAppointmentsList" class="mb-4">
+                <h4 class="text-lg font-semibold mb-2" id="dailyAppointmentsTitle">Günün Planı</h4>
+                <div id="dailyAppointmentsContainer" class="max-h-32 overflow-y-auto space-y-2 bg-gray-50 p-3 rounded-md border">
+                    <p class="text-sm text-gray-500 text-center">Bu gün için randevu yok.</p>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pb-3 border-t pt-4">
+                <h3 class="text-2xl font-semibold">Yeni Randevu Planla</h3>
+                <button id="closeRandevuModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="randevuStudentId" class="block text-sm font-medium text-gray-700">Öğrenci</label>
+                    <select id="randevuStudentId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                        <option value="" disabled selected>Önce öğrenci listesi yüklenmeli...</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="randevuBaslik" class="block text-sm font-medium text-gray-700">Başlık</label>
+                    <input type="text" id="randevuBaslik" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <!-- GÜNCELLENDİ: Tarih ve Tekrar Seçeneği -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="randevuTarih" class="block text-sm font-medium text-gray-700">Tarih</label>
+                        <input type="date" id="randevuTarih" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                     <div>
+                        <label for="randevuTekrar" class="block text-sm font-medium text-gray-700">Tekrarla</label>
+                        <select id="randevuTekrar" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                            <option value="0" selected>Tekrarlanmaz</option>
+                            <option value="4">Her Hafta (4 Kez)</option>
+                            <option value="8">Her Hafta (8 Kez)</option>
+                            <option value="12">Her Hafta (12 Kez)</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Saat Aralığı -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="randevuBaslangic" class="block text-sm font-medium text-gray-700">Başlangıç</label>
+                        <input type="time" id="randevuBaslangic" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label for="randevuBitis" class="block text-sm font-medium text-gray-700">Bitiş</label>
+                        <input type="time" id="randevuBitis" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="randevuNot" class="block text-sm font-medium text-gray-700">Not (Opsiyonel)</label>
+                    <input type="text" id="randevuNot" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <p id="randevuModalErrorMessage" class="text-sm text-red-600 hidden"></p>
+            </div>
+            <div class="flex justify-end pt-4 mt-4 border-t">
+                <button id="cancelRandevuModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</Bbutton>
+                <button id="saveRandevuButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Randevuyu Kaydet</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- === "RANDEVU DETAY/DÜZENLE" MODALI (YENİ EKLENDİ) === -->
     <div id="editRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">

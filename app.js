@@ -58,6 +58,10 @@ const userAvatar = document.getElementById("userAvatar");
 const userName = document.getElementById("userName");
 const userEmail = document.getElementById("userEmail");
 const logoutButton = document.getElementById("logoutButton");
+const logoutButton = document.getElementById("logoutButton");
+const mainContentTitle = document.getElementById("mainContentTitle");
+const mainContentArea = document.getElementById("mainContentArea");
+// YENİ: Profil Alanı
 const userProfileArea = document.getElementById("userProfileArea"); // index.html'deki profil alanına bu ID'yi eklemeliyiz.
 // YENİ: Profil Modalı Elementleri
 const profileModal = document.getElementById("profileModal");
@@ -66,7 +70,6 @@ const btnSaveName = document.getElementById("btnSaveName");
 const btnResetPassword = document.getElementById("btnResetPassword");
 const btnDeleteAccount = document.getElementById("btnDeleteAccount");
 const profileError = document.getElementById("profileError");
-
 
 // 3. Global Değişkenler
 let auth;
@@ -116,23 +119,14 @@ async function main() {
 }
 
 // === 5. Arayüz Güncelleme ve ANA NAVİGASYON ===
+
 function updateUIForLoggedInUser(user) {
     if (user) {
-        // GÜNCELLENDİ: 'displayName' (Ad Soyad) kullan
-        const displayName = user.displayName ? user.displayName : (user.email ? user.email.split('@')[0] : "Koç");
+       const displayName = user.displayName ? user.displayName : (user.email ? user.email.split('@')[0] : "Koç");
         const displayEmail = user.email || "E-posta yok";
-        
         userName.textContent = displayName;
         userEmail.textContent = displayEmail;
-        userAvatar.textContent = displayName.substring(0, 2).toUpperCase();
-
-        // YENİ: Profil alanını tıklanabilir yap
-        // Not: index.html'deki profil alanına id="userProfileArea" eklediğinizden emin olun
-        const userProfileArea = document.getElementById("userProfileArea"); // Bu ID'yi <nav> içindeki profil div'ine ekleyin
-        if (userProfileArea) {
-            userProfileArea.style.cursor = "pointer";
-            userProfileArea.addEventListener('click', () => showProfileModal(user));
-        }
+        userAvatar.textContent = displayName[0].toUpperCase();
     }
     
     // Çıkış Butonu
@@ -364,6 +358,7 @@ document.getElementById('saveTahsilatButton').addEventListener("click", () => sa
 document.getElementById('closeBorcModalButton').addEventListener("click", () => document.getElementById('addBorcModal').style.display = "none");
 document.getElementById('cancelBorcModalButton').addEventListener("click", () => document.getElementById('addBorcModal').style.display = "none");
 document.getElementById('saveBorcButton').addEventListener("click", () => saveNewBorc(db, currentUserId, appId));
+
 // YENİ: Profil Modalı Listener'ları
 closeProfileModalButton.addEventListener('click', () => { profileModal.style.display = 'none'; });
 btnSaveName.addEventListener('click', handleProfileSave);

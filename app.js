@@ -58,7 +58,6 @@ const userAvatar = document.getElementById("userAvatar");
 const userName = document.getElementById("userName");
 const userEmail = document.getElementById("userEmail");
 const logoutButton = document.getElementById("logoutButton");
-const logoutButton = document.getElementById("logoutButton");
 const mainContentTitle = document.getElementById("mainContentTitle");
 const mainContentArea = document.getElementById("mainContentArea");
 // YENİ: Profil Alanı

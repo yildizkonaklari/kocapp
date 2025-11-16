@@ -10,28 +10,10 @@
     
     <!-- 2. Font Awesome (İkonlar için) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 3. Özel Stiller (style.css'den) -->
     <link rel="stylesheet" href="style.css">
     
-    <!-- 3. Özel Stiller -->
-    <style>
-        /* Kaydırma Çubuğu (Scrollbar) Yardımcı Sınıfı */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;  /* IE ve Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        /* Soru Takibi Donut Grafik Animasyonu */
-        #summaryDonutChart circle:nth-child(2) {
-            transition: stroke-dashoffset 0.5s ease-out;
-        }
-        /* Radyo buton seçiliyken etiket stili */
-        .has-[:checked] {
-            border-color: #7c3aed; /* purple-500 */
-            background-color: #f5f3ff; /* purple-50 */
-        }
-    </style>
 </head>
 <body class="bg-gray-100">
 
@@ -372,7 +354,8 @@
             </div>
         </div>
     </div>
-    <!-- === "YENİ RANDEVU EKLE" MODALI (GÜNCELLENDİ) === -->
+
+<!-- === "YENİ RANDEVU EKLE" MODALI (GÜNCELLENDİ) === -->
     <div id="addRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             
@@ -439,6 +422,62 @@
             </div>
         </div>
     </div>
+            <div class="flex justify-between items-center pb-3 border-t pt-4">
+                <h3 class="text-2xl font-semibold">Yeni Randevu Planla</h3>
+                <button id="closeRandevuModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="randevuStudentId" class="block text-sm font-medium text-gray-700">Öğrenci</label>
+                    <select id="randevuStudentId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                        <option value="" disabled selected>Önce öğrenci listesi yüklenmeli...</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="randevuBaslik" class="block text-sm font-medium text-gray-700">Başlık</label>
+                    <input type="text" id="randevuBaslik" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <!-- GÜNCELLENDİ: Tarih ve Tekrar Seçeneği -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="randevuTarih" class="block text-sm font-medium text-gray-700">Tarih</label>
+                        <input type="date" id="randevuTarih" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                     <div>
+                        <label for="randevuTekrar" class="block text-sm font-medium text-gray-700">Tekrarla</label>
+                        <select id="randevuTekrar" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                            <option value="0" selected>Tekrarlanmaz</option>
+                            <option value="4">Her Hafta (4 Kez)</option>
+                            <option value="8">Her Hafta (8 Kez)</option>
+                            <option value="12">Her Hafta (12 Kez)</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Saat Aralığı -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="randevuBaslangic" class="block text-sm font-medium text-gray-700">Başlangıç</label>
+                        <input type="time" id="randevuBaslangic" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label for="randevuBitis" class="block text-sm font-medium text-gray-700">Bitiş</label>
+                        <input type="time" id="randevuBitis" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="randevuNot" class="block text-sm font-medium text-gray-700">Not (Opsiyonel)</label>
+                    <input type="text" id="randevuNot" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <p id="randevuModalErrorMessage" class="text-sm text-red-600 hidden"></p>
+            </div>
+            <div class="flex justify-end pt-4 mt-4 border-t">
+                <button id="cancelRandevuModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</Bbutton>
+                <button id="saveRandevuButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Randevuyu Kaydet</button>
+            </div>
+        </div>
+    </div>
+   
     <!-- === "RANDEVU DETAY/DÜZENLE" MODALI (YENİ EKLENDİ) === -->
     <div id="editRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
@@ -496,7 +535,8 @@
             </div>
         </div>
     </div>
-    
+
+
     <!-- === "YENİ TAHSİLAT EKLE" MODALI (Pop-up) === -->
     <div id="addTahsilatModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">

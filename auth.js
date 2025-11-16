@@ -3,7 +3,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { 
     getAuth,
     createUserWithEmailAndPassword,
-    signInWithEmailAndPassword
+    signInWithEmailAndPassword,
+    updateProfile
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // =================================================================
@@ -78,9 +79,18 @@ if (signupButton) {
         signupButton.textContent = "Hesap Oluşturuluyor...";
 
         try {
-            // Firebase ile yeni kullanıcı oluştur
-            await createUserWithEmailAndPassword(auth, email, password);
-            // Başarılı kayıt -> Ana panele (index.html) yönlendir
+            // 1. Firebase ile yeni kullanıcı oluştur
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user; // Kullanıcıyı al
+            
+            // YENİ: 2. Varsayılan bir Görünen Ad (DisplayName) oluştur
+            // Örn: "koc.ahmet@gmail.com" -> "koc.ahmet"
+            const defaultDisplayName = email.split('@')[0];
+            await updateProfile(user, {
+                displayName: defaultDisplayName
+            });
+            
+            // 3. Ana panele (index.html) yönlendir
             window.location.href = "index.html";
         } catch (error) {
             handleFirebaseError(error);

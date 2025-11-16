@@ -498,50 +498,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- ... (Kalan Muhasebe Modalları ve <script> etiketleri) ... -->
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-            <div class="flex justify-between items-center pb-3 border-b">
-                <h3 class="text-2xl font-semibold">Yeni Randevu Planla</h3>
-                <button id="closeRandevuModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
-            </div>
-            <div class="mt-4 space-y-4">
-                <div>
-                    <label for="randevuStudentId" class="block text-sm font-medium text-gray-700">Öğrenci</label>
-                    <select id="randevuStudentId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
-                        <option value="" disabled selected>Önce öğrenci listesi yüklenmeli...</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="randevuBaslik" class="block text-sm font-medium text-gray-700">Başlık</label>
-                    <input type="text" id="randevuBaslik" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
-                </div>
-                <div class="grid grid-cols-3 gap-4">
-                    <div>
-                        <label for="randevuTarih" class="block text-sm font-medium text-gray-700">Tarih</label>
-                        <input type="date" id="randevuTarih" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
-                    </div>
-                    <div>
-                        <label for="randevuBaslangic" class="block text-sm font-medium text-gray-700">Başlangıç</label>
-                        <input type="time" id="randevuBaslangic" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
-                    </div>
-                    <div>
-                        <label for="randevuBitis" class="block text-sm font-medium text-gray-700">Bitiş</label>
-                        <input type="time" id="randevuBitis" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
-                    </div>
-                </div>
-                <div>
-                    <label for="randevuNot" class="block text-sm font-medium text-gray-700">Not (Opsiyonel)</label>
-                    <input type="text" id="randevuNot" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
-                </div>
-                <p id="randevuModalErrorMessage" class="text-sm text-red-600 hidden"></p>
-            </div>
-            <div class="flex justify-end pt-4 mt-4 border-t">
-                <button id="cancelRandevuModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</button>
-                <button id="saveRandevuButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Randevuyu Kaydet</button>
-            </div>
-        </div>
-    </div>
 
     <!-- === "YENİ TAHSİLAT EKLE" MODALI (Pop-up) === -->
     <div id="addTahsilatModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">

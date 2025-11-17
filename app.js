@@ -74,7 +74,7 @@ const profileError = document.getElementById("profileError");
 let auth;
 let db;
 let currentUserId = null;
-let appId = null;
+const appId = "kocluk-sistemi"; // Bu, student-auth.js ile eşleşmeli
 
 // Global window objesine modül fonksiyonlarını ekle (HTML inline onclick'leri için)
 // Bu, modül yapısında gereklidir, özellikle dashboard'dan profile geçiş için.
@@ -89,7 +89,7 @@ async function main() {
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    appId = "kocluk-sistemi";
+    
     setLogLevel('debug'); // Hata ayıklama için
 
     // GİRİŞ KORUMASI (Auth Guard)
@@ -118,57 +118,7 @@ async function main() {
 }
 
 // === 5. Arayüz Güncelleme ve ANA NAVİGASYON ===
-function navigateToPage(pageId) {
-    cleanUpListeners(); // helpers.js'den (Tüm dinleyicileri temizle)
-    
-    // İlgili modülün render fonksiyonunu çağır
-    switch(pageId) {
-        case 'anasayfa':
-            renderAnaSayfa(db, currentUserId, appId);
-            break;
-        case 'ogrencilerim':
-            renderOgrenciSayfasi(db, currentUserId, appId);
-            break;
-        case 'ajandam':
-            renderAjandaSayfasi(db, currentUserId, appId);
-            break;
-        case 'muhasebe':
-            renderMuhasebeSayfasi(db, currentUserId, appId);
-            break;
-        case 'mesajlar':
-            renderMesajlarSayfasi(db, currentUserId, appId);
-            break;
-        default:
-            renderPlaceholderSayfasi(pageId);
-            break;
-    }
 
-    // Hem sol menüde hem alt menüde aktif stili ayarla
-    setActiveNav(pageId);
-}
-
-// YENİ: Aktif Navigasyon Stil Fonksiyonu
-function setActiveNav(pageId) {
-    // Sol Menü (Sidebar)
-    document.querySelectorAll('.nav-link').forEach(l => {
-        l.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
-    });
-    const sidebarLink = document.getElementById(`nav-${pageId}`);
-    if (sidebarLink) {
-        sidebarLink.classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
-    }
-
-    // Alt Menü (Bottom Nav)
-    document.querySelectorAll('.bottom-nav-btn').forEach(l => {
-        l.classList.remove('active', 'text-purple-600');
-        l.classList.add('text-gray-500');
-    });
-    const bottomNavLink = document.querySelector(`.bottom-nav-btn[data-page="${pageId}"]`);
-    if (bottomNavLink) {
-        bottomNavLink.classList.add('active', 'text-purple-600');
-        bottomNavLink.classList.remove('text-gray-500');
-    }
-}
 function updateUIForLoggedInUser(user) {
     if (user) {
         // GÜNCELLENDİ: 'displayName' (Ad Soyad) kullan
@@ -196,23 +146,17 @@ function updateUIForLoggedInUser(user) {
         });
     });
 
-    // Ana Navigasyon (Sidebar) Yönlendiricisi
+    // Ana Navigasyon Yönlendiricisi
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const pageId = link.id.split('-')[1];
-            navigateToPage(pageId); // YENİ fonksiyonu çağır
-        });
-    });
+            cleanUpListeners(); // helpers.js'den (Tüm dinleyicileri temizle)
 
-    // YENİ: Alt Navigasyon (Bottom Nav) Yönlendiricisi
-    document.querySelectorAll('.bottom-nav-btn').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const pageId = e.currentTarget.dataset.page;
-            navigateToPage(pageId); // YENİ fonksiyonu çağır
-        });
-    });
+            // Aktif menü öğesini ayarla
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold'));
+            link.classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
+            
+            const pageId = link.id.split('-')[1];
             
             // İlgili modülün render fonksiyonunu çağır
             // TÜM ÇAĞRILARA appId EKLENDİ

@@ -33,8 +33,9 @@
         
         <!-- === SOL NAVİGASYON (Sidebar) === -->
         <nav class="flex flex-col w-64 h-full bg-white shadow-lg border-r border-gray-200 no-scrollbar overflow-y-auto">
-            <!-- Profil Alanı -->
-            <div class="flex items-center p-4 border-b border-gray-200">
+            
+            <!-- DÜZELTME: Profil Alanı (Tıklanabilir) -->
+            <div id="userProfileArea" class="flex items-center p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
                 <div id="userAvatar" class="flex-shrink-0 h-12 w-12 bg-purple-100 text-purple-600 flex items-center justify-center rounded-full font-bold text-xl">
                     ?
                 </div>
@@ -87,7 +88,7 @@
     <!-- === TÜM MODALLAR (Pop-up Pencereler) === -->
     <!-- ===================================================================== -->
 
-    <!-- === "YENİ ÖĞRENCİ EKLE" MODALI (Pop-up) === -->
+    <!-- === "YENİ ÖĞRENCİ EKLE" MODALI === -->
     <div id="addStudentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-20">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -132,7 +133,7 @@
         </div>
     </div>
 
-    <!-- === "ÖĞRENCİ BİLGİLERİNİ DÜZENLE" MODALI (Pop-up) === -->
+    <!-- === "ÖĞRENCİ BİLGİLERİNİ DÜZENLE" MODALI === -->
     <div id="editStudentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -178,7 +179,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ DENEME EKLE" MODALI (Pop-up) === -->
+    <!-- === "YENİ DENEME EKLE" MODALI === -->
     <div id="addDenemeModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -219,7 +220,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ SORU VERİSİ EKLE" MODALI (Pop-up) === -->
+    <!-- === "YENİ SORU VERİSİ EKLE" MODALI === -->
     <div id="addSoruModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -265,7 +266,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ HEDEF EKLE" MODALI (Pop-up) === -->
+    <!-- === "YENİ HEDEF EKLE" MODALI === -->
     <div id="addHedefModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -295,7 +296,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ ÖDEV EKLE" MODALI (Pop-up) === -->
+    <!-- === "YENİ ÖDEV EKLE" MODALI === -->
     <div id="addOdevModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -355,11 +356,11 @@
         </div>
     </div>
 
-<!-- === "YENİ RANDEVU EKLE" MODALI (GÜNCELLENDİ) === -->
+    <!-- === "YENİ RANDEVU EKLE" MODALI === -->
     <div id="addRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
             
-            <!-- GÜNCELLENDİ: O GÜNÜN MEVCUT RANDEVU LİSTESİ -->
+            <!-- O Günün Mevcut Randevu Listesi -->
             <div id="dailyAppointmentsList" class="mb-4">
                 <h4 class="text-lg font-semibold mb-2" id="dailyAppointmentsTitle">Günün Planı</h4>
                 <div id="dailyAppointmentsContainer" class="max-h-32 overflow-y-auto space-y-2 bg-gray-50 p-3 rounded-md border">
@@ -383,7 +384,6 @@
                     <label for="randevuBaslik" class="block text-sm font-medium text-gray-700">Başlık</label>
                     <input type="text" id="randevuBaslik" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
                 </div>
-                <!-- GÜNCELLENDİ: Tarih ve Tekrar Seçeneği -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label for="randevuTarih" class="block text-sm font-medium text-gray-700">Tarih</label>
@@ -399,7 +399,6 @@
                         </select>
                     </div>
                 </div>
-                <!-- Saat Aralığı -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label for="randevuBaslangic" class="block text-sm font-medium text-gray-700">Başlangıç</label>
@@ -422,19 +421,17 @@
             </div>
         </div>
     </div>
-   
-    <!-- === "RANDEVU DETAY/DÜZENLE" MODALI (YENİ EKLENDİ) === -->
+    
+    <!-- === "RANDEVU DETAY/DÜZENLE" MODALI === -->
     <div id="editRandevuModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-            <input type="hidden" id="editRandevuId">
-            <input type="hidden" id="editRandevuStudentId">
-            
             <div class="flex justify-between items-center pb-3 border-b">
-                <h3 class="text-2xl font-semibold" id="editRandevuTitle">Randevu Detayları</h3>
+                <h3 id="editRandevuTitle" class="text-2xl font-semibold">Randevu Detayı</h3>
                 <button id="closeEditRandevuModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
             </div>
-            
             <div class="mt-4 space-y-4">
+                <input type="hidden" id="editRandevuId">
+                <input type="hidden" id="editRandevuStudentId">
                 <div>
                     <label for="editRandevuBaslik" class="block text-sm font-medium text-gray-700">Başlık</label>
                     <input type="text" id="editRandevuBaslik" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
@@ -454,35 +451,30 @@
                     </div>
                 </div>
                 <div>
-                    <label for="editRandevuNot" class="block text-sm font-medium text-gray-700">Notlar</label>
-                    <textarea id="editRandevuNot" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" placeholder="Görüşme notları..."></textarea>
+                    <label for="editRandevuNot" class="block text-sm font-medium text-gray-700">Not (Opsiyonel)</label>
+                    <input type="text" id="editRandevuNot" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
                 </div>
                 <p id="editRandevuModalErrorMessage" class="text-sm text-red-600 hidden"></p>
             </div>
-
             <!-- Eylem Butonları -->
             <div class="flex justify-between items-center pt-4 mt-4 border-t">
-                <!-- Sol Taraf: Durum ve Sil -->
-                <div class="flex gap-2">
-                    <button id="btnToggleRandevuDurum" class="bg-green-100 text-green-700 px-3 py-2 rounded-md hover:bg-green-200 text-sm font-medium flex items-center" title="Yapıldı olarak işaretle">
-                        <i class="fa-solid fa-check mr-2"></i>
-                        <span>Yapıldı</span>
+                <div>
+                    <button id="btnToggleRandevuDurum" class="bg-green-100 text-green-700 px-4 py-2 rounded-md mr-2 hover:bg-green-200 text-sm font-medium flex items-center">
+                        <i class="fa-solid fa-check mr-2"></i> Yapıldı
                     </button>
-                    <button id="btnDeleteRandevu" class="bg-red-100 text-red-700 px-3 py-2 rounded-md hover:bg-red-200 text-sm font-medium" title="Randevuyu Sil">
-                        <i class="fa-solid fa-trash"></i>
+                    <button id="btnDeleteRandevu" class="bg-red-100 text-red-700 px-4 py-2 rounded-md mr-2 hover:bg-red-200 text-sm font-medium">
+                        Sil
                     </button>
                 </div>
-                <!-- Sağ Taraf: Kaydet -->
-                <div class="flex gap-2">
-                    <button id="cancelEditRandevuModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">İptal</button>
+                <div>
+                    <button id="cancelEditRandevuModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</button>
                     <button id="saveRandevuChangesButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Değişiklikleri Kaydet</button>
                 </div>
             </div>
         </div>
     </div>
 
-
-    <!-- === "YENİ TAHSİLAT EKLE" MODALI (Pop-up) === -->
+    <!-- === "YENİ TAHSİLAT EKLE" MODALI === -->
     <div id="addTahsilatModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -515,7 +507,7 @@
         </div>
     </div>
 
-    <!-- === "YENİ BORÇ/HİZMET EKLE" MODALI (Pop-up) === -->
+    <!-- === "YENİ BORÇ/HİZMET EKLE" MODALI === -->
     <div id="addBorcModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -547,7 +539,8 @@
             </div>
         </div>
     </div>
-<!-- === YENİ: "PROFİL AYARLARI" MODALI (Pop-up) === -->
+
+    <!-- === "PROFİL AYARLARI" MODALI === -->
     <div id="profileModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
         <div class="relative top-20 mx-auto p-0 border w-full max-w-2xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center p-5 border-b">
@@ -559,15 +552,15 @@
                 <!-- Sol Sekme Menüsü -->
                 <div class="w-1/3 bg-gray-50 border-r p-4 rounded-bl-md">
                     <nav class="flex flex-col space-y-1">
-    <!-- 2. ANA UYGULAMA PANELİ (Giriş yapınca görünür) -->
-    <div id="appContainer" class="hidden h-screen w-full lg:flex">
-        
-        <!-- === SOL NAVİGASYON (Sidebar) === -->
-        <nav class="flex flex-col w-64 h-full bg-white shadow-lg border-r border-gray-200 no-scrollbar overflow-y-auto">
-            <!-- Profil Alanı (GÜNCELLENDİ: ID ve hover eklendi) -->
-            <div id="userProfileArea" class="flex items-center p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
-                <div id="userAvatar" class="flex-shrink-0 h-12 w-12 bg-purple-100 text-purple-600 flex items-center justify-center rounded-full font-bold text-xl">
-                    ?
+                        <button data-tab="hesap" class="profile-tab-button active flex items-center px-3 py-2 text-gray-700 bg-purple-100 text-purple-700 rounded-md">
+                            <i class="fa-solid fa-user-gear w-5 h-5 mr-3"></i>
+                            <span class="text-sm font-medium">Hesap</span>
+                        </button>
+                        <button data-tab="yasal" class="profile-tab-button flex items-center px-3 py-2 text-gray-500 hover:bg-gray-200 rounded-md">
+                            <i class="fa-solid fa-shield-halved w-5 h-5 mr-3"></i>
+                            <span class="text-sm font-medium">Yasal Bilgiler</span>
+                        </button>
+                    </nav>
                 </div>
 
                 <!-- Sağ İçerik Alanı -->
@@ -576,7 +569,7 @@
                     <div id="tab-hesap" class="profile-tab-content space-y-6">
                         <!-- Ad Soyad Değiştirme -->
                         <div class="space-y-2">
-                            <label for="profileDisplayName" class="block text-sm font-medium text-gray-700">Ad Soyad</label>
+                            <label for="profileDisplayName" class="block text-sm font-medium text-gray-700">Ad Soyad</ok>
                             <input type="text" id="profileDisplayName" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
                             <button id="btnSaveName" class="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700">Adı Kaydet</button>
                         </div>
@@ -617,6 +610,7 @@
             </div>
         </div>
     </div>
+
     <!-- ===================================================================== -->
     <!-- === ANA JAVASCRIPT DOSYASI === -->
     <!-- ===================================================================== -->

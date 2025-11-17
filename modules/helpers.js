@@ -89,7 +89,10 @@ export let activeListeners = {
     ajandaUnsubscribe: null,
     muhasebeUnsubscribe: null,
     chatUnsubscribe: null,
-    islemGecmisiUnsubscribe: null
+    islemGecmisiUnsubscribe: null,
+    studentUnsubscribe: null,
+    upcomingAjandaUnsubscribe: null // YENİ EKLENDİ
+};
 };
 
 // 4. PAYLAŞILAN FONKSİYONLAR

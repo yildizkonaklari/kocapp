@@ -13,7 +13,7 @@ import {
     where, 
     serverTimestamp,
     getDoc,
-    writeBatch // YENİ: Haftalık tekrar için toplu yazma
+    writeBatch // Haftalık tekrar için toplu yazma
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { 
@@ -42,31 +42,44 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
     
     mainContentTitle.textContent = "Ajandam";
     
-    // GÜNCELLENDİ: HTML İskeleti (Takvim + Liste)
+    // YENİ HTML İSKELETİ (Takvim + Liste)
     mainContentArea.innerHTML = `
         <div class="bg-white rounded-lg shadow border border-gray-200">
             <!-- Takvim Kontrolleri -->
-            <div class="flex justify-between items-center p-4 border-b border-gray-200">
-// ... (Mevcut takvim kontrolleri: prevMonth, nextMonth, goToday) ...
-                <h2 id="currentMonthYear" class="text-xl font-bold text-gray-800 mx-4 w-40 text-center">Yükleniyor...</h2>
-                <button id="nextMonth" class="p-2 text-gray-500 hover:text-purple-600 rounded-full" title="Sonraki Ay">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-                <button id="goToday" class="ml-4 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full hover:bg-gray-200 border border-gray-200">Bugün</button>
+            <div class="flex flex-col sm:flex-row justify-between items-center p-4 border-b border-gray-200 gap-2">
+                <div class="flex items-center">
+                    <button id="prevMonth" class="p-2 text-gray-500 hover:text-purple-600 rounded-full" title="Önceki Ay">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <h2 id="currentMonthYear" class="text-xl font-bold text-gray-800 mx-4 w-40 text-center">Yükleniyor...</h2>
+                    <button id="nextMonth" class="p-2 text-gray-500 hover:text-purple-600 rounded-full" title="Sonraki Ay">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <button id="goToday" class="ml-4 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full hover:bg-gray-200 border border-gray-200">Bugün</button>
+                </div>
+                <p class="text-sm text-gray-500 hidden md:block">Randevu eklemek için bir güne tıklayın.</p>
             </div>
             
             <!-- Takvim Başlıkları (Pzt, Sal...) -->
             <div id="calendarHeader" class="grid grid-cols-7 p-4 border-b border-gray-200 bg-gray-50">
-// ... (Mevcut takvim başlıkları) ...
+                <div class="calendar-header">Pzt</div>
+                <div class="calendar-header">Sal</div>
+                <div class="calendar-header">Çar</div>
+                <div class="calendar-header">Per</div>
+                <div class="calendar-header">Cum</div>
+                <div class="calendar-header">Cmt</div>
+                <div class="calendar-header">Paz</div>
             </div>
 
             <!-- Takvim Izgarası -->
             <div id="calendarGrid" class="relative p-2">
-                <!-- JS burayı dolduracak -->
+                <div class="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center">
+                    <p class="text-gray-500">Takvim yükleniyor...</p>
+                </div>
             </div>
         </div>
         
-        <!-- YENİ: Yaklaşan Randevular Listesi Alanı -->
+        <!-- Yaklaşan Randevular Listesi Alanı -->
         <div class="mt-8">
             <h3 id="appointmentListTitle" class="text-lg font-semibold text-gray-700 mb-4">Bu Haftanın Randevuları (Gelecek)</h3>
             <div id="appointmentListContainer" class="space-y-3 max-h-96 overflow-y-auto bg-white p-4 rounded-lg shadow border border-gray-200">
@@ -74,16 +87,16 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
             </div>
         </div>
     `;
+
     // Event Listener'ları Kur
-    // Not: "Yeni Randevu Ekle" butonu kaldırıldı, günlere tıklayınca açılacak.
     document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
     document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
     document.getElementById('goToday').addEventListener('click', () => changeMonth(0, true));
 
-    // "Randevu Ekle" modalı için listener'lar (app.js'de zaten var ama burada da bağlayalım)
+    // "Randevu Ekle" modalı (app.js'de)
     document.getElementById('saveRandevuButton').addEventListener('click', saveNewRandevu);
 
-    // "Randevu Düzenle" modalı için listener'lar
+    // "Randevu Düzenle" modalı
     document.getElementById('closeEditRandevuModalButton').addEventListener('click', () => document.getElementById('editRandevuModal').style.display = 'none');
     document.getElementById('cancelEditRandevuModalButton').addEventListener('click', () => document.getElementById('editRandevuModal').style.display = 'none');
     document.getElementById('saveRandevuChangesButton').addEventListener('click', saveRandevuChanges);
@@ -101,6 +114,8 @@ function changeMonth(offset, toToday = false) {
     if (toToday) {
         currentCalDate = new Date();
     } else {
+        // Ayı 1 artır/azalt
+        currentCalDate.setDate(1); // Ayın 1'ine git (taşmaları önlemek için)
         currentCalDate.setMonth(currentCalDate.getMonth() + offset);
     }
     loadCalendarDataAndDraw(currentCalDate);
@@ -108,18 +123,24 @@ function changeMonth(offset, toToday = false) {
 
 /**
  * Gösterilen ay için Firestore'dan randevuları çeker ve takvimi çizer.
+ * BU, SAYFADAKİ TEK VERİTABANI OKUMASIDIR.
  */
 function loadCalendarDataAndDraw(date) {
     const year = date.getFullYear();
     const month = date.getMonth(); // 0-11
     
+    // Ayın ilk ve son gününü hesapla (Sorgu için)
     const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
     const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0]; 
 
-    document.getElementById('currentMonthYear').textContent = date.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    document.getElementById('currentMonthYear').textContent = date.toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
 
+    // Önceki dinleyiciyi kapat
     if (activeListeners.ajandaUnsubscribe) activeListeners.ajandaUnsubscribe();
 
+    // DÜZELTME: SORGUMUZ GÜNCELLENDİ.
+    // Artık 'baslangic'a göre sıralamıyoruz. Sadece tarih aralığına bakıyoruz.
+    // Bu, Firebase'in otomatik oluşturduğu tekil indeksi kullanır. MANUEL İNDEKS GEREKMEZ.
     const q = query(
         collection(currentDb, "artifacts", currentAppId, "users", currentUid, "ajandam"),
         where("tarih", ">=", startOfMonth),
@@ -132,7 +153,11 @@ function loadCalendarDataAndDraw(date) {
             allMonthAppointments.push({ id: doc.id, ...doc.data() });
         });
         
+        // Veriler geldikten sonra takvimi çiz
         drawCalendarGrid(year, month, allMonthAppointments);
+        
+        // Veriler geldikten sonra "Yaklaşanlar" listesini çiz
+        renderUpcomingWeekList(allMonthAppointments); 
 
     }, (error) => {
         console.error("Ajanda yüklenirken hata:", error);
@@ -167,15 +192,13 @@ function drawCalendarGrid(year, month, appointments) {
         const dayEl = document.createElement('div');
         dayEl.className = 'calendar-day';
         
-        // Bugün'ü işaretle (Görseldeki gibi)
         if (dateStr === todayStr) {
             dayEl.classList.add('today');
         }
 
-        // Gün numarası
         dayEl.innerHTML = `<div class="day-number">${day}</div>`;
 
-        // O güne ait randevuları bul ve noktaları ekle
+        // O güne ait randevuları bul (JavaScript ile)
         const dayAppointments = appointments.filter(a => a.tarih === dateStr);
         if (dayAppointments.length > 0) {
             const dotsContainer = document.createElement('div');
@@ -186,7 +209,7 @@ function drawCalendarGrid(year, month, appointments) {
                 dot.className = 'dot';
                 
                 if (appt.durum === 'tamamlandi') dot.classList.add('dot-green');
-                else if (appt.tarih < todayStr) dot.classList.add('dot-red');
+                else if (appt.tarih < todayStr && appt.durum !== 'tamamlandi') dot.classList.add('dot-red');
                 else dot.classList.add('dot-blue');
                 
                 dotsContainer.appendChild(dot);
@@ -194,7 +217,7 @@ function drawCalendarGrid(year, month, appointments) {
             dayEl.appendChild(dotsContainer);
         }
 
-        // GÜNE TIKLAMA EYLEMİ: "Randevu Ekle" modalını açar
+        // GÜNE TIKLAMA EYLEMİ: "Randevu Ekle/Gör" modalını açar
         dayEl.addEventListener('click', () => {
             onShowAddRandevuModal(dateStr, dayAppointments);
         });
@@ -230,10 +253,58 @@ async function onShowAddRandevuModal(dateStr, dayAppointments = []) {
     if (dayAppointments.length === 0) {
         listContainer.innerHTML = `<p class="text-sm text-gray-500 text-center">Bu gün için randevu yok.</p>`;
     } else {
-        listContainer.innerHTML = dayAppointments
-            .sort((a,b) => a.baslangic.localeCompare(b.baslangic)) // Saate göre sırala
-            .map(r => {
-                const isDone = r.durum === 'tamamlandi';
+        // Fonksiyonu yeniden kullan
+        renderAppointmentListHTML(listContainer, dayAppointments, "", true); // true = modal içi
+    }
+
+    // 4. Modalı göster
+    modal.style.display = 'block';
+}
+
+/**
+ * "Bu Hafta" listesini (takvim altı) yükler.
+ * Bu fonksiyon artık veritabanını sorgulamaz, hafızadaki veriyi (allMonthAppointments) kullanır.
+ */
+function renderUpcomingWeekList(allAppointments) {
+    const listContainer = document.getElementById('appointmentListContainer');
+    if (!listContainer) return;
+
+    // Bu haftanın sonunu ve bugününü hesapla
+    const today = new Date();
+    const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; // 0=Pzt
+    const endOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (6 - dayOfWeek));
+
+    const todayStr = today.toISOString().split('T')[0];
+    const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
+
+    // Javascript ile filtrele
+    const appointmentsToShow = allAppointments
+        .filter(a => 
+            a.tarih >= todayStr && 
+            a.tarih <= endOfWeekStr && 
+            a.durum !== 'tamamlandi'
+        )
+        .sort((a,b) => a.tarih.localeCompare(b.tarih) || a.baslangic.localeCompare(b.baslangic));
+    
+    renderAppointmentListHTML(listContainer, appointmentsToShow, "Bu hafta için yaklaşan randevu yok.", false);
+}
+
+/**
+ * Randevu listesini (Takvim altı VEYA Modal içi) HTML olarak çizer.
+ */
+function renderAppointmentListHTML(container, appointments, emptyMessage, isModalList) {
+    if (!container) return;
+    
+    if (appointments.length === 0) {
+        container.innerHTML = `<p class="text-gray-500 text-center py-4">${emptyMessage}</p>`;
+        return;
+    }
+
+    container.innerHTML = appointments
+        .map(r => {
+            const isDone = r.durum === 'tamamlandi';
+            // Modal içi liste (daha detaylı) vs Takvim altı liste (daha basit)
+            if (isModalList) {
                 return `
                 <div class="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
                     <div class="flex-1">
@@ -243,21 +314,36 @@ async function onShowAddRandevuModal(dateStr, dayAppointments = []) {
                     <button data-id="${r.id}" class="edit-randevu-item-btn flex-shrink-0 text-xs text-purple-600 font-medium hover:underline ml-2">Detay/Düzenle</button>
                 </div>
                 `;
-            }).join('');
+            } else {
+                return `
+                <div data-id="${r.id}" class="appointment-item flex items-center justify-between p-3 bg-white rounded border border-gray-200 cursor-pointer hover:bg-gray-50">
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold ${isDone ? 'text-gray-400 line-through' : 'text-gray-800'}">${r.baslangic} - ${r.ogrenciAd}</p>
+                        <p class="text-xs text-gray-500">${r.baslik}</p>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span class="text-xs font-bold text-purple-600">${formatDateTR(r.tarih)}</span>
+                        ${isDone ? '<span class="text-xs text-green-600 font-medium">Tamamlandı</span>' : ''}
+                    </div>
+                </div>
+                `;
+            }
+        }).join('');
         
-        // "Detay/Düzenle" butonlarına tıklama olayı ekle
-        listContainer.querySelectorAll('.edit-randevu-item-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const randevuId = e.currentTarget.dataset.id;
-                // Yeni modalı açmadan önce eskisini kapat
-                modal.style.display = 'none';
-                openEditRandevuModal(randevuId);
-            });
+    // Listeye/Butonlara tıklayınca detay modalını aç
+    const items = isModalList ? container.querySelectorAll('.edit-randevu-item-btn') : container.querySelectorAll('.appointment-item');
+    
+    items.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation(); // İç içe tıklamayı engelle
+            const randevuId = e.currentTarget.dataset.id;
+            
+            // Eğer modal içindeysek, önce 'Ekle' modalını kapat
+            document.getElementById('addRandevuModal').style.display = 'none';
+            
+            openEditRandevuModal(randevuId);
         });
-    }
-
-    // 4. Modalı göster
-    modal.style.display = 'block';
+    });
 }
 
 
@@ -290,6 +376,7 @@ export async function saveNewRandevu(db, currentUserId, appId) {
 
         // Toplu yazma (batch) işlemi başlat
         const batch = writeBatch(db);
+        // DÜZELTME: Veritabanı yolu
         const collectionRef = collection(db, "artifacts", appId, "users", currentUserId, "ajandam");
         
         const baseRandevu = {
@@ -304,7 +391,7 @@ export async function saveNewRandevu(db, currentUserId, appId) {
         };
 
         // İlk randevuyu (veya tek randevuyu) ekle
-        let currentDate = new Date(new Date(tarihStr).setUTCHours(12,0,0,0)); // Saat dilimi sorunları için öğlen 12'yi al
+        let currentDate = new Date(new Date(tarihStr).setUTCHours(12,0,0,0));
         batch.set(doc(collectionRef), {
             ...baseRandevu,
             tarih: currentDate.toISOString().split('T')[0]
@@ -312,6 +399,7 @@ export async function saveNewRandevu(db, currentUserId, appId) {
 
         // Haftalık Tekrar varsa, döngüyle ekle
         if (tekrarSayisi > 0) {
+            // tekrarSayisi kadar (örn 4 kez) 7 gün sonrasına ekle
             for (let i = 0; i < tekrarSayisi; i++) {
                 currentDate.setDate(currentDate.getDate() + 7); // 7 gün ekle
                 batch.set(doc(collectionRef), {
@@ -335,90 +423,7 @@ export async function saveNewRandevu(db, currentUserId, appId) {
         saveButton.textContent = "Randevuyu Kaydet";
     }
 }
-// --- YENİ LİSTE FONKSİYONLARI ---
 
-/**
- * Takvimin altındaki "Bu Hafta" listesini yükler.
- * (Bugünden itibaren haftanın sonuna kadar)
- */
-function loadUpcomingWeekList(db, currentUserId, appId) {
-    const listContainer = document.getElementById('appointmentListContainer');
-    if (!listContainer) return;
-
-    // Bu haftanın başlangıcını ve sonunu hesapla
-    const today = new Date();
-    const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; // 0=Pzt
-    const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Pazar
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
-
-    // Sorgu: Bugünden itibaren haftanın sonuna kadar, tarihe ve saate göre sıralı
-    const q = query(
-        collection(db, "artifacts", appId, "users", currentUserId, "ajandam"),
-        where("tarih", ">=", todayStr),
-        where("tarih", "<=", endOfWeekStr),
-        orderBy("tarih", "asc"),
-        orderBy("baslangic", "asc")
-    );
-
-    if (activeListeners.upcomingAjandaUnsubscribe) activeListeners.upcomingAjandaUnsubscribe();
-    
-    activeListeners.upcomingAjandaUnsubscribe = onSnapshot(q, (snapshot) => {
-        const appointments = [];
-        snapshot.forEach(doc => {
-            appointments.push({ id: doc.id, ...doc.data() });
-        });
-        renderAppointmentList(listContainer, appointments, "Bu hafta için yaklaşan randevu yok.");
-    }, (error) => {
-        console.error("Yaklaşan ajanda yüklenirken hata:", error);
-        let errorMsg = "Yaklaşan randevular yüklenemedi.";
-        if (error.code === 'failed-precondition') {
-            errorMsg = "Veritabanı index'i gerekiyor. Lütfen F12 > Konsol'daki linke tıklayarak index'i oluşturun.";
-            console.error("EKSİK FİRESTORE İNDEKSİ: 'ajandam' koleksiyonu için (tarih ASC, baslangic ASC) indeksi oluşturun.", error.message);
-        }
-        listContainer.innerHTML = `<p class="text-red-500 text-center py-4">${errorMsg}</p>`;
-    });
-}
-
-/**
- * Randevu listesini (Takvim altı veya Modal içi) HTML olarak çizer.
- */
-function renderAppointmentList(container, appointments, emptyMessage) {
-    if (!container) return;
-    
-    if (appointments.length === 0) {
-        container.innerHTML = `<p class="text-gray-500 text-center py-4">${emptyMessage}</p>`;
-        return;
-    }
-
-    container.innerHTML = appointments
-        .map(r => {
-            const isDone = r.durum === 'tamamlandi';
-            return `
-            <div data-id="${r.id}" class="appointment-item flex items-center justify-between p-3 bg-white rounded border border-gray-200 cursor-pointer hover:bg-gray-50">
-                <div class="flex-1">
-                    <p class="text-sm font-semibold ${isDone ? 'text-gray-400 line-through' : 'text-gray-800'}">${r.baslangic} - ${r.ogrenciAd}</p>
-                    <p class="text-xs text-gray-500">${r.baslik}</p>
-                </div>
-                <div class="flex flex-col items-end">
-                    <span class="text-xs font-bold text-purple-600">${formatDateTR(r.tarih)}</span>
-                    ${isDone ? '<span class="text-xs text-green-600 font-medium">Tamamlandı</span>' : ''}
-                </div>
-            </div>
-            `;
-        }).join('');
-        
-    // Listeye tıklayınca detay modalını aç
-    container.querySelectorAll('.appointment-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const randevuId = e.currentTarget.dataset.id;
-            openEditRandevuModal(randevuId);
-        });
-    });
-}
 // --- DÜZENLEME MODALI FONKSİYONLARI ---
 
 async function openEditRandevuModal(randevuId) {

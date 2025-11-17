@@ -42,14 +42,12 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
     
     mainContentTitle.textContent = "Ajandam";
     
-    // YENİ HTML İSKELETİ (Takvim + Liste)
+    // GÜNCELLENDİ: HTML İskeleti (Takvim + Liste)
     mainContentArea.innerHTML = `
         <div class="bg-white rounded-lg shadow border border-gray-200">
             <!-- Takvim Kontrolleri -->
             <div class="flex justify-between items-center p-4 border-b border-gray-200">
-                <button id="prevMonth" class="p-2 text-gray-500 hover:text-purple-600 rounded-full" title="Önceki Ay">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                </button>
+// ... (Mevcut takvim kontrolleri: prevMonth, nextMonth, goToday) ...
                 <h2 id="currentMonthYear" class="text-xl font-bold text-gray-800 mx-4 w-40 text-center">Yükleniyor...</h2>
                 <button id="nextMonth" class="p-2 text-gray-500 hover:text-purple-600 rounded-full" title="Sonraki Ay">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -59,13 +57,7 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
             
             <!-- Takvim Başlıkları (Pzt, Sal...) -->
             <div id="calendarHeader" class="grid grid-cols-7 p-4 border-b border-gray-200 bg-gray-50">
-                <div class="calendar-header">Pzt</div>
-                <div class="calendar-header">Sal</div>
-                <div class="calendar-header">Çar</div>
-                <div class="calendar-header">Per</div>
-                <div class="calendar-header">Cum</div>
-                <div class="calendar-header">Cmt</div>
-                <div class="calendar-header">Paz</div>
+// ... (Mevcut takvim başlıkları) ...
             </div>
 
             <!-- Takvim Izgarası -->
@@ -74,10 +66,14 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
             </div>
         </div>
         
-        <!-- YENİ: Randevu Listesi Alanı Kaldırıldı -->
-        <!-- Kullanıcı artık günlere tıklayarak randevuları görecek ve ekleyecek -->
+        <!-- YENİ: Yaklaşan Randevular Listesi Alanı -->
+        <div class="mt-8">
+            <h3 id="appointmentListTitle" class="text-lg font-semibold text-gray-700 mb-4">Bu Haftanın Randevuları (Gelecek)</h3>
+            <div id="appointmentListContainer" class="space-y-3 max-h-96 overflow-y-auto bg-white p-4 rounded-lg shadow border border-gray-200">
+                <p class="text-center text-gray-400 py-4">Yaklaşan randevular yükleniyor...</p>
+            </div>
+        </div>
     `;
-
     // Event Listener'ları Kur
     // Not: "Yeni Randevu Ekle" butonu kaldırıldı, günlere tıklayınca açılacak.
     document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));

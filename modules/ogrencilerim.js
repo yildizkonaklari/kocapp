@@ -5,7 +5,8 @@
 // 1. GEREKLİ IMPORTLAR
 import { 
     doc, getDoc, addDoc, updateDoc, collection, query, 
-    onSnapshot, deleteDoc, orderBy, where, serverTimestamp
+    onSnapshot, deleteDoc, orderBy, where, serverTimestamp,
+    increment // increment'i muhasebe için (veya gerekirse) ekleyebiliriz
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // helpers.js dosyamızdan ortak fonksiyonları ve sabitleri import ediyoruz
@@ -14,10 +15,10 @@ import {
     formatCurrency, 
     formatDateTR, 
     SINAV_DERSLERI, 
-    DERS_HAVUZU,
+    DERS_HAVUZU, // DERS_HAVUZU import edildi
     renderDersSecimi,
     cleanUpListeners,
-    populateStudentSelect
+    populateStudentSelect // populateStudentSelect import edildi
 } from './helpers.js';
 
 // 2. MODÜL İÇİ GLOBAL DEĞİŞKENLER
@@ -93,7 +94,7 @@ function loadOgrenciler(db, currentUserId, appId) {
     const studentListContainer = document.getElementById('studentListContainer');
     if (!studentListContainer) return;
     
-    // DÜZELTME: Veritabanı yolu
+    // DÜZELTME: Veritabanı yolu 'koclar' -> 'artifacts'
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"));
     
     activeListeners.studentUnsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -101,7 +102,7 @@ function loadOgrenciler(db, currentUserId, appId) {
         querySnapshot.forEach((doc) => {
             students.push({ id: doc.id, ...doc.data() });
         });
-        renderStudentList(students, db, currentUserId, appId);
+        renderStudentList(students, db, currentUserId, appId); // db vs. geçilmeli
     }, (error) => {
         console.error("Öğrencileri yüklerken hata:", error);
         studentListContainer.innerHTML = `<p class="text-red-500 text-center py-4">Veri okuma izni alınamadı. Güvenlik kurallarınızı kontrol edin.</p>`;
@@ -305,6 +306,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         const modal = document.getElementById('addRandevuModal');
         const selectId = 'randevuStudentId';
         
+        // DÜZELTME: populateStudentSelect'e appId iletildi
         await populateStudentSelect(db, currentUserId, appId, selectId);
         
         document.getElementById(selectId).value = studentId;

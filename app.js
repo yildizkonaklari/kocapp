@@ -202,7 +202,18 @@ function showProfileModal(user) {
     
     profileModal.style.display = 'block';
 }
-
+                        <!-- YENİ: Koç Davet Kodu Alanı -->
+                        <div class="space-y-2">
+                            <label for="kocDavetKodu" class="block text-sm font-medium text-gray-700">Koç Davet Kodu (Öğrencileriniz için)</label>
+                            <div class="flex rounded-md shadow-sm">
+                                <input type="text" id="kocDavetKodu" readonly class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border-gray-300 bg-gray-50 text-gray-500 sm:text-sm" value="Yükleniyor...">
+                                <button id="btnKopyala" type="button" class="relative -ml-px inline-flex items-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
+                                    <i class="fa-solid fa-copy w-5 h-5 text-gray-400"></i>
+                                    <span>Kopyala</span>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500">Öğrencilerinizin kayıt olurken girmesi gereken kod budur.</p>
+                        </div>
 /**
  * Koçun görünen adını (displayName) günceller
  */

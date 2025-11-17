@@ -339,7 +339,90 @@ export async function saveNewRandevu(db, currentUserId, appId) {
         saveButton.textContent = "Randevuyu Kaydet";
     }
 }
+// --- YENİ LİSTE FONKSİYONLARI ---
 
+/**
+ * Takvimin altındaki "Bu Hafta" listesini yükler.
+ * (Bugünden itibaren haftanın sonuna kadar)
+ */
+function loadUpcomingWeekList(db, currentUserId, appId) {
+    const listContainer = document.getElementById('appointmentListContainer');
+    if (!listContainer) return;
+
+    // Bu haftanın başlangıcını ve sonunu hesapla
+    const today = new Date();
+    const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; // 0=Pzt
+    const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Pazar
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
+
+    // Sorgu: Bugünden itibaren haftanın sonuna kadar, tarihe ve saate göre sıralı
+    const q = query(
+        collection(db, "artifacts", appId, "users", currentUserId, "ajandam"),
+        where("tarih", ">=", todayStr),
+        where("tarih", "<=", endOfWeekStr),
+        orderBy("tarih", "asc"),
+        orderBy("baslangic", "asc")
+    );
+
+    if (activeListeners.upcomingAjandaUnsubscribe) activeListeners.upcomingAjandaUnsubscribe();
+    
+    activeListeners.upcomingAjandaUnsubscribe = onSnapshot(q, (snapshot) => {
+        const appointments = [];
+        snapshot.forEach(doc => {
+            appointments.push({ id: doc.id, ...doc.data() });
+        });
+        renderAppointmentList(listContainer, appointments, "Bu hafta için yaklaşan randevu yok.");
+    }, (error) => {
+        console.error("Yaklaşan ajanda yüklenirken hata:", error);
+        let errorMsg = "Yaklaşan randevular yüklenemedi.";
+        if (error.code === 'failed-precondition') {
+            errorMsg = "Veritabanı index'i gerekiyor. Lütfen F12 > Konsol'daki linke tıklayarak index'i oluşturun.";
+            console.error("EKSİK FİRESTORE İNDEKSİ: 'ajandam' koleksiyonu için (tarih ASC, baslangic ASC) indeksi oluşturun.", error.message);
+        }
+        listContainer.innerHTML = `<p class="text-red-500 text-center py-4">${errorMsg}</p>`;
+    });
+}
+
+/**
+ * Randevu listesini (Takvim altı veya Modal içi) HTML olarak çizer.
+ */
+function renderAppointmentList(container, appointments, emptyMessage) {
+    if (!container) return;
+    
+    if (appointments.length === 0) {
+        container.innerHTML = `<p class="text-gray-500 text-center py-4">${emptyMessage}</p>`;
+        return;
+    }
+
+    container.innerHTML = appointments
+        .map(r => {
+            const isDone = r.durum === 'tamamlandi';
+            return `
+            <div data-id="${r.id}" class="appointment-item flex items-center justify-between p-3 bg-white rounded border border-gray-200 cursor-pointer hover:bg-gray-50">
+                <div class="flex-1">
+                    <p class="text-sm font-semibold ${isDone ? 'text-gray-400 line-through' : 'text-gray-800'}">${r.baslangic} - ${r.ogrenciAd}</p>
+                    <p class="text-xs text-gray-500">${r.baslik}</p>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-xs font-bold text-purple-600">${formatDateTR(r.tarih)}</span>
+                    ${isDone ? '<span class="text-xs text-green-600 font-medium">Tamamlandı</span>' : ''}
+                </div>
+            </div>
+            `;
+        }).join('');
+        
+    // Listeye tıklayınca detay modalını aç
+    container.querySelectorAll('.appointment-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const randevuId = e.currentTarget.dataset.id;
+            openEditRandevuModal(randevuId);
+        });
+    });
+}
 // --- DÜZENLEME MODALI FONKSİYONLARI ---
 
 async function openEditRandevuModal(randevuId) {

@@ -74,7 +74,7 @@ const profileError = document.getElementById("profileError");
 let auth;
 let db;
 let currentUserId = null;
-const appId = "kocluk-sistemi"; // Bu, student-auth.js ile eşleşmeli
+appId = null;
 
 // Global window objesine modül fonksiyonlarını ekle (HTML inline onclick'leri için)
 // Bu, modül yapısında gereklidir, özellikle dashboard'dan profile geçiş için.
@@ -89,7 +89,7 @@ async function main() {
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    
+    appId = "kocluk-sistemi";
     setLogLevel('debug'); // Hata ayıklama için
 
     // GİRİŞ KORUMASI (Auth Guard)
@@ -118,20 +118,69 @@ async function main() {
 }
 
 // === 5. Arayüz Güncelleme ve ANA NAVİGASYON ===
+// YENİ: Sayfa Değiştirme Fonksiyonu
+function navigateToPage(pageId) {
+    cleanUpListeners(); // helpers.js'den (Tüm dinleyicileri temizle)
+    
+    // İlgili modülün render fonksiyonunu çağır
+    switch(pageId) {
+        case 'anasayfa':
+            renderAnaSayfa(db, currentUserId, appId);
+            break;
+        case 'ogrencilerim':
+            renderOgrenciSayfasi(db, currentUserId, appId);
+            break;
+        case 'ajandam':
+            renderAjandaSayfasi(db, currentUserId, appId);
+            break;
+        case 'muhasebe':
+            renderMuhasebeSayfasi(db, currentUserId, appId);
+            break;
+        case 'mesajlar':
+            renderMesajlarSayfasi(db, currentUserId, appId);
+            break;
+        default:
+            renderPlaceholderSayfasi(pageId);
+            break;
+    }
 
+    // Hem sol menüde hem alt menüde aktif stili ayarla
+    setActiveNav(pageId);
+}
+
+// YENİ: Aktif Navigasyon Stil Fonksiyonu
+function setActiveNav(pageId) {
+    // Sol Menü (Sidebar)
+    document.querySelectorAll('.nav-link').forEach(l => {
+        l.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
+    });
+    const sidebarLink = document.getElementById(`nav-${pageId}`);
+    if (sidebarLink) {
+        sidebarLink.classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
+    }
+
+    // Alt Menü (Bottom Nav)
+    document.querySelectorAll('.bottom-nav-btn').forEach(l => {
+        l.classList.remove('active', 'text-purple-600');
+        l.classList.add('text-gray-500');
+    });
+    const bottomNavLink = document.querySelector(`.bottom-nav-btn[data-page="${pageId}"]`);
+    if (bottomNavLink) {
+        bottomNavLink.classList.add('active', 'text-purple-600');
+        bottomNavLink.classList.remove('text-gray-500');
+    }
+}
+// GÜNCELLENDİ: updateUIForLoggedInUser
 function updateUIForLoggedInUser(user) {
     if (user) {
-        // GÜNCELLENDİ: 'displayName' (Ad Soyad) kullan
+        // ... (Kullanıcı bilgilerini doldurma kısmı aynı) ...
         const displayName = user.displayName ? user.displayName : (user.email ? user.email.split('@')[0] : "Koç");
         const displayEmail = user.email || "E-posta yok";
-        
         userName.textContent = displayName;
         userEmail.textContent = displayEmail;
         userAvatar.textContent = displayName.substring(0, 2).toUpperCase();
 
-        // YENİ: Profil alanını tıklanabilir yap
-        // Not: index.html'deki profil alanına id="userProfileArea" eklediğinizden emin olun
-        const userProfileArea = document.getElementById("userProfileArea"); // Bu ID'yi <nav> içindeki profil div'ine ekleyin
+        const userProfileArea = document.getElementById("userProfileArea");
         if (userProfileArea) {
             userProfileArea.style.cursor = "pointer";
             userProfileArea.addEventListener('click', () => showProfileModal(user));
@@ -146,46 +195,25 @@ function updateUIForLoggedInUser(user) {
         });
     });
 
-    // Ana Navigasyon Yönlendiricisi
+    // Ana Navigasyon (Sidebar) Yönlendiricisi
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            cleanUpListeners(); // helpers.js'den (Tüm dinleyicileri temizle)
-
-            // Aktif menü öğesini ayarla
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold'));
-            link.classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
-            
             const pageId = link.id.split('-')[1];
-            
-            // İlgili modülün render fonksiyonunu çağır
-            // TÜM ÇAĞRILARA appId EKLENDİ
-            switch(pageId) {
-                case 'anasayfa':
-                    renderAnaSayfa(db, currentUserId, appId);
-                    break;
-                case 'ogrencilerim':
-                    renderOgrenciSayfasi(db, currentUserId, appId);
-                    break;
-                case 'ajandam':
-                    renderAjandaSayfasi(db, currentUserId, appId);
-                    break;
-                case 'muhasebe':
-                    renderMuhasebeSayfasi(db, currentUserId, appId);
-                    break;
-                case 'mesajlar':
-                    renderMesajlarSayfasi(db, currentUserId, appId);
-                    break;
-                default:
-                    renderPlaceholderSayfasi(link.textContent.trim());
-                    break;
-            }
+            navigateToPage(pageId); // YENİ fonksiyonu çağır
         });
     });
 
-    // Varsayılan olarak Ana Sayfa'yı aktif yap
-    document.getElementById('nav-ogrencilerim').classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
-    document.getElementById('nav-anasayfa').classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
+    // YENİ: Alt Navigasyon (Bottom Nav) Yönlendiricisi
+    document.querySelectorAll('.bottom-nav-btn').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const pageId = e.currentTarget.dataset.page;
+            navigateToPage(pageId); // YENİ fonksiyonu çağır
+        });
+    });
+
+    // Varsayılan olarak Ana Sayfa'yı aktif yap (Bu navigateToPage içinde zaten yapılıyor)
 }
 // === YENİ BÖLÜM: PROFİL YÖNETİMİ ===
 

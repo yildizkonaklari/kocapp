@@ -116,3 +116,23 @@
     border: 2px solid #6366f1; /* indigo-500 */
     padding: calc(0.5rem - 2px);
 }
+/* ... (Mevcut stilleriniz: .no-scrollbar, #summaryDonutChart, .has-[:checked], #calendarGrid, vb.) ... */
+
+/* === YENİ: MOBİL ALT MENÜ STİLLERİ === */
+
+.bottom-nav-btn {
+    transition: color 0.2s ease-in-out;
+}
+
+.bottom-nav-btn.active {
+    color: #5b21b6; /* purple-700 */
+}
+
+/* Ortadaki büyük buton */
+.bottom-nav-btn-center {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.bottom-nav-btn-center:active {
+    transform: translateY(-2px) scale(0.95);
+    box-shadow: 0 4px 10px rgba(91, 33, 182, 0.4);
+}

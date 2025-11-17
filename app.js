@@ -121,11 +121,21 @@ async function main() {
 
 function updateUIForLoggedInUser(user) {
     if (user) {
-       const displayName = user.displayName ? user.displayName : (user.email ? user.email.split('@')[0] : "Koç");
+        // GÜNCELLENDİ: 'displayName' (Ad Soyad) kullan
+        const displayName = user.displayName ? user.displayName : (user.email ? user.email.split('@')[0] : "Koç");
         const displayEmail = user.email || "E-posta yok";
+        
         userName.textContent = displayName;
         userEmail.textContent = displayEmail;
-        userAvatar.textContent = displayName[0].toUpperCase();
+        userAvatar.textContent = displayName.substring(0, 2).toUpperCase();
+
+        // YENİ: Profil alanını tıklanabilir yap
+        // Not: index.html'deki profil alanına id="userProfileArea" eklediğinizden emin olun
+        const userProfileArea = document.getElementById("userProfileArea"); // Bu ID'yi <nav> içindeki profil div'ine ekleyin
+        if (userProfileArea) {
+            userProfileArea.style.cursor = "pointer";
+            userProfileArea.addEventListener('click', () => showProfileModal(user));
+        }
     }
     
     // Çıkış Butonu

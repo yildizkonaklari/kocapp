@@ -2,6 +2,7 @@
 // 1. FİREBASE KÜTÜPHANELERİ VE AYARLARI
 // =================================================================
 import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
 import { 
     getAuth, 
     onAuthStateChanged, 
@@ -761,9 +762,12 @@ window.approveSoru = async (sid, docId) => {
     await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sid, "soruTakibi", docId), { onayDurumu: 'onaylandi' });
 };
 
-// === MODAL KAYIT İŞLEMLERİ ===
-// (Daha önce yazılan saveNewStudent, saveNewDeneme vb. buraya gelecek veya direkt event listener içinde olacak)
-// Basitlik için burada event listener içinde tanımlıyorum.
+document.getElementById('closeRandevuModalButton').addEventListener('click', () => { document.getElementById('addRandevuModal').style.display = 'none'; });
+document.getElementById('cancelRandevuModalButton').addEventListener('click', () => { document.getElementById('addRandevuModal').style.display = 'none'; });
+
+// DÜZELTME: saveNewRandevu fonksiyonunu doğru parametrelerle çağırın
+document.getElementById('saveRandevuButton').addEventListener('click', () => saveNewRandevu(db, currentUserId, appId));
+
 
 // Borç Ekle
 document.getElementById('saveBorcButton').addEventListener('click', async () => {

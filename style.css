@@ -1,138 +1,215 @@
-/* ANA STİL DOSYASI (style.css)
-    Projenin büyük kısmı Tailwind CSS tarafından stillendirildiği için 
-    bu dosya, sadece Tailwind ile yapılamayan veya
-    özel olarak üzerine yazılması gereken stilleri içerir.
-*/
+/* =================================================================
+   KOÇLUK TAKİP SİSTEMİ - ANA STİL DOSYASI
+   ================================================================= */
 
-/* --- 1. Kaydırma Çubuğu (Scrollbar) Yardımcı Sınıfı --- */
-/* index.html'de yan menü ve ana içerik alanında kullanılan sınıf */
+/* --- 1. GENEL YARDIMCI SINIFLAR --- */
+
+/* Kaydırma Çubuğunu Gizle (Ama kaydırmaya izin ver) */
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
-
 .no-scrollbar {
     -ms-overflow-style: none;  /* IE ve Edge */
     scrollbar-width: none;  /* Firefox */
 }
 
+/* Mobil tarayıcılarda güvenli alt boşluk (iPhone X ve üzeri için) */
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+}
 
-/* --- 2. Soru Takibi Donut Grafik Animasyonu --- */
-/* app.js'de 'renderDonutChart' fonksiyonu ile çizilen SVG'nin
-   ikinci çemberine (renkli olan) bir geçiş efekti ekler. */
+/* Cam Efekti (Glassmorphism) */
+.glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Radyo Buton Seçili Durumu (Ödev Ekleme Modalı için) */
+.has-[:checked] {
+    border-color: #7c3aed; /* purple-600 */
+    background-color: #f5f3ff; /* purple-50 */
+}
+
+
+/* --- 2. ANİMASYONLAR --- */
+
+/* Aşağıdan Yukarı Kayma (Modallar için) */
+@keyframes slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+    animation: slide-up 0.3s ease-out forwards;
+}
+
+/* Pomodoro Nabız Efekti */
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); }
+    100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+.timer-active {
+    animation: pulse-ring 2s infinite;
+}
+
+/* Donut Grafik Animasyonu */
 #summaryDonutChart circle:nth-child(2) {
-    transition: stroke-dashoffset 0.5s ease-out;
+    transition: stroke-dashoffset 1s ease-out;
 }
 
 
-/* --- 3. (İsteğe Bağlı) Modal Geçiş Efekti --- */
-/* Modalların (pop-up) daha yumuşak açılması için.
-   (Not: app.js'deki modal gösterme/gizleme mantığı
-   display: block/none kullandığı için tam bir fade-in
-   animasyonu için JS'in de değişmesi gerekir. 
-   Bu, mevcut yapıya en uygun temel stildir.) */
-.fixed.inset-0 {
-    transition: opacity 0.2s ease-in-out;
-}
-
-/* === YENİ: AJANDA TAKVİM STİLLERİ (Görseldeki gibi) === */
+/* --- 3. AJANDA TAKVİM STİLLERİ --- */
 
 #calendarGrid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    /* `gap: 1px;` ve `bg-color` kaldırıldı, hücreler arası boşluk olacak */
+    /* Hücreler arası boşluk yok, borderlar ile ayrılacak */
 }
 
 .calendar-header {
     text-align: center;
-    font-size: 0.875rem; /* 14px */
-    font-weight: 500;
-    color: #4b5563; /* gray-600 */
-    padding-bottom: 0.75rem; /* 12px */
+    font-size: 0.75rem; /* 12px */
+    font-weight: 600;
+    color: #6b7280; /* gray-500 */
+    padding-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .calendar-day {
     position: relative;
-    height: 100px; /* Sabit yükseklik, daha iyi görünüm için */
-    padding: 0.5rem; /* 8px */
+    height: 80px; /* Masaüstü ve mobil için ideal yükseklik */
+    padding: 0.25rem;
     background-color: #ffffff;
-    border: 1px solid #f3f4f6; /* gray-100 */
+    border-right: 1px solid #f3f4f6;
+    border-bottom: 1px solid #f3f4f6;
     transition: background-color 0.2s;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .calendar-day:hover {
-    background-color: #f5f3ff; /* purple-50 */
-    border-color: #ddd6fe; /* purple-200 */
+    background-color: #f9fafb; /* gray-50 */
 }
 
 .calendar-day.other-month {
-    background-color: #f9fafb; /* gray-50 */
+    background-color: #f9fafb;
     color: #d1d5db; /* gray-300 */
-    cursor: not-allowed;
+    cursor: default;
 }
 
+/* Gün Numarası */
 .calendar-day .day-number {
-    font-size: 0.875rem; /* 14px */
+    font-size: 0.8rem;
     font-weight: 500;
     color: #374151; /* gray-700 */
-}
-
-/* Bugünün Tarihi (Görseldeki gibi belirgin) */
-.calendar-day.today .day-number {
-    background-color: #6d28d9; /* violet-700 (daha koyu) */
-    color: white;
-    width: 28px;
-    height: 28px;
+    margin-bottom: 4px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 9999px;
+    border-radius: 50%;
+}
+
+/* Bugünün Tarihi */
+.calendar-day.today .day-number {
+    background-color: #6d28d9; /* purple-700 */
+    color: white;
     font-weight: 700;
-    margin-left: -2px; /* Hizalama */
+    box-shadow: 0 2px 4px rgba(109, 40, 217, 0.3);
+}
+
+/* Seçili Gün */
+.calendar-day.selected {
+    background-color: #eef2ff; /* indigo-50 */
+    box-shadow: inset 0 0 0 2px #6366f1; /* indigo-500 border */
 }
 
 /* Randevu Noktaları */
 .appointment-dots {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px; /* Noktalar arası boşluk */
-    margin-top: 0.5rem;
-    padding-left: 2px;
+    gap: 3px;
+    justify-content: center;
+    width: 100%;
 }
 
 .dot {
-    width: 10px; /* Daha büyük noktalar */
-    height: 10px;
-    border-radius: 9999px;
-    border: 1px solid rgba(0,0,0,0.05);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
 }
 .dot-blue { background-color: #3b82f6; } /* Gelecek */
-.dot-red { background-color: #ef4444; } /* Geçmiş */
+.dot-red { background-color: #ef4444; } /* Geçmiş/Kaçırılan */
 .dot-green { background-color: #22c55e; } /* Tamamlandı */
 
-/* Seçili Gün Stili (Kullanıcı tıkladığında) */
-.calendar-day.selected {
-    background-color: #eef2ff; /* indigo-50 */
-    border: 2px solid #6366f1; /* indigo-500 */
-    padding: calc(0.5rem - 2px);
-}
-/* ... (Mevcut stilleriniz: .no-scrollbar, #summaryDonutChart, .has-[:checked], #calendarGrid, vb.) ... */
 
-/* === YENİ: MOBİL ALT MENÜ STİLLERİ === */
+/* --- 4. MOBİL ALT MENÜ (BOTTOM NAVIGATION) --- */
 
 .bottom-nav-btn {
-    transition: color 0.2s ease-in-out;
+    transition: color 0.2s ease-in-out, transform 0.1s;
+}
+
+.bottom-nav-btn:active {
+    transform: scale(0.95);
 }
 
 .bottom-nav-btn.active {
-    color: #5b21b6; /* purple-700 */
+    color: #5b21b6; /* purple-800 */
 }
 
-/* Ortadaki büyük buton */
+.bottom-nav-btn.active i {
+    /* İkon biraz yukarı kaysın */
+    transform: translateY(-2px); 
+    transition: transform 0.2s;
+}
+
+/* Ortadaki Büyük Buton (Öğrencilerim/Ekle) */
 .bottom-nav-btn-center {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
 }
+
 .bottom-nav-btn-center:active {
     transform: translateY(-2px) scale(0.95);
-    box-shadow: 0 4px 10px rgba(91, 33, 182, 0.4);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+
+/* --- 5. SORU TAKİP TABLOSU (ÖZEL GRID) --- */
+/* Bu stiller, app.js içinde dinamik olarak oluşturulan tabloyu destekler */
+
+.tracking-container {
+    overflow-x: auto;
+    border-radius: 0.75rem; /* rounded-xl */
+    border: 1px solid #e5e7eb; /* gray-200 */
+    background-color: white;
+}
+
+/* Sticky Header ve Kolonlar için temel ayarlar */
+.tracking-header, .tracking-header-sub, .tracking-cell-date, .tracking-cell-total {
+    background-color: #ffffff;
+}
+
+/* Hücre Odaklanma (Input) */
+.tracking-input {
+    transition: all 0.2s;
+}
+.tracking-input:focus {
+    background-color: #ffffff;
+    box-shadow: inset 0 0 0 2px #6366f1; /* indigo-500 */
+}
+
+/* Onay Durumuna Göre Kenarlıklar */
+.tracking-input.border-yellow-400 {
+    background-color: #fefce8; /* yellow-50 */
+}
+.tracking-input.border-green-400 {
+    background-color: #f0fdf4; /* green-50 */
+    color: #15803d; /* green-700 */
+    font-weight: 600;
 }

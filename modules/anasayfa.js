@@ -1,8 +1,23 @@
 // === ANA SAYFA (DASHBOARD) MODÜLÜ ===
 
-import { collection, query, where, orderBy, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// DÜZELTME: helpers.js'den import edilen fonksiyonlar
-import { activeListeners, formatCurrency, renderDersSecimi, populateStudentSelect } from './helpers.js';
+import { 
+    collection, 
+    query, 
+    where, 
+    orderBy, 
+    onSnapshot, 
+    getDocs,
+    collectionGroup, // YENİ: Gecikmiş ödevler ve onaylar için
+    limit
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// helpers.js'den import edilen fonksiyonlar
+import { 
+    activeListeners, 
+    formatCurrency, 
+    renderDersSecimi, 
+    populateStudentSelect 
+} from './helpers.js';
 
 /**
  * Ana Sayfa (Dashboard) arayüzünü çizer ve verileri yükler.
@@ -30,19 +45,27 @@ export function renderAnaSayfa(db, currentUserId, appId) {
             </div>
         </div>
 
-        <!-- KPI Kartları (Özet Bilgiler) -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- GÜNCELLENDİ: KPI Kartları (4 Kart) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Kart 1: Öğrenciler -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-users"></i></div>
                 <div><p class="text-sm text-gray-500 font-medium">Aktif Öğrenci</p><h3 class="text-2xl font-bold text-gray-800" id="dashTotalStudent">...</h3></div>
             </div>
+            <!-- Kart 2: Bugünkü Randevular -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-regular fa-calendar-check"></i></div>
                 <div><p class="text-sm text-gray-500 font-medium">Bugünkü Randevular</p><h3 class="text-2xl font-bold text-gray-800" id="dashTodayAppt">...</h3></div>
             </div>
+            <!-- YENİ Kart 3: Gecikmiş Ödevler -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-turkish-lira-sign"></i></div>
-                <div><p class="text-sm text-gray-500 font-medium">Bekleyen Alacak</p><h3 class="text-2xl font-bold text-gray-800" id="dashPendingPayment">...</h3></div>
+                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-calendar-times"></i></div>
+                <div><p class="text-sm text-gray-500 font-medium">Gecikmiş Ödevler</p><h3 class="text-2xl font-bold text-red-600" id="dashPendingOdev">...</h3></div>
+            </div>
+            <!-- YENİ Kart 4: Onay Bekleyenler -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-hourglass-half"></i></div>
+                <div><p class="text-sm text-gray-500 font-medium">Onay Bekleyenler</p><h3 class="text-2xl font-bold text-yellow-600" id="dashPendingOnay">...</h3></div>
             </div>
         </div>
 
@@ -64,14 +87,20 @@ export function renderAnaSayfa(db, currentUserId, appId) {
                 </div>
             </div>
 
-            <!-- SAĞ KOLON (Dar): HIZLI EYLEMLER ve DUYURULAR -->
+            <!-- SAĞ KOLON (Dar): HIZLI EYLEMLER -->
             <div class="space-y-6">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <h3 class="font-bold text-gray-800 mb-4">Hızlı İşlemler</h3>
                     <div class="space-y-3">
                         <button id="btnDashAddStudent" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-200 transition-colors group"><div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3 group-hover:bg-purple-600 group-hover:text-white transition-colors"><i class="fa-solid fa-user-plus"></i></div><span class="font-medium text-gray-700 group-hover:text-purple-700">Yeni Öğrenci Ekle</span></button>
                         <button id="btnDashAddRandevu" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-orange-50 hover:border-orange-200 transition-colors group"><div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mr-3 group-hover:bg-orange-600 group-hover:text-white transition-colors"><i class="fa-regular fa-calendar-plus"></i></div><span class="font-medium text-gray-700 group-hover:text-orange-700">Randevu Oluştur</span></button>
-                        <button id="btnDashGoMesajlar" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors group"><div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-colors"><i class="fa-regular fa-envelope"></i></div><span class="font-medium text-gray-700 group-hover:text-blue-700">Mesajları Oku</span></button>
+                        
+                        <!-- GÜNCELLENDİ: Mesaj Sayacı Eklendi -->
+                        <button id="btnDashGoMesajlar" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors group relative">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-colors"><i class="fa-regular fa-envelope"></i></div>
+                            <span class="font-medium text-gray-700 group-hover:text-blue-700">Mesajları Oku</span>
+                            <span id="dashUnreadCount" class="hidden absolute top-2 right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">0</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -96,7 +125,6 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     });
     
     document.getElementById('btnDashAddRandevu').addEventListener('click', async () => {
-        // DÜZELTME: populateStudentSelect'e 'appId' iletildi
         await populateStudentSelect(db, currentUserId, appId, 'randevuStudentId');
         document.getElementById('randevuBaslik').value = 'Birebir Koçluk';
         document.getElementById('randevuTarih').value = new Date().toISOString().split('T')[0];
@@ -111,15 +139,16 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     // --- 4. VERİLERİ YÜKLE ---
     loadDashboardStats(db, currentUserId, appId);
     loadTodayAgenda(db, currentUserId, appId);
+    loadPendingOdevler(db, currentUserId, appId); // YENİ
+    loadPendingOnaylar(db, currentUserId, appId); // YENİ
+    loadUnreadMessages(db, currentUserId, appId); // YENİ
 }
 
 /**
- * Dashboard'daki KPI kartlarını ve öğrenci özet listesini yükler.
+ * KPI Kartı 1: Aktif Öğrenciler ve Bekleyen Alacak
  */
 function loadDashboardStats(db, currentUserId, appId) {
     const studentTableBody = document.getElementById('dashStudentTableBody');
-    
-    // DÜZELTME: Veritabanı yolu 'koclar' -> 'artifacts'
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
     
     activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -130,44 +159,44 @@ function loadDashboardStats(db, currentUserId, appId) {
             const bakiye = (s.toplamBorc || 0) - (s.toplamOdenen || 0);
             if (bakiye > 0) totalAlacak += bakiye;
             
-            tableHtml += `
-                <tr class="hover:bg-gray-50 transition-colors group cursor-pointer dash-student-link" data-id="${doc.id}" data-name="${s.ad} ${s.soyad}">
-                    <td class="px-6 py-3 whitespace-nowrap"><div class="flex items-center"><div class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-bold mr-3 group-hover:bg-purple-100 group-hover:text-purple-600">${s.ad[0]}${s.soyad[0]}</div><div><div class="text-sm font-medium text-gray-900">${s.ad} ${s.soyad}</div></div></div></td>
-                    <td class="px-6 py-3 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">${s.sinif}</span></td>
-                    <td class="px-6 py-3 whitespace-nowrap text-center text-sm text-gray-500"><i class="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-purple-500"></i></td>
-                </tr>
-            `;
+            // Sadece ilk 5 öğrenciyi listele (performans için)
+            if (totalStudents <= 5) {
+                tableHtml += `
+                    <tr class="hover:bg-gray-50 transition-colors group cursor-pointer dash-student-link" data-id="${doc.id}" data-name="${s.ad} ${s.soyad}">
+                        <td class="px-6 py-3 whitespace-nowrap"><div class="flex items-center"><div class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-bold mr-3 group-hover:bg-purple-100 group-hover:text-purple-600">${s.ad[0]}${s.soyad[0]}</div><div><div class="text-sm font-medium text-gray-900">${s.ad} ${s.soyad}</div></div></div></td>
+                        <td class="px-6 py-3 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">${s.sinif}</span></td>
+                        <td class="px-6 py-3 whitespace-nowrap text-center text-sm text-gray-500"><i class="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-purple-500"></i></td>
+                    </tr>
+                `;
+            }
         });
 
         document.getElementById('dashTotalStudent').textContent = totalStudents;
-        document.getElementById('dashPendingPayment').textContent = formatCurrency(totalAlacak);
+        // document.getElementById('dashPendingPayment').textContent = formatCurrency(totalAlacak); // Bu kartı kaldırdık
         studentTableBody.innerHTML = tableHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-400">Henüz öğrenci yok.</td></tr>';
     
-        // Dashboard'dan öğrenci profiline gitmek için Event Listener
         studentTableBody.querySelectorAll('.dash-student-link').forEach(button => {
             button.addEventListener('click', (e) => {
                 const studentId = e.currentTarget.dataset.id;
                 const studentName = e.currentTarget.dataset.name;
-                // `renderOgrenciDetaySayfasi` global scope'da (app.js) tanımlı
-                window.renderOgrenciDetaySayfasi(studentId, studentName);
+                window.renderOgrenciDetaySayfasi(studentId, studentName); // app.js'deki global fonk.
             });
         });
         
     }, (error) => {
         console.error("Dashboard istatistikleri yüklenirken hata:", error);
         document.getElementById('dashTotalStudent').textContent = 'Hata';
-        document.getElementById('dashPendingPayment').textContent = 'Hata';
+        // document.getElementById('dashPendingPayment').textContent = 'Hata';
     });
 }
 
 /**
- * Dashboard'daki "Bugünkü Programım" listesini yükler.
+ * KPI Kartı 2: Bugünkü Randevular
  */
 function loadTodayAgenda(db, currentUserId, appId) {
     const listContainer = document.getElementById('dashAgendaList');
     const todayStr = new Date().toISOString().split('T')[0];
     
-    // DÜZELTME: Veritabanı yolu 'koclar' -> 'artifacts'
     const q = query(
         collection(db, "artifacts", appId, "users", currentUserId, "ajandam"),
         where("tarih", "==", todayStr),
@@ -198,5 +227,100 @@ function loadTodayAgenda(db, currentUserId, appId) {
     }, (error) => {
         console.error("Bugünkü ajanda yüklenirken hata:", error);
         listContainer.innerHTML = `<p class="text-red-500 text-center py-4">Ajanda yüklenemedi.</p>`;
+    });
+}
+
+/**
+ * YENİ: KPI Kartı 3: Gecikmiş Ödevler
+ * Bu fonksiyon çalışmadan önce 'ogrencilerim.js' içindeki saveNewOdev fonksiyonuna 'kocId' eklenmelidir!
+ * Ve Firestore kuralları güncellenmelidir!
+ */
+function loadPendingOdevler(db, currentUserId, appId) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const q = query(
+        collectionGroup(db, 'odevler'), // TÜM 'odevler' alt koleksiyonlarında ara
+        where('kocId', '==', currentUserId),
+        where('durum', '!=', 'tamamlandi'),
+        where('bitisTarihi', '<', todayStr)
+    );
+
+    activeListeners.pendingOdevUnsubscribe = onSnapshot(q, (snapshot) => {
+        document.getElementById('dashPendingOdev').textContent = snapshot.size;
+    }, (error) => {
+        console.error("Gecikmiş ödevler yüklenirken hata (İndeks veya kural eksik olabilir):", error.message);
+        document.getElementById('dashPendingOdev').textContent = "Hata";
+    });
+}
+
+/**
+ * YENİ: KPI Kartı 4: Onay Bekleyenler (Sorular + Denemeler)
+ * Bu fonksiyon çalışmadan önce 'student-app.js' dosyaları 'kocId' eklemelidir!
+ * Ve Firestore kuralları güncellenmelidir!
+ */
+function loadPendingOnaylar(db, currentUserId, appId) {
+    let pendingSoru = 0;
+    let pendingDeneme = 0;
+    const countEl = document.getElementById('dashPendingOnay');
+
+    const updateCount = () => {
+        countEl.textContent = pendingSoru + pendingDeneme;
+    };
+
+    // 1. Onay bekleyen sorular
+    const qSoru = query(
+        collectionGroup(db, 'soruTakibi'),
+        where('kocId', '==', currentUserId),
+        where('onayDurumu', '==', 'bekliyor')
+    );
+    activeListeners.pendingSoruUnsubscribe = onSnapshot(qSoru, (snapshot) => {
+        pendingSoru = snapshot.size;
+        updateCount();
+    }, (error) => {
+        console.error("Onay bekleyen sorular yüklenirken hata:", error.message);
+        countEl.textContent = "Hata";
+    });
+
+    // 2. Onay bekleyen denemeler
+    const qDeneme = query(
+        collectionGroup(db, 'denemeler'),
+        where('kocId', '==', currentUserId),
+        where('onayDurumu', '==', 'bekliyor')
+    );
+    activeListeners.pendingDenemeUnsubscribe = onSnapshot(qDeneme, (snapshot) => {
+        pendingDeneme = snapshot.size;
+        updateCount();
+    }, (error) => {
+        console.error("Onay bekleyen denemeler yüklenirken hata:", error.message);
+        countEl.textContent = "Hata";
+    });
+}
+
+/**
+ * YENİ: Okunmamış Mesaj Sayacı
+ * Bu fonksiyon çalışmadan önce 'student-app.js' (mesaj gönderirken) ve
+ * 'modules/mesajlar.js' (mesaj okurken) 'kocId' ve 'okundu' alanlarını eklemelidir!
+ */
+function loadUnreadMessages(db, currentUserId, appId) {
+    const countEl = document.getElementById('dashUnreadCount');
+
+    const q = query(
+        collectionGroup(db, 'mesajlar'),
+        where('kocId', '==', currentUserId),
+        where('gonderen', '==', 'ogrenci'),
+        where('okundu', '==', false)
+    );
+
+    activeListeners.unreadMessagesUnsubscribe = onSnapshot(q, (snapshot) => {
+        const count = snapshot.size;
+        if (count > 0) {
+            countEl.textContent = count > 9 ? '9+' : count;
+            countEl.classList.remove('hidden');
+        } else {
+            countEl.classList.add('hidden');
+        }
+    }, (error) => {
+        console.error("Okunmamış mesajlar yüklenirken hata:", error.message);
+        countEl.classList.add('hidden');
     });
 }

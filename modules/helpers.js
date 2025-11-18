@@ -76,10 +76,9 @@ export const DERS_HAVUZU = {
     ]
 };
 
+// ... (Mevcut kod) ...
 
 // 3. PAYLAŞILAN DİNLEYİCİ DEĞİŞKENLERİ
-// Bu değişkenler, app.js'de temizlenebilmeleri için
-// burada tutulur ve export edilir.
 export let activeListeners = {
     studentUnsubscribe: null,
     soruTakibiUnsubscribe: null,
@@ -90,9 +89,15 @@ export let activeListeners = {
     muhasebeUnsubscribe: null,
     chatUnsubscribe: null,
     islemGecmisiUnsubscribe: null,
-    upcomingAjandaUnsubscribe: null // YENİ EKLENDİ
+    
+    // YENİ EKLENDİ (Dashboard için)
+    pendingOdevUnsubscribe: null,
+    pendingSoruUnsubscribe: null,
+    pendingDenemeUnsubscribe: null,
+    unreadMessagesUnsubscribe: null
 };
 
+// ... (Kalan kodlar) ...
 // 4. PAYLAŞILAN FONKSİYONLAR
 
 /**

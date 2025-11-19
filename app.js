@@ -1,13 +1,12 @@
 // =================================================================
-// HATA YAKALAMA (Sistem Yükleniyor Hatası İçin)
+// HATA YAKALAMA
 // =================================================================
 window.addEventListener('error', function(e) {
     const spinner = document.getElementById('loadingSpinner');
     if (spinner) {
         spinner.innerHTML = `
             <div class="text-center p-6 max-w-lg bg-white rounded-lg shadow-xl border-l-4 border-red-500">
-                <h3 class="text-red-600 font-bold text-lg mb-2">Bir Hata Oluştu</h3>
-                <p class="text-gray-600 text-sm mb-4">Uygulama başlatılamadı. Lütfen aşağıdaki hatayı kontrol edin:</p>
+                <h3 class="text-red-600 font-bold text-lg mb-2">Uygulama Hatası</h3>
                 <code class="block bg-gray-100 p-3 rounded text-red-500 text-xs font-mono text-left overflow-auto">
                     ${e.message}<br>
                     <span class="text-gray-400">${e.filename}:${e.lineno}</span>
@@ -18,11 +17,11 @@ window.addEventListener('error', function(e) {
 });
 
 // =================================================================
-// 1. FİREBASE KÜTÜPHANELERİ
+// 1. FİREBASE KÜTÜPHANELERİ (DÜZELTİLDİ)
 // =================================================================
 import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
-// DÜZELTME: Auth fonksiyonları buradan çağrılmalı
+// DÜZELTME: Auth ile ilgili TÜM fonksiyonlar buradan gelmeli
 import { 
     getAuth, 
     onAuthStateChanged, 
@@ -122,7 +121,7 @@ async function main() {
             if(loadingSpinner) loadingSpinner.style.display = 'none';
             if(appContainer) {
                 appContainer.style.display = 'flex';
-                appContainer.classList.remove('hidden'); // Tailwind hidden classını kaldır
+                appContainer.classList.remove('hidden');
             }
             
             updateUIForLoggedInUser(user);
@@ -152,13 +151,14 @@ function updateUIForLoggedInUser(user) {
         profileArea.onclick = () => showProfileModal(user);
     }
 
-    logoutButton.onclick = () => {
-        signOut(auth).then(() => window.location.href = 'login.html');
-    };
+    if (logoutButton) {
+        logoutButton.onclick = () => {
+            signOut(auth).then(() => window.location.href = 'login.html');
+        };
+    }
 
     const handleNavClick = (e) => {
         e.preventDefault();
-        // Tıklanan elementin kendisi veya en yakın ebeveynindeki data-page veya id'yi al
         const target = e.currentTarget;
         const pageId = target.dataset.page || (target.id ? target.id.split('-')[1] : null);
         
@@ -171,7 +171,7 @@ function updateUIForLoggedInUser(user) {
 }
 
 function navigateToPage(pageId) {
-    cleanUpListeners(); // Eski dinleyicileri temizle
+    cleanUpListeners();
     
     // UI Güncelle (Sidebar)
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold'));
@@ -202,7 +202,6 @@ function navigateToPage(pageId) {
             
             case 'hedefler': 
             case 'odevler':
-                 // Bu alt sekmeler için şimdilik ana sayfaya veya öğrenci sayfasına yönlendirebiliriz
                  renderPlaceholderSayfasi(pageId.charAt(0).toUpperCase() + pageId.slice(1));
                  break;
 
@@ -224,7 +223,11 @@ function navigateToPage(pageId) {
 // Yardımcı: Element varsa event ekle, yoksa hata verme
 function addListener(id, event, handler) {
     const el = document.getElementById(id);
-    if (el) el.addEventListener(event, handler);
+    if (el) {
+        el.addEventListener(event, handler);
+    } else {
+        // console.warn(`Uyarı: Element ID '${id}' bulunamadı.`); // Geliştirme aşamasında açılabilir
+    }
 }
 
 // Öğrenci Ekleme
@@ -237,7 +240,7 @@ addListener('closeEditModalButton', 'click', () => document.getElementById('edit
 addListener('cancelEditModalButton', 'click', () => document.getElementById('editStudentModal').style.display = 'none');
 addListener('saveStudentChangesButton', 'click', () => saveStudentChanges(db, currentUserId, appId));
 
-// Sınıf Seçimi Değişimleri
+// Sınıf Seçimi
 addListener('studentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('studentDersSecimiContainer')));
 addListener('editStudentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('editStudentDersSecimiContainer')));
 
@@ -320,7 +323,7 @@ addListener('btnSaveName', 'click', async () => {
     btn.disabled = true;
     btn.textContent = "Kaydediliyor...";
     try {
-        await updateProfile(auth.currentUser, { displayName: newName });
+        await updateAuthProfile(auth.currentUser, { displayName: newName });
         alert("Profil güncellendi.");
         window.location.reload();
     } catch (e) {
@@ -336,7 +339,7 @@ addListener('btnResetPassword', 'click', async () => {
     const btn = document.getElementById('btnResetPassword');
     btn.disabled = true;
     try {
-        await sendPasswordResetEmail(auth, auth.currentUser.email);
+        await sendResetEmail(auth, auth.currentUser.email);
         alert("Şifre sıfırlama e-postası gönderildi.");
     } catch (e) {
         console.error(e);
@@ -354,8 +357,8 @@ addListener('btnDeleteAccount', 'click', async () => {
 
     btn.disabled = true;
     try {
-        const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
-        await reauthenticateWithCredential(auth.currentUser, credential);
+        const credential = EmailProvider.credential(auth.currentUser.email, password);
+        await reauth(auth.currentUser, credential);
         await deleteUser(auth.currentUser);
         alert("Hesap silindi.");
         window.location.href = "login.html";

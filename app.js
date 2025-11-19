@@ -16,6 +16,8 @@ import {
     onSnapshot, getDocs, serverTimestamp, limit, increment, writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
+
 // --- FIREBASE CONFIG ---
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",

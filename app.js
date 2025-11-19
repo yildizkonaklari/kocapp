@@ -17,7 +17,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- FIREBASE CONFIG ---
-// (Burayı kendi proje bilgilerinizle doldurun)
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -764,6 +763,13 @@ window.approveSoru = async (sid, docId) => {
 // === MODAL KAYIT İŞLEMLERİ ===
 // (Daha önce yazılan saveNewStudent, saveNewDeneme vb. buraya gelecek veya direkt event listener içinde olacak)
 // Basitlik için burada event listener içinde tanımlıyorum.
+
+// Randevu Modalı
+document.getElementById('closeRandevuModalButton').addEventListener('click', () => { document.getElementById('addRandevuModal').style.display = 'none'; });
+document.getElementById('cancelRandevuModalButton').addEventListener('click', () => { document.getElementById('addRandevuModal').style.display = 'none'; });
+
+// DÜZELTME: saveNewRandevu fonksiyonunu doğru parametrelerle çağırın
+document.getElementById('saveRandevuButton').addEventListener('click', () => saveNewRandevu(db, currentUserId, appId));
 
 // Borç Ekle
 document.getElementById('saveBorcButton').addEventListener('click', async () => {

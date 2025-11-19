@@ -21,9 +21,6 @@ import {
 
 /**
  * Ana Sayfa (Dashboard) arayüzünü çizer ve verileri yükler.
- * @param {object} db - Firestore veritabanı referansı
- * @param {string} currentUserId - Giriş yapmış koçun UID'si
- * @param {string} appId - Uygulama ID'si
  */
 export function renderAnaSayfa(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
@@ -45,7 +42,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
             </div>
         </div>
 
-        <!-- GÜNCELLENDİ: KPI Kartları (4 Kart) -->
+        <!-- KPI Kartları (4 Kart) -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Kart 1: Öğrenciler -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
@@ -57,12 +54,12 @@ export function renderAnaSayfa(db, currentUserId, appId) {
                 <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-regular fa-calendar-check"></i></div>
                 <div><p class="text-sm text-gray-500 font-medium">Bugünkü Randevular</p><h3 class="text-2xl font-bold text-gray-800" id="dashTodayAppt">...</h3></div>
             </div>
-            <!-- YENİ Kart 3: Gecikmiş Ödevler -->
+            <!-- Kart 3: Gecikmiş Ödevler -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-calendar-times"></i></div>
                 <div><p class="text-sm text-gray-500 font-medium">Gecikmiş Ödevler</p><h3 class="text-2xl font-bold text-red-600" id="dashPendingOdev">...</h3></div>
             </div>
-            <!-- YENİ Kart 4: Onay Bekleyenler -->
+            <!-- Kart 4: Onay Bekleyenler -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-hourglass-half"></i></div>
                 <div><p class="text-sm text-gray-500 font-medium">Onay Bekleyenler</p><h3 class="text-2xl font-bold text-yellow-600" id="dashPendingOnay">...</h3></div>
@@ -72,7 +69,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
         <!-- Ana İçerik Izgarası -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <!-- SOL KOLON (Geniş): BUGÜNKÜ PROGRAM -->
+            <!-- SOL KOLON: BUGÜNKÜ PROGRAM -->
             <div class="lg:col-span-2 space-y-6">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
@@ -87,7 +84,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
                 </div>
             </div>
 
-            <!-- SAĞ KOLON (Dar): HIZLI EYLEMLER -->
+            <!-- SAĞ KOLON: HIZLI EYLEMLER -->
             <div class="space-y-6">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <h3 class="font-bold text-gray-800 mb-4">Hızlı İşlemler</h3>
@@ -95,7 +92,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
                         <button id="btnDashAddStudent" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-200 transition-colors group"><div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3 group-hover:bg-purple-600 group-hover:text-white transition-colors"><i class="fa-solid fa-user-plus"></i></div><span class="font-medium text-gray-700 group-hover:text-purple-700">Yeni Öğrenci Ekle</span></button>
                         <button id="btnDashAddRandevu" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-orange-50 hover:border-orange-200 transition-colors group"><div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mr-3 group-hover:bg-orange-600 group-hover:text-white transition-colors"><i class="fa-regular fa-calendar-plus"></i></div><span class="font-medium text-gray-700 group-hover:text-orange-700">Randevu Oluştur</span></button>
                         
-                        <!-- GÜNCELLENDİ: Mesaj Sayacı Eklendi -->
+                        <!-- Mesaj Sayacı -->
                         <button id="btnDashGoMesajlar" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors group relative">
                             <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-colors"><i class="fa-regular fa-envelope"></i></div>
                             <span class="font-medium text-gray-700 group-hover:text-blue-700">Mesajları Oku</span>
@@ -107,14 +104,14 @@ export function renderAnaSayfa(db, currentUserId, appId) {
         </div>
     `;
 
-    // --- 2. TARİH BİLGİSİ ---
+    // Tarih Bilgisi
     const now = new Date();
     const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
     const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
     document.getElementById('dashDateDay').textContent = days[now.getDay()];
     document.getElementById('dashDateFull').textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
 
-    // --- 3. HIZLI EYLEM BUTONLARI ---
+    // Hızlı Eylem Butonları
     document.getElementById('btnDashAddStudent').addEventListener('click', () => {
         document.getElementById('studentName').value = '';
         document.getElementById('studentSurname').value = '';
@@ -136,30 +133,28 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     document.getElementById('btnDashGoAjanda').addEventListener('click', () => document.getElementById('nav-ajandam').click());
     document.getElementById('btnDashGoMesajlar').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
 
-    // --- 4. VERİLERİ YÜKLE ---
+    // Verileri Yükle
     loadDashboardStats(db, currentUserId, appId);
     loadTodayAgenda(db, currentUserId, appId);
-    loadPendingOdevler(db, currentUserId, appId); // YENİ
-    loadPendingOnaylar(db, currentUserId, appId); // YENİ
-    loadUnreadMessages(db, currentUserId, appId); // YENİ
+    loadPendingOdevler(db, currentUserId, appId);
+    loadPendingOnaylar(db, currentUserId, appId);
+    loadUnreadMessages(db, currentUserId, appId);
 }
 
 /**
- * KPI Kartı 1: Aktif Öğrenciler ve Bekleyen Alacak
+ * KPI Kartı 1: Aktif Öğrenciler
  */
 function loadDashboardStats(db, currentUserId, appId) {
     const studentTableBody = document.getElementById('dashStudentTableBody');
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
     
     activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
-        let totalStudents = 0, totalAlacak = 0, tableHtml = '';
+        let totalStudents = 0, tableHtml = '';
         snapshot.forEach(doc => {
             const s = doc.data();
             totalStudents++;
-            const bakiye = (s.toplamBorc || 0) - (s.toplamOdenen || 0);
-            if (bakiye > 0) totalAlacak += bakiye;
             
-            // Sadece ilk 5 öğrenciyi listele (performans için)
+            // Sadece ilk 5 öğrenciyi listele
             if (totalStudents <= 5) {
                 tableHtml += `
                     <tr class="hover:bg-gray-50 transition-colors group cursor-pointer dash-student-link" data-id="${doc.id}" data-name="${s.ad} ${s.soyad}">
@@ -172,21 +167,19 @@ function loadDashboardStats(db, currentUserId, appId) {
         });
 
         document.getElementById('dashTotalStudent').textContent = totalStudents;
-        // document.getElementById('dashPendingPayment').textContent = formatCurrency(totalAlacak); // Bu kartı kaldırdık
         studentTableBody.innerHTML = tableHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-400">Henüz öğrenci yok.</td></tr>';
     
         studentTableBody.querySelectorAll('.dash-student-link').forEach(button => {
             button.addEventListener('click', (e) => {
                 const studentId = e.currentTarget.dataset.id;
                 const studentName = e.currentTarget.dataset.name;
-                window.renderOgrenciDetaySayfasi(studentId, studentName); // app.js'deki global fonk.
+                window.renderOgrenciDetaySayfasi(studentId, studentName);
             });
         });
         
     }, (error) => {
         console.error("Dashboard istatistikleri yüklenirken hata:", error);
         document.getElementById('dashTotalStudent').textContent = 'Hata';
-        // document.getElementById('dashPendingPayment').textContent = 'Hata';
     });
 }
 
@@ -231,32 +224,31 @@ function loadTodayAgenda(db, currentUserId, appId) {
 }
 
 /**
- * YENİ: KPI Kartı 3: Gecikmiş Ödevler
- * Bu fonksiyon çalışmadan önce 'ogrencilerim.js' içindeki saveNewOdev fonksiyonuna 'kocId' eklenmelidir!
- * Ve Firestore kuralları güncellenmelidir!
+ * KPI Kartı 3: Gecikmiş Ödevler
+ * DÜZELTME: Sorgu basitleştirildi. "durum != tamamlandi" yerine "durum == devam" kullanıldı.
+ * Bu, Firestore'un çoklu eşitsizlik kısıtlamasını aşar.
  */
 function loadPendingOdevler(db, currentUserId, appId) {
     const todayStr = new Date().toISOString().split('T')[0];
     
     const q = query(
-        collectionGroup(db, 'odevler'), // TÜM 'odevler' alt koleksiyonlarında ara
+        collectionGroup(db, 'odevler'),
         where('kocId', '==', currentUserId),
-        where('durum', '!=', 'tamamlandi'),
+        where('durum', '==', 'devam'), // DÜZELTME: != yerine == kullanıldı
         where('bitisTarihi', '<', todayStr)
     );
 
     activeListeners.pendingOdevUnsubscribe = onSnapshot(q, (snapshot) => {
         document.getElementById('dashPendingOdev').textContent = snapshot.size;
     }, (error) => {
-        console.error("Gecikmiş ödevler yüklenirken hata (İndeks veya kural eksik olabilir):", error.message);
+        console.error("Gecikmiş ödevler yüklenirken hata:", error.message);
+        // Konsolda link çıkarsa, o linke tıklayarak index oluşturun
         document.getElementById('dashPendingOdev').textContent = "Hata";
     });
 }
 
 /**
- * YENİ: KPI Kartı 4: Onay Bekleyenler (Sorular + Denemeler)
- * Bu fonksiyon çalışmadan önce 'student-app.js' dosyaları 'kocId' eklemelidir!
- * Ve Firestore kuralları güncellenmelidir!
+ * KPI Kartı 4: Onay Bekleyenler
  */
 function loadPendingOnaylar(db, currentUserId, appId) {
     let pendingSoru = 0;
@@ -267,7 +259,7 @@ function loadPendingOnaylar(db, currentUserId, appId) {
         countEl.textContent = pendingSoru + pendingDeneme;
     };
 
-    // 1. Onay bekleyen sorular
+    // 1. Onay bekleyen sorular (İndeks gerektirir)
     const qSoru = query(
         collectionGroup(db, 'soruTakibi'),
         where('kocId', '==', currentUserId),
@@ -281,7 +273,7 @@ function loadPendingOnaylar(db, currentUserId, appId) {
         countEl.textContent = "Hata";
     });
 
-    // 2. Onay bekleyen denemeler
+    // 2. Onay bekleyen denemeler (İndeks gerektirir)
     const qDeneme = query(
         collectionGroup(db, 'denemeler'),
         where('kocId', '==', currentUserId),
@@ -297,9 +289,7 @@ function loadPendingOnaylar(db, currentUserId, appId) {
 }
 
 /**
- * YENİ: Okunmamış Mesaj Sayacı
- * Bu fonksiyon çalışmadan önce 'student-app.js' (mesaj gönderirken) ve
- * 'modules/mesajlar.js' (mesaj okurken) 'kocId' ve 'okundu' alanlarını eklemelidir!
+ * Okunmamış Mesaj Sayacı
  */
 function loadUnreadMessages(db, currentUserId, appId) {
     const countEl = document.getElementById('dashUnreadCount');

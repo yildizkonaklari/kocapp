@@ -21,21 +21,27 @@ window.addEventListener('error', function(e) {
 // 1. FİREBASE KÜTÜPHANELERİ
 // =================================================================
 import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+// DÜZELTME: Auth fonksiyonları buradan çağrılmalı
 import { 
     getAuth, 
     onAuthStateChanged, 
-    signOut 
+    signOut,
+    updateProfile, 
+    EmailAuthProvider, 
+    reauthenticateWithCredential, 
+    deleteUser, 
+    sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+// DÜZELTME: Firestore fonksiyonları sadece veritabanı işleri içindir
 import { 
     getFirestore,
-    updateProfile,
-    EmailAuthProvider,
-    reauthenticateWithCredential,
-    deleteUser,
-    sendPasswordResetEmail
+    doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, 
+    collection, collectionGroup, query, where, orderBy, 
+    onSnapshot, getDocs, serverTimestamp, limit, increment, writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
-// Not: Auth fonksiyonları normalde 'firebase-auth.js'den gelir, ancak import'larda çakışma olmaması için
-// aşağıda auth paketinden alias ile import ediyoruz.
+
 
 // =================================================================
 // 2. MODÜL IMPORTLARI
@@ -66,15 +72,6 @@ import { renderMuhasebeSayfasi, saveNewBorc, saveNewTahsilat } from './modules/m
 import { renderMesajlarSayfasi } from './modules/mesajlar.js';
 import { renderDenemelerSayfasi } from './modules/denemeler.js';
 import { renderSoruTakibiSayfasi } from './modules/sorutakibi.js';
-
-// Profil Yönetimi için Auth Fonksiyonları
-import { 
-    updateProfile as updateAuthProfile, 
-    reauthenticateWithCredential as reauth, 
-    EmailAuthProvider as EmailProvider,
-    deleteUser as delUser,
-    sendPasswordResetEmail as sendResetEmail
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
 // =================================================================
@@ -119,11 +116,14 @@ async function main() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUserId = user.uid;
-            console.log("Giriş yapıldı:", currentUserId);
+            console.log("Koç giriş yaptı:", currentUserId);
             
             // Arayüzü Göster
             if(loadingSpinner) loadingSpinner.style.display = 'none';
-            if(appContainer) appContainer.style.display = 'flex';
+            if(appContainer) {
+                appContainer.style.display = 'flex';
+                appContainer.classList.remove('hidden'); // Tailwind hidden classını kaldır
+            }
             
             updateUIForLoggedInUser(user);
             
@@ -203,7 +203,6 @@ function navigateToPage(pageId) {
             case 'hedefler': 
             case 'odevler':
                  // Bu alt sekmeler için şimdilik ana sayfaya veya öğrenci sayfasına yönlendirebiliriz
-                 // Veya placeholder gösterebiliriz.
                  renderPlaceholderSayfasi(pageId.charAt(0).toUpperCase() + pageId.slice(1));
                  break;
 
@@ -321,7 +320,7 @@ addListener('btnSaveName', 'click', async () => {
     btn.disabled = true;
     btn.textContent = "Kaydediliyor...";
     try {
-        await updateAuthProfile(auth.currentUser, { displayName: newName });
+        await updateProfile(auth.currentUser, { displayName: newName });
         alert("Profil güncellendi.");
         window.location.reload();
     } catch (e) {
@@ -337,7 +336,7 @@ addListener('btnResetPassword', 'click', async () => {
     const btn = document.getElementById('btnResetPassword');
     btn.disabled = true;
     try {
-        await sendResetEmail(auth, auth.currentUser.email);
+        await sendPasswordResetEmail(auth, auth.currentUser.email);
         alert("Şifre sıfırlama e-postası gönderildi.");
     } catch (e) {
         console.error(e);
@@ -355,9 +354,9 @@ addListener('btnDeleteAccount', 'click', async () => {
 
     btn.disabled = true;
     try {
-        const credential = EmailProvider.credential(auth.currentUser.email, password);
-        await reauth(auth.currentUser, credential);
-        await delUser(auth.currentUser);
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        await deleteUser(auth.currentUser);
         alert("Hesap silindi.");
         window.location.href = "login.html";
     } catch (e) {

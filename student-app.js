@@ -465,6 +465,7 @@ function addTrackingInputListeners() {
             const val = parseInt(el.value) || 0;
             const oldVal = parseInt(el.defaultValue) || 0;
             
+            // Sadece değer değişmişse kaydet
             if (val !== oldVal) {
                 saveSoruData(el.dataset.docId, el.dataset.tarih, el.dataset.ders, val, el);
             }
@@ -478,23 +479,29 @@ async function saveSoruData(docId, tarih, ders, adet, inputEl) {
     try {
         if (docId) {
             if (adet > 0) {
-                await updateDoc(doc(collectionRef, docId), { adet: adet, onayDurumu: 'bekliyor' });
+                // Varolanı güncelle
+                await updateDoc(doc(collectionRef, docId), { 
+                    adet: adet, 
+                    onayDurumu: 'bekliyor' // Değişiklik olunca tekrar onaya düşer
+                });
             } else {
+                // Sıfır girildiyse sil
                 await deleteDoc(doc(collectionRef, docId));
-                inputEl.dataset.docId = ""; // ID'yi temizle
+                inputEl.dataset.docId = ""; 
             }
         } else if (adet > 0) {
+            // Yeni kayıt ekle
             const docRef = await addDoc(collectionRef, {
                 tarih, ders, adet,
                 konu: studentRutinler.includes(ders) ? ders : "Genel",
                 onayDurumu: 'bekliyor',
                 eklenmeTarihi: serverTimestamp(),
-                kocId: coachId // Dashboard'da görünmesi için önemli
+                kocId: coachId 
             });
             inputEl.dataset.docId = docRef.id;
         }
         
-        // Görsel Geri Bildirim
+        // Görsel Geri Bildirim (Sarı = Bekliyor)
         inputEl.className = 'tracking-input border-yellow-400 bg-yellow-50';
         showToast('Kaydedildi');
 
@@ -723,9 +730,6 @@ document.getElementById('btnSaveDeneme').addEventListener('click', async () => {
     const ad = document.getElementById('inpDenemeAd').value;
     const tur = document.getElementById('inpDenemeTur').value;
     const tarih = document.getElementById('inpDenemeTarih').value;
-    
-    // Not: Detaylı net hesaplama UI'ı bu versiyonda basitleştirildi. 
-    // Koç panelindeki gibi detaylı istenirse eklenebilir. Şimdilik sadece başlık olarak kaydediyoruz.
     
     await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), {
         ad, tur, tarih, toplamNet: 0, onayDurumu: 'bekliyor', kocId: coachId, eklenmeTari: serverTimestamp()

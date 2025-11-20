@@ -13,7 +13,7 @@ import {
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- FİREBASE AYARLARI ---
+// --- FİREBASE AYARLARI (Sizin Projeniz) ---
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -36,21 +36,15 @@ const showSignupLink = document.getElementById('showSignup');
 const showLoginLink = document.getElementById('showLogin');
 const authErrorMessage = document.getElementById('authErrorMessage');
 const authErrorText = document.getElementById('authErrorText');
-
-// Butonlar
 const loginButton = document.getElementById('loginButton');
 const signupButton = document.getElementById('signupButton');
 
-
-// 4. Giriş Kontrolü
-// Not: Kayıt olurken bu tetiklenir, ancak biz manuel yönlendirme de yapacağız.
+// 4. Giriş Kontrolü (Yönlendirme Mantığı Düzeltildi)
+// Sayfa yüklendiğinde kullanıcı zaten giriş yapmışsa direkt panele at.
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        // Sadece login sayfasındaysak yönlendir
-        if (window.location.pathname.includes('student-login.html')) {
-             console.log("Kullanıcı giriş yapmış, yönlendiriliyor...");
-             window.location.href = "student-dashboard.html";
-        }
+        console.log("Kullanıcı oturumu açık, panele yönlendiriliyor...");
+        window.location.href = "student-dashboard.html";
     }
 });
 
@@ -89,8 +83,14 @@ if (loginButton) {
         try {
             loginButton.disabled = true;
             loginButton.textContent = "Giriş Yapılıyor...";
+            
+            // Firebase Auth ile giriş
             await signInWithEmailAndPassword(auth, email, password);
-            // onAuthStateChanged yönlendirecek
+            
+            // Başarılı olursa onAuthStateChanged tetiklenir ve yönlendirir.
+            // Ancak biz işi garantiye almak için manuel de yönlendirelim:
+            window.location.href = "student-dashboard.html";
+
         } catch (error) {
             console.error("Giriş Hatası:", error);
             handleAuthError(error);
@@ -126,12 +126,13 @@ if (signupButton) {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // 2. Profil ayar dosyasını oluştur (linkedDocId: null olarak başlar)
+            // 2. Profil ayar dosyasını oluştur
+            // Bu dosya, öğrencinin hangi koça ait olduğunu tutar.
             await setDoc(doc(db, "artifacts", appId, "users", user.uid, "settings", "profile"), {
                 email: email,
-                kocId: kocDavetKodu, // Koç ID'si burada saklanır
+                kocId: kocDavetKodu,
                 rol: "ogrenci",
-                linkedDocId: null,   // Eşleşme henüz yok
+                linkedDocId: null, // Henüz eşleşmedi
                 kayitTarihi: serverTimestamp()
             });
 

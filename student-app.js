@@ -308,127 +308,155 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 
 // =================================================================
-// 6. SORU TAKİBİ (HAFTALIK GRID)
+// 6. SORU TAKİBİ (YENİ AKORDİYON SİSTEMİ)
 // =================================================================
 
-async function renderSoruTakibiGrid() {
-    const container = document.getElementById('trackingGridContainer');
+async function renderSoruTakibiGrid() { // Adı aynı kalsın ki navigasyondan çağrılabilsin
+    const container = document.getElementById('weeklyAccordion');
     container.innerHTML = '<p class="text-center text-gray-400 p-8">Yükleniyor...</p>';
 
+    // 1. Haftayı Hesapla
     const weekDates = getWeekDates(currentWeekOffset);
     document.getElementById('weekRangeTitle').textContent = `${formatDateTR(weekDates[0].dateStr)} - ${formatDateTR(weekDates[6].dateStr)}`;
     
+    // Butonlar
     document.getElementById('prevWeekBtn').onclick = () => { currentWeekOffset--; renderSoruTakibiGrid(); };
     document.getElementById('nextWeekBtn').onclick = () => { currentWeekOffset++; renderSoruTakibiGrid(); };
     document.getElementById('nextWeekBtn').disabled = currentWeekOffset >= 0;
 
+    // 2. Verileri Çek
     const weekData = await loadWeekSoruData(weekDates[0].dateStr, weekDates[6].dateStr);
 
-    const allHeaders = [...studentDersler, ...studentRutinler];
-    let headerHtml = '<div class="grid grid-cols-tracking-table sticky top-0 bg-gray-50 z-10 border-b border-gray-200">';
-    
-    headerHtml += '<div class="tracking-header sticky left-0 z-20 bg-gray-50 border-r">TARİH</div>';
-    headerHtml += `<div class="tracking-header-group" style="grid-column: span ${studentDersler.length}">Dersler</div>`;
-    headerHtml += `<div class="tracking-header-group" style="grid-column: span ${studentRutinler.length}">Rutinler</div>`;
-    headerHtml += '<div class="tracking-header-group">TOPLAM</div>';
-    
-    headerHtml += '<div class="tracking-header-sub sticky left-0 z-20 bg-gray-50 border-r"></div>'; 
-    allHeaders.forEach(ders => {
-        headerHtml += `<div class="tracking-header-sub" title="${ders}">${ders.substring(0, 10)}${ders.length>10?'.':''}</div>`;
-    });
-    headerHtml += '<div class="tracking-header-sub sticky right-0 bg-gray-50"></div></div>'; 
+    // 3. HTML Oluştur (Akordiyon)
+    let html = '';
 
-    let bodyHtml = '<div class="grid grid-cols-tracking-table">';
-    const haftalikToplamlar = new Array(allHeaders.length).fill(0);
-    
     weekDates.forEach(day => {
-        let gunlukToplam = 0;
-        bodyHtml += `<div class="tracking-cell-date sticky left-0 z-10 ${day.isToday ? 'bg-indigo-50 text-indigo-700' : 'bg-white'}">${day.dayName} <span class="font-bold">${day.dayNum}</span></div>`;
-        
-        allHeaders.forEach((ders, index) => {
-            const data = weekData.find(d => d.tarih === day.dateStr && d.ders === ders);
-            const adet = data ? (data.adet || 0) : 0;
-            const onay = data ? data.onayDurumu : null;
-            
-            gunlukToplam += adet;
-            haftalikToplamlar[index] += adet;
+        // Bu günün verileri
+        const dayData = weekData.filter(d => d.tarih === day.dateStr);
+        const isExpanded = day.isToday; // Sadece bugün açık olsun
 
-            let borderClass = 'border-transparent';
-            if (onay === 'bekliyor') borderClass = 'border-yellow-400 bg-yellow-50';
-            if (onay === 'onaylandi') borderClass = 'border-green-400 bg-green-50';
+        // Başlık (Gün Adı)
+        html += `
+            <div class="accordion-item">
+                <button class="accordion-header w-full flex justify-between items-center p-4 rounded-xl border mb-2 text-left ${isExpanded ? 'bg-purple-50 border-purple-500 text-purple-700' : 'bg-white border-gray-200'}" 
+                        onclick="toggleAccordion(this)" 
+                        aria-expanded="${isExpanded}">
+                    <span class="font-bold text-lg">${day.dayNum} ${day.dayName}</span>
+                    <i class="fa-solid fa-chevron-down transition-transform ${isExpanded ? 'rotate-180' : ''}"></i>
+                </button>
+                
+                <div class="accordion-content ${isExpanded ? '' : 'hidden'} px-1 pb-4">
+                    
+                    <!-- DERS KARTLARI IZGARASI -->
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        ${studentDersler.map(ders => {
+                            // Bu ders için kayıt var mı?
+                            const record = dayData.find(d => d.ders === ders);
+                            const val = record ? record.adet : '';
+                            const docId = record ? record.id : '';
+                            
+                            return `
+                            <div class="subject-card">
+                                <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide text-center w-full truncate">${ders}</label>
+                                <input type="number" 
+                                       class="text-3xl font-bold text-center text-gray-800 w-full outline-none bg-transparent placeholder-gray-200" 
+                                       placeholder="0"
+                                       value="${val}"
+                                       data-tarih="${day.dateStr}"
+                                       data-ders="${ders}"
+                                       data-konu="Genel"
+                                       data-doc-id="${docId}"
+                                       onblur="saveInput(this)">
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
 
-            bodyHtml += `
-                <div class="tracking-cell">
-                    <input type="number" inputmode="numeric" class="tracking-input ${borderClass}" value="${adet > 0 ? adet : ''}" data-tarih="${day.dateStr}" data-ders="${ders}" data-doc-id="${data ? data.id : ''}">
+                    <!-- RUTİNLER BUTONU -->
+                    <div class="text-left">
+                        <button class="routine-btn" onclick="toggleRoutines(this)">
+                            <i class="fa-solid fa-list-check mr-2"></i> Rutinler
+                        </button>
+                        <!-- Gizli Rutinler Alanı -->
+                        <div class="hidden mt-3 grid grid-cols-2 gap-3 p-3 bg-gray-100 rounded-xl border border-gray-200">
+                             ${studentRutinler.map(rutin => {
+                                const record = dayData.find(d => d.ders === rutin);
+                                const val = record ? record.adet : '';
+                                const docId = record ? record.id : '';
+                                
+                                return `
+                                <div class="subject-card bg-white">
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase text-center">${rutin}</label>
+                                    <input type="number" 
+                                           class="text-2xl font-bold text-center text-gray-800 w-full outline-none placeholder-gray-200" 
+                                           placeholder="0"
+                                           value="${val}"
+                                           data-tarih="${day.dateStr}"
+                                           data-ders="${rutin}"
+                                           data-konu="${rutin}"
+                                           data-doc-id="${docId}"
+                                           onblur="saveInput(this)">
+                                </div>
+                                `;
+                             }).join('')}
+                        </div>
+                    </div>
+
                 </div>
-            `;
-        });
-        bodyHtml += `<div class="tracking-cell-total sticky right-0 z-10 ${day.isToday ? 'bg-indigo-50' : 'bg-white'}">${gunlukToplam}</div>`;
+            </div>
+        `;
     });
 
-    bodyHtml += `<div class="tracking-cell-footer sticky left-0 z-10">TOPLAM</div>`;
-    haftalikToplamlar.forEach(t => { bodyHtml += `<div class="tracking-cell-footer">${t}</div>`; });
-    bodyHtml += `<div class="tracking-cell-footer sticky right-0 z-10">${haftalikToplamlar.reduce((a,b)=>a+b,0)}</div>`;
-    bodyHtml += '</div>';
-
-    const colCount = allHeaders.length + 2;
-    const styleEl = document.createElement('style');
-    styleEl.innerHTML = `.grid-cols-tracking-table { grid-template-columns: 70px repeat(${colCount-2}, minmax(60px, 1fr)) 60px; }`;
-    
-    container.innerHTML = "";
-    container.appendChild(styleEl);
-    container.insertAdjacentHTML('beforeend', headerHtml + bodyHtml);
-
-    addTrackingInputListeners();
+    container.innerHTML = html;
 }
 
-function getWeekDates(offset) {
-    const days = ['Paz', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-    const week = [];
-    const today = new Date();
-    const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1;
-    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek + (offset * 7));
+// Akordiyon Aç/Kapa
+window.toggleAccordion = (btn) => {
+    const content = btn.nextElementSibling;
+    const icon = btn.querySelector('i');
+    const isExpanded = btn.getAttribute('aria-expanded') === 'true';
     
-    for (let i = 0; i < 7; i++) {
-        const current = new Date(monday);
-        current.setDate(monday.getDate() + i);
-        week.push({
-            dateStr: current.toISOString().split('T')[0],
-            dayName: days[i],
-            dayNum: current.getDate(),
-            isToday: current.toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
-        });
+    if (isExpanded) {
+        content.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+        icon.classList.remove('rotate-180');
+        // Stili normale çevir
+        btn.classList.remove('bg-purple-50', 'border-purple-500', 'text-purple-700');
+        btn.classList.add('bg-white', 'border-gray-200');
+    } else {
+        content.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+        icon.classList.add('rotate-180');
+        // Stili aktif yap
+        btn.classList.remove('bg-white', 'border-gray-200');
+        btn.classList.add('bg-purple-50', 'border-purple-500', 'text-purple-700');
     }
-    return week;
-}
+};
 
-async function loadWeekSoruData(startDate, endDate) {
-    const q = query(
-        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"),
-        where("tarih", ">=", startDate),
-        where("tarih", "<=", endDate)
-    );
-    const snapshot = await getDocs(q);
-    const data = [];
-    snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
-    return data;
-}
+// Rutinleri Aç/Kapa
+window.toggleRoutines = (btn) => {
+    const container = btn.nextElementSibling;
+    container.classList.toggle('hidden');
+};
 
-function addTrackingInputListeners() {
-    document.querySelectorAll('.tracking-input').forEach(input => {
-        input.addEventListener('blur', (e) => {
-            const el = e.target;
-            const val = parseInt(el.value) || 0;
-            const oldVal = parseInt(el.defaultValue) || 0;
-            if (val !== oldVal) {
-                saveSoruData(el.dataset.docId, el.dataset.tarih, el.dataset.ders, val, el);
-            }
-        });
-    });
-}
+// Inputtan çıkınca kaydet
+window.saveInput = (input) => {
+    const val = parseInt(input.value) || 0;
+    const oldVal = parseInt(input.defaultValue) || 0;
+    if (val !== oldVal) {
+        saveSoruData(input.dataset.docId, input.dataset.tarih, input.dataset.ders, val, input);
+    }
+};
 
+// ... (getWeekDates ve loadWeekSoruData fonksiyonları aynı) ...
+
+// Kayıt Fonksiyonu (Ufak güncellemelerle aynı)
 async function saveSoruData(docId, tarih, ders, adet, inputEl) {
     const collectionRef = collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi");
+    
+    // Görsel Geri Bildirim (Kaydediliyor...)
+    inputEl.parentElement.classList.add('animate-pulse', 'border-indigo-300');
+
     try {
         if (docId) {
             if (adet > 0) {
@@ -440,23 +468,26 @@ async function saveSoruData(docId, tarih, ders, adet, inputEl) {
         } else if (adet > 0) {
             const docRef = await addDoc(collectionRef, {
                 tarih, ders, adet,
-                konu: studentRutinler.includes(ders) ? ders : "Genel",
+                konu: "Genel", // Konu artık opsiyonel/genel
                 onayDurumu: 'bekliyor',
                 eklenmeTarihi: serverTimestamp(),
                 kocId: coachId 
             });
             inputEl.dataset.docId = docRef.id;
         }
-        inputEl.className = 'tracking-input border-yellow-400 bg-yellow-50';
-        showToast('Kaydedildi');
+        
+        // Başarılı
+        inputEl.parentElement.classList.remove('animate-pulse', 'border-indigo-300');
+        inputEl.parentElement.classList.add('border-green-400'); // Yeşil kenarlık
+        setTimeout(() => inputEl.parentElement.classList.remove('border-green-400'), 2000);
+
     } catch (error) {
         console.error("Kayıt hatası:", error);
+        inputEl.parentElement.classList.remove('animate-pulse');
+        inputEl.parentElement.classList.add('border-red-500');
         showToast('Hata oluştu!', true);
-        inputEl.classList.add('border-red-500');
     }
 }
-
-
 // =================================================================
 // 7. AJANDA (TAKVİM) YÖNETİMİ (Student)
 // =================================================================

@@ -13,7 +13,7 @@ import {
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- FİREBASE AYARLARI (Sizin Projeniz) ---
+// --- FİREBASE AYARLARI ---
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -39,10 +39,18 @@ const authErrorText = document.getElementById('authErrorText');
 const loginButton = document.getElementById('loginButton');
 const signupButton = document.getElementById('signupButton');
 
-// 4. Giriş Kontrolü (Yönlendirme Mantığı Düzeltildi)
-// Sayfa yüklendiğinde kullanıcı zaten giriş yapmışsa direkt panele at.
+// YENİ: Kayıt işlemi devam ederken otomatik yönlendirmeyi engellemek için bayrak
+let isRegistering = false;
+
+// 4. Giriş Kontrolü
 onAuthStateChanged(auth, (user) => {
     if (user) {
+        // Eğer o an kayıt işlemi yapılıyorsa, otomatik yönlendirme YAPMA.
+        // Kayıt fonksiyonunun (signupButton) işini bitirmesini bekle.
+        if (isRegistering) {
+            return; 
+        }
+        
         console.log("Kullanıcı oturumu açık, panele yönlendiriliyor...");
         window.location.href = "student-dashboard.html";
     }
@@ -88,7 +96,7 @@ if (loginButton) {
             await signInWithEmailAndPassword(auth, email, password);
             
             // Başarılı olursa onAuthStateChanged tetiklenir ve yönlendirir.
-            // Ancak biz işi garantiye almak için manuel de yönlendirelim:
+            // Ancak garanti olması için manuel yönlendirme ekliyoruz
             window.location.href = "student-dashboard.html";
 
         } catch (error) {
@@ -101,7 +109,7 @@ if (loginButton) {
 }
 
 
-// --- 7. KAYIT OLMA İŞLEMİ ---
+// --- 7. KAYIT OLMA İŞLEMİ (GÜNCELLENDİ) ---
 if (signupButton) {
     signupButton.addEventListener('click', async () => {
         const email = document.getElementById('signupEmail').value;
@@ -119,6 +127,9 @@ if (signupButton) {
         }
 
         try {
+            // YENİ: Kayıt bayrağını kaldır (Otomatik yönlendirmeyi durdur)
+            isRegistering = true;
+            
             signupButton.disabled = true;
             signupButton.textContent = "Hesap Oluşturuluyor...";
 
@@ -127,7 +138,7 @@ if (signupButton) {
             const user = userCredential.user;
 
             // 2. Profil ayar dosyasını oluştur
-            // Bu dosya, öğrencinin hangi koça ait olduğunu tutar.
+            // DÜZELTME: await kullanarak işlemin bitmesini KESİN bekliyoruz
             await setDoc(doc(db, "artifacts", appId, "users", user.uid, "settings", "profile"), {
                 email: email,
                 kocId: kocDavetKodu,
@@ -136,11 +147,14 @@ if (signupButton) {
                 kayitTarihi: serverTimestamp()
             });
 
-            console.log("Kayıt başarılı, yönlendiriliyor...");
+            console.log("Kayıt ve profil oluşturma başarılı.");
+            
+            // 3. Her şey bittiğinde manuel olarak yönlendir
             window.location.href = "student-dashboard.html";
 
         } catch (error) {
             console.error("Kayıt Hatası:", error);
+            isRegistering = false; // Hata olursa bayrağı indir
             handleAuthError(error);
             signupButton.disabled = false;
             signupButton.textContent = "Kaydol ve Başla";

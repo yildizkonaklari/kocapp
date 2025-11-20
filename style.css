@@ -213,3 +213,56 @@
     color: #15803d; /* green-700 */
     font-weight: 600;
 }
+/* --- YENİ: SORU TAKİBİ KARTLARI --- */
+
+/* Günlük Akordiyon Başlığı */
+.accordion-header {
+    transition: all 0.2s ease-in-out;
+}
+/* Açık durumdaki günün stili (Mor çerçeve, açık mor arka plan) */
+.accordion-header[aria-expanded="true"] {
+    background-color: #f5f3ff; /* purple-50 */
+    border-color: #7c3aed; /* purple-600 */
+    color: #5b21b6; /* purple-800 */
+    box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.1), 0 2px 4px -1px rgba(124, 58, 237, 0.06);
+}
+/* Kapalı durumdaki günün stili */
+.accordion-header[aria-expanded="false"] {
+    background-color: white;
+    border-color: #e5e7eb; /* gray-200 */
+}
+
+/* Ders Kartları */
+.subject-card {
+    background-color: white;
+    border: 1px solid #e5e7eb; /* gray-200 */
+    border-radius: 0.75rem; /* rounded-xl */
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+.subject-card:focus-within {
+    border-color: #8b5cf6; /* violet-500 */
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* Rutin Butonu (Yeşil) */
+.routine-btn {
+    background-color: #10b981; /* emerald-500 */
+    color: white;
+    font-weight: 700;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+    transition: transform 0.1s;
+}
+.routine-btn:active {
+    transform: scale(0.95);
+}

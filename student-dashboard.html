@@ -5,14 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Öğrenci Paneli</title>
     
+    <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 3. Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
 
-    <!-- HEADER (Aynı) -->
+    <!-- HEADER -->
     <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-10 shrink-0">
         <div>
             <p class="text-xs text-gray-500 font-medium">Hoş geldin,</p>
@@ -27,16 +33,15 @@
     <!-- MAIN CONTENT -->
     <main id="mainContent" class="flex-1 overflow-y-auto no-scrollbar p-4 pb-24">
         
-        <!-- 1. ANA SAYFA (Aynı) -->
+        <!-- 1. ANA SAYFA -->
         <div id="tab-home" class="tab-content space-y-6">
-            <!-- ... (Motivasyon, Hızlı Eylemler vb. aynı kalacak) ... -->
             <div class="bg-gradient-to-r from-purple-700 to-indigo-600 text-white rounded-xl p-5 relative overflow-hidden shadow-lg shadow-indigo-200">
                 <div class="absolute -right-4 -bottom-4 text-white/10 text-8xl"><i class="fa-solid fa-quote-right"></i></div>
                 <p class="text-xs font-bold text-purple-200 uppercase tracking-wider mb-2">GÜNÜN SÖZÜ</p>
-                <p class="text-lg font-medium italic relative z-10" id="motivasyonSozu">...</p>
+                <p class="text-lg font-medium italic relative z-10" id="motivasyonSozu">"Başarı, her gün tekrarlanan küçük çabaların toplamıdır."</p>
             </div>
             
-             <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-3">
                 <button id="btnOpenDenemeEkle" class="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-xl shadow-sm active:scale-95 transition-transform">
                     <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-2"><i class="fa-solid fa-pen-nib"></i></div>
                     <span class="text-xs font-medium text-gray-700">Deneme Gir</span>
@@ -46,8 +51,7 @@
                     <span class="text-xs font-medium text-gray-700">Ajandam</span>
                 </button>
             </div>
-            
-            <!-- ... (Ödev İlerlemesi ve Gecikmiş Ödevler aynı) ... -->
+
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-sm font-semibold text-gray-700">Haftalık Ödev İlerlemesi</h3>
@@ -57,23 +61,24 @@
                     <div id="haftalikIlerlemeBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
             </div>
-             <div>
+
+            <div>
                 <h3 class="text-sm font-semibold text-gray-700 mb-2">Aktif Hedeflerin</h3>
                 <div id="dashboardHedefList" class="space-y-2">
-                    <p class="text-center text-gray-400 text-sm py-4 bg-white rounded-xl shadow-sm border border-gray-100">Yükleniyor...</p>
+                    <p class="text-center text-gray-400 text-sm py-4 bg-white rounded-xl shadow-sm border border-gray-100">Aktif hedef yükleniyor...</p>
                 </div>
             </div>
-             <div>
+
+            <div>
                 <h3 class="text-sm font-semibold text-gray-700 mb-2">Gecikmiş Ödevler</h3>
                 <div id="gecikmisOdevlerList" class="space-y-2"></div>
             </div>
         </div>
 
-        <!-- 2. ÖDEVLER (Aynı) -->
+        <!-- 2. ÖDEVLER -->
         <div id="tab-homework" class="tab-content hidden space-y-4">
-             <h2 class="text-lg font-bold text-gray-800">Ödevlerim & Rutinlerim</h2>
-            <!-- ... (Ödev içeriği aynı) ... -->
-             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-lg font-bold text-gray-800">Ödevlerim & Rutinlerim</h2>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-sm font-semibold text-gray-700">Haftalık İlerleme</h3>
                     <span id="haftalikIlerlemeText2" class="text-sm font-bold text-indigo-600">0/0</span>
@@ -87,39 +92,46 @@
             </div>
         </div>
 
-        <!-- 3. SEKMESİ: SORU TAKİBİ (YENİ TASARIM) -->
+         <!-- 3. SORU TAKİBİ (GÜNCELLENDİ - TABLO) -->
         <div id="tab-tracking" class="tab-content hidden space-y-4">
-            <h2 class="text-xl font-bold text-gray-900">Haftalık Soru Takibi</h2>
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-800">Soru Takibi</h2>
+                <p class="text-xs text-gray-500">Haftalık Çizelge</p>
+            </div>
 
-            <!-- Haftalık Kontroller (Tasarım Güncellendi) -->
-            <div class="flex items-center justify-between bg-white p-2 rounded-full shadow-sm border border-gray-200">
-                <button id="prevWeekBtn" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-full transition-colors">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </button>
-                <span id="weekRangeTitle" class="text-sm font-semibold text-gray-700">...</span>
-                <button id="nextWeekBtn" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-full transition-colors">
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
+            <!-- Haftalık Kontroller -->
+            <div class="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm border">
+                <button id="prevWeekBtn" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button>
+                <h2 id="weekRangeTitle" class="text-sm font-bold text-indigo-600 text-center">Yükleniyor...</h2>
+                <button id="nextWeekBtn" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
             
-            <!-- Akordiyon Gün Listesi -->
-            <div id="weeklyAccordion" class="space-y-3 pb-20">
-                <!-- JS ile doldurulacak (Günler ve Kartlar) -->
-                <p class="text-center text-gray-400 py-8">Yükleniyor...</p>
+            <!-- Dinamik Tablo Konteyneri -->
+            <div class="w-full overflow-x-auto bg-white rounded-xl shadow-sm border tracking-container">
+                <div id="trackingGridContainer" class="min-w-[800px]">
+                    <!-- JS burayı dolduracak -->
+                    <p class="text-center text-gray-400 p-8">Soru takip tablosu yükleniyor...</p>
+                </div>
+            </div>
+            
+            <div class="text-xs text-gray-400 text-center">
+                <p>Hücreye tıkla, sayıyı gir ve kaydetmek için başka bir yere dokun.</p>
+                <div class="flex justify-center gap-3 mt-2">
+                    <span class="flex items-center"><span class="w-2 h-2 bg-yellow-400 rounded-full mr-1"></span> Onay Bekliyor</span>
+                    <span class="flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span> Onaylandı</span>
+                </div>
             </div>
         </div>
         
-        <!-- 4. HEDEFLER (Aynı) -->
+        <!-- 4. HEDEFLER -->
         <div id="tab-goals" class="tab-content hidden space-y-4">
-            <!-- ... -->
-             <h2 class="text-lg font-bold text-gray-800 mb-2">Tüm Hedeflerim</h2>
+            <h2 class="text-lg font-bold text-gray-800 mb-2">Tüm Hedeflerim</h2>
             <div id="studentHedefList" class="space-y-3 pb-20"></div>
         </div>
 
-        <!-- 5. AJANDA (Aynı) -->
+        <!-- 5. AJANDA -->
         <div id="tab-ajanda" class="tab-content hidden space-y-4">
-             <!-- ... -->
-             <h2 class="text-lg font-bold text-gray-800">Ajandam</h2>
+            <h2 class="text-lg font-bold text-gray-800">Ajandam</h2>
             <div class="bg-white rounded-lg shadow border border-gray-200">
                 <div class="flex justify-between items-center p-3 border-b border-gray-200">
                     <button id="prevMonth" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button>
@@ -137,10 +149,9 @@
             </div>
         </div>
 
-        <!-- 6. MESAJLAR (Aynı) -->
+        <!-- 6. MESAJLAR -->
         <div id="tab-messages" class="tab-content hidden flex flex-col h-full pb-20">
-            <!-- ... -->
-             <div class="bg-white p-4 border-b border-gray-200 flex items-center gap-3 shadow-sm shrink-0">
+            <div class="bg-white p-4 border-b border-gray-200 flex items-center gap-3 shadow-sm shrink-0">
                 <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><i class="fa-solid fa-user-tie"></i></div>
                 <div><h3 class="font-bold text-gray-800 text-sm">Koçum</h3><p class="text-xs text-green-500 flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Çevrimiçi</p></div>
             </div>
@@ -153,10 +164,9 @@
             </div>
         </div>
 
-        <!-- 7. PROFİL (Aynı) -->
+        <!-- 7. PROFİL -->
         <div id="tab-profile" class="tab-content hidden space-y-4">
-            <!-- ... -->
-             <h2 class="text-lg font-bold text-gray-800">Profilim</h2>
+            <h2 class="text-lg font-bold text-gray-800">Profilim</h2>
             <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4">
                 <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl font-bold" id="profileAvatar"></div>
                 <div><h3 id="profileName" class="font-bold text-gray-900">...</h3><p id="profileClass" class="text-sm text-gray-500">...</p></div>
@@ -165,12 +175,11 @@
                 <button id="btnLogout" class="w-full px-4 py-4 text-left flex justify-between items-center hover:bg-red-50 text-red-600"><span class="text-sm font-medium">Çıkış Yap</span><i class="fa-solid fa-arrow-right-from-bracket text-xs"></i></button>
             </div>
         </div>
-
     </main>
 
-    <!-- ALT NAVİGASYON (Aynı) -->
+    <!-- ALT NAVİGASYON -->
     <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-20">
-         <div class="flex justify-around items-center h-16">
+        <div class="flex justify-around items-center h-16">
             <button class="nav-btn active flex flex-col items-center justify-center w-full h-full text-indigo-600" data-target="tab-home"><i class="fa-solid fa-house text-xl mb-1"></i><span class="text-[10px] font-medium">Ana Sayfa</span></button>
             <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500" data-target="tab-homework"><i class="fa-solid fa-list-check text-xl mb-1"></i><span class="text-[10px] font-medium">Ödevler</span></button>
             <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500 relative" data-target="tab-tracking">
@@ -181,8 +190,8 @@
         </div>
     </nav>
 
-    <!-- MODALLAR (Aynı) -->
-     <!-- Deneme Ekle -->
+    <!-- MODALLAR -->
+    <!-- Deneme Ekle -->
     <div id="modalDenemeEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center">
         <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Deneme Sonucu Gir</h3><button class="close-modal text-gray-400 p-2"><i class="fa-solid fa-xmark"></i></button></div>

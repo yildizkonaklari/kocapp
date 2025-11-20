@@ -14,7 +14,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- FİREBASE AYARLARI ---
-// (Sizin projenize ait güncel config bilgileri)
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -28,8 +27,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-// Global Canvas App ID'si (Veritabanı yolu için sabit)
 const appId = "kocluk-sistemi"; 
 
 // 3. DOM Elementleri
@@ -45,16 +42,20 @@ const loginButton = document.getElementById('loginButton');
 const signupButton = document.getElementById('signupButton');
 
 
-// 4. Giriş Kontrolü (Zaten giriş yapmışsa panele yönlendir)
+// 4. Giriş Kontrolü
+// Not: Kayıt olurken bu tetiklenir, ancak biz manuel yönlendirme de yapacağız.
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        console.log("Öğrenci zaten giriş yapmış, yönlendiriliyor...", user.uid);
-        window.location.href = "student-dashboard.html"; // Öğrenci paneli
+        // Sadece login sayfasındaysak yönlendir
+        if (window.location.pathname.includes('student-login.html')) {
+             console.log("Kullanıcı giriş yapmış, yönlendiriliyor...");
+             window.location.href = "student-dashboard.html";
+        }
     }
 });
 
 
-// 5. Form Geçişleri (Giriş Yap <-> Kayıt Ol)
+// 5. Form Geçişleri
 if (showSignupLink) {
     showSignupLink.addEventListener('click', (e) => {
         e.preventDefault();
@@ -88,13 +89,8 @@ if (loginButton) {
         try {
             loginButton.disabled = true;
             loginButton.textContent = "Giriş Yapılıyor...";
-            
-            // Firebase Auth ile giriş
             await signInWithEmailAndPassword(auth, email, password);
-            
-            // Başarılı ise onAuthStateChanged tetiklenir ve yönlendirme yapar
-            console.log("Giriş başarılı.");
-
+            // onAuthStateChanged yönlendirecek
         } catch (error) {
             console.error("Giriş Hatası:", error);
             handleAuthError(error);
@@ -112,7 +108,6 @@ if (signupButton) {
         const password = document.getElementById('signupPassword').value;
         const kocDavetKodu = document.getElementById('kocDavetKodu').value.trim();
 
-        // Validasyonlar
         if (!email || !password) {
             showError("Lütfen tüm alanları doldurun.");
             return;
@@ -127,23 +122,21 @@ if (signupButton) {
             signupButton.disabled = true;
             signupButton.textContent = "Hesap Oluşturuluyor...";
 
-            // 1. Firebase Auth ile kullanıcı oluştur
+            // 1. Kullanıcı oluştur
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // 2. Öğrencinin hangi koça ait olduğunu kaydet
-            // Yol: artifacts/{appId}/users/{studentUid}/settings/profile
-            // Bu belge, öğrenci panele girdiğinde 'student-app.js' tarafından okunacak.
+            // 2. Profil ayar dosyasını oluştur (linkedDocId: null olarak başlar)
             await setDoc(doc(db, "artifacts", appId, "users", user.uid, "settings", "profile"), {
                 email: email,
-                kocId: kocDavetKodu, // ÖNEMLİ: Koçun ID'sini buraya kaydediyoruz
+                kocId: kocDavetKodu, // Koç ID'si burada saklanır
                 rol: "ogrenci",
-                linkedDocId: null,   // İlk başta null, dashboard'da eşleşecek
+                linkedDocId: null,   // Eşleşme henüz yok
                 kayitTarihi: serverTimestamp()
             });
 
-            console.log("Öğrenci hesabı oluşturuldu ve koç ID'si kaydedildi.");
-            // Yönlendirme onAuthStateChanged ile otomatik yapılacak
+            console.log("Kayıt başarılı, yönlendiriliyor...");
+            window.location.href = "student-dashboard.html";
 
         } catch (error) {
             console.error("Kayıt Hatası:", error);
@@ -156,13 +149,12 @@ if (signupButton) {
 
 
 // --- 8. YARDIMCI FONKSİYONLAR ---
-
 function showError(message) {
     if (authErrorText && authErrorMessage) {
         authErrorText.textContent = message;
         authErrorMessage.classList.remove('hidden');
     } else {
-        alert(message); // Fallback
+        alert(message);
     }
 }
 
@@ -175,25 +167,13 @@ function hideError() {
 function handleAuthError(error) {
     let message = "Bir hata oluştu.";
     switch (error.code) {
-        case "auth/invalid-email":
-            message = "Geçersiz e-posta adresi.";
-            break;
+        case "auth/invalid-email": message = "Geçersiz e-posta adresi."; break;
         case "auth/user-not-found":
-        case "auth/invalid-credential":
-            message = "E-posta veya şifre hatalı.";
-            break;
-        case "auth/wrong-password":
-            message = "Hatalı şifre.";
-            break;
-        case "auth/email-already-in-use":
-            message = "Bu e-posta adresi zaten kullanımda.";
-            break;
-        case "auth/weak-password":
-            message = "Şifre çok zayıf (en az 6 karakter).";
-            break;
-        case "permission-denied":
-            message = "Veritabanına yazma izniniz yok. Güvenlik kurallarını kontrol edin.";
-            break;
+        case "auth/invalid-credential": message = "E-posta veya şifre hatalı."; break;
+        case "auth/wrong-password": message = "Hatalı şifre."; break;
+        case "auth/email-already-in-use": message = "Bu e-posta adresi zaten kullanımda."; break;
+        case "auth/weak-password": message = "Şifre çok zayıf (en az 6 karakter)."; break;
+        case "permission-denied": message = "Veritabanına yazma izniniz yok."; break;
     }
     showError(message);
 }

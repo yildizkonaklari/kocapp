@@ -72,10 +72,7 @@ const motivasyonSozleri = [
 ];
 
 
-// =================================================================
-// 3. BAŞLANGIÇ VE KİMLİK DOĞRULAMA
-// =================================================================
-
+// --- BAŞLANGIÇ ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
@@ -85,9 +82,12 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
+// UYGULAMA BAŞLATMA VE EŞLEŞME KONTROLÜ
 async function initializeStudentApp(uid) {
     try {
-        // Öğrencinin ayar dosyasını çek (Koç ID'sini bulmak için)
+        console.log("Kullanıcı profili yükleniyor...");
+        
+        // 1. Öğrencinin Profil Ayarlarını Çek
         const profileRef = doc(db, "artifacts", appId, "users", uid, "settings", "profile");
         const profileSnap = await getDoc(profileRef);
 
@@ -96,68 +96,94 @@ async function initializeStudentApp(uid) {
             coachId = profileData.kocId;
             studentDocId = profileData.linkedDocId;
             
+            console.log("Koç ID:", coachId);
+            console.log("Öğrenci Döküman ID:", studentDocId);
+
             if (coachId && studentDocId) {
-                // Eşleşme tamam, uygulamayı başlat
+                // Eşleşme tamam, dashboard verilerini yükle
                 loadDashboardData(); 
             } else {
-                // Eşleşme yok, modalı aç
-                document.getElementById('modalMatchProfile').classList.remove('hidden');
+                // DİKKAT: Eşleşme yoksa Modalı AÇ
+                console.warn("Öğrenci henüz eşleşmemiş. Modal açılıyor.");
+                const modal = document.getElementById('modalMatchProfile');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.style.display = 'flex'; // Garanti olsun diye display flex yap
+                } else {
+                    console.error("HATA: modalMatchProfile bulunamadı!");
+                }
             }
         } else {
-            console.error("Profil ayarları bulunamadı!");
+            console.error("Profil ayar dosyası bulunamadı! Kayıt işlemi eksik olabilir.");
+            alert("Profilinize erişilemedi. Lütfen tekrar giriş yapın.");
+            signOut(auth);
         }
     } catch (error) { 
         console.error("Başlatma hatası:", error); 
+        alert("Sistem başlatılırken hata oluştu: " + error.message);
     }
 }
 
-// --- PROFİL EŞLEŞTİRME (İlk Giriş) ---
-document.getElementById('btnMatchProfile').addEventListener('click', async () => {
-    const name = document.getElementById('matchName').value.trim();
-    const surname = document.getElementById('matchSurname').value.trim();
-    const btn = document.getElementById('btnMatchProfile');
-    const errorEl = document.getElementById('matchError');
+// --- PROFİL EŞLEŞTİRME İŞLEMİ ---
+const btnMatch = document.getElementById('btnMatchProfile');
+if (btnMatch) {
+    btnMatch.addEventListener('click', async () => {
+        const name = document.getElementById('matchName').value.trim();
+        const surname = document.getElementById('matchSurname').value.trim();
+        const errorEl = document.getElementById('matchError');
 
-    if (!name || !surname) return;
-
-    btn.disabled = true;
-    btn.textContent = "Aranıyor...";
-    errorEl.classList.add('hidden');
-
-    try {
-        const q = query(
-            collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"),
-            where("ad", "==", name),
-            where("soyad", "==", surname)
-        );
-
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            const matchDoc = querySnapshot.docs[0];
-            studentDocId = matchDoc.id;
-
-            await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), {
-                linkedDocId: studentDocId
-            });
-
-            document.getElementById('modalMatchProfile').classList.add('hidden');
-            showToast("Profil başarıyla eşleşti!");
-            loadDashboardData();
-        } else {
-            errorEl.textContent = "Profil bulunamadı. İsmi koçunun girdiği gibi tam yazmalısın.";
+        if (!name || !surname) {
+            errorEl.textContent = "Ad ve Soyad girmelisiniz.";
             errorEl.classList.remove('hidden');
+            return;
         }
-    } catch (error) {
-        console.error("Eşleştirme hatası:", error);
-        errorEl.textContent = "Hata: " + error.message;
-        errorEl.classList.remove('hidden');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = "Profili Eşleştir";
-    }
-});
 
+        btnMatch.disabled = true;
+        btnMatch.textContent = "Aranıyor...";
+        errorEl.classList.add('hidden');
+
+        try {
+            // Koçun 'ogrencilerim' koleksiyonunda İsim/Soyisim araması yap
+            // ÖNEMLİ: İsimler büyük/küçük harfe duyarlıdır.
+            const q = query(
+                collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"),
+                where("ad", "==", name),
+                where("soyad", "==", surname)
+            );
+
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                // Eşleşme bulundu!
+                const matchDoc = querySnapshot.docs[0];
+                studentDocId = matchDoc.id;
+
+                // Eşleşmeyi kaydet
+                await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), {
+                    linkedDocId: studentDocId
+                });
+
+                // Modalı kapat
+                document.getElementById('modalMatchProfile').classList.add('hidden');
+                document.getElementById('modalMatchProfile').style.display = 'none';
+                
+                alert("Başarıyla eşleştiniz! Hoş geldiniz.");
+                loadDashboardData(); // Verileri yüklemeye başla
+
+            } else {
+                errorEl.textContent = `Koçunuzun listesinde "${name} ${surname}" bulunamadı. Lütfen koçunuzun girdiği ismin aynısını (büyük/küçük harf dahil) yazın.`;
+                errorEl.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error("Eşleştirme hatası:", error);
+            errorEl.textContent = "Hata: " + error.message;
+            errorEl.classList.remove('hidden');
+        } finally {
+            btnMatch.disabled = false;
+            btnMatch.textContent = "Profili Eşleştir";
+        }
+    });
+}
 
 // =================================================================
 // 4. DASHBOARD (ANA SAYFA) YÖNETİMİ
@@ -167,10 +193,13 @@ async function loadDashboardData() {
     if (!coachId || !studentDocId) return;
 
     // 1. Motivasyon Sözü
+async function loadDashboardData() {
+    // ... (Önceki kodun aynısı) ...
+    if (!coachId || !studentDocId) return;
+
     const soz = motivasyonSozleri[Math.floor(Math.random() * motivasyonSozleri.length)];
     document.getElementById('motivasyonSozu').textContent = `"${soz}"`;
 
-    // 2. Profil Bilgilerini Çek
     const studentRef = doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId);
     const studentSnap = await getDoc(studentRef);
     
@@ -180,14 +209,11 @@ async function loadDashboardData() {
         document.getElementById('profileName').textContent = `${data.ad} ${data.soyad}`;
         document.getElementById('profileClass').textContent = data.sinif;
         document.getElementById('profileAvatar').textContent = (data.ad[0] || '') + (data.soyad[0] || '');
-        
-        // Dersleri belirle (Sınıfa göre otomatik)
         studentDersler = data.takipDersleri || (['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(data.sinif) ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE']);
     }
-    
-    // 3. Verileri Yükle
-    await updateHomeworkMetrics(); // Ödev özetleri
-    loadActiveGoalsForDashboard(); // Aktif hedefler
+    await updateHomeworkMetrics();
+    loadActiveGoalsForDashboard();
+    loadStats(); // Bunu en son çağır
 }
 
 // Ödev İstatistikleri (Gecikenler ve İlerleme)

@@ -127,6 +127,19 @@
                 <p>Veriler otomatik kaydedilir.</p>
             </div>
         </div>
+
+        <!-- YENİ: 4. DENEMELER SEKMESİ -->
+        <div id="tab-denemeler" class="tab-content hidden space-y-4">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-lg font-bold text-gray-800">Denemelerim</h2>
+                <button id="btnAddNewDeneme" class="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center">
+                    <i class="fa-solid fa-plus mr-1"></i> Yeni Ekle
+                </button>
+            </div>
+            <div id="studentDenemeList" class="space-y-3 pb-20">
+                <p class="text-center text-gray-400 text-sm py-4">Denemeler yükleniyor...</p>
+            </div>
+        </div>
         
         <!-- 4. HEDEFLER -->
         <div id="tab-goals" class="tab-content hidden space-y-4">
@@ -183,18 +196,25 @@
     </main>
 
     <!-- ALT NAVİGASYON -->
-    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-20">
-        <div class="flex justify-around items-center h-16">
-            <button class="nav-btn active flex flex-col items-center justify-center w-full h-full text-indigo-600" data-target="tab-home"><i class="fa-solid fa-house text-xl mb-1"></i><span class="text-[10px] font-medium">Ana Sayfa</span></button>
-            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500" data-target="tab-homework"><i class="fa-solid fa-list-check text-xl mb-1"></i><span class="text-[10px] font-medium">Ödevler</span></button>
-            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500 relative" data-target="tab-tracking">
-                <div class="-mt-6 w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg border-4 border-gray-50 text-white"><i class="fa-solid fa-pen-to-square text-xl"></i></div><span class="text-[10px] font-medium mt-1">Takip</span>
+   <!-- ALT NAVİGASYON (GÜNCELLENDİ) -->
+    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-20 overflow-x-auto">
+        <div class="flex justify-between items-center h-16 px-2 min-w-[360px]">
+            <button class="nav-btn active flex flex-col items-center justify-center w-14 h-full text-indigo-600" data-target="tab-home"><i class="fa-solid fa-house text-lg mb-1"></i><span class="text-[9px] font-medium">Ana Sayfa</span></button>
+            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400" data-target="tab-homework"><i class="fa-solid fa-list-check text-lg mb-1"></i><span class="text-[9px] font-medium">Ödevler</span></button>
+            
+            <!-- Takip Butonu (Ortada) -->
+            <button class="nav-btn flex flex-col items-center justify-center w-16 h-full text-gray-400 relative" data-target="tab-tracking">
+                <div class="-mt-8 w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg border-4 border-gray-50 text-white"><i class="fa-solid fa-pen-to-square text-lg"></i></div>
+                <span class="text-[9px] font-medium mt-1">Takip</span>
             </button>
-            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500" data-target="tab-goals"><i class="fa-solid fa-bullseye text-xl mb-1"></i><span class="text-[10px] font-medium">Hedefler</span></button>
-            <button class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-indigo-500" data-target="tab-profile"><i class="fa-solid fa-bars text-xl mb-1"></i><span class="text-[10px] font-medium">Menü</span></button>
+            
+            <!-- Yeni Denemeler Butonu -->
+            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400" data-target="tab-denemeler"><i class="fa-solid fa-chart-simple text-lg mb-1"></i><span class="text-[9px] font-medium">Deneme</span></button>
+            
+            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400" data-target="tab-goals"><i class="fa-solid fa-bullseye text-lg mb-1"></i><span class="text-[9px] font-medium">Hedef</span></button>
+            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400" data-target="tab-profile"><i class="fa-solid fa-bars text-lg mb-1"></i><span class="text-[9px] font-medium">Menü</span></button>
         </div>
     </nav>
-
     <!-- MODALLAR -->
     <!-- Deneme Ekle -->
     <div id="modalDenemeEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center">

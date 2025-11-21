@@ -1,35 +1,28 @@
-// === DENEMELER MODÜLÜ (GLOBAL) ===
-// Bu dosya, TÜM öğrencilerden gelen denemeleri onaylama ve analiz etme sayfasını yönetir.
+// === DENEMELER MODÜLÜ (FİLTRELİ) ===
 
-// 1. GEREKLİ IMPORTLAR
 import { 
     doc, 
-    collectionGroup, // YENİ: Tüm 'denemeler' koleksiyonlarını sorgulamak için
+    collection, // Öğrenci listesi için
+    collectionGroup, 
     query, 
     onSnapshot, 
     updateDoc, 
     deleteDoc,
     where, 
-    orderBy 
+    orderBy,
+    writeBatch,
+    getDocs // Öğrenci listesini çekmek için
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { 
-    activeListeners, 
-    formatDateTR 
-} from './helpers.js';
+import { activeListeners, formatDateTR } from './helpers.js';
 
-// Chart.js instance'ını tutmak için (Global değişken)
-let denemeBarChart = null;
+// Modül Seviyesi Değişkenler
+let allDenemeData = []; // Tüm ham veri
+let studentMap = {};    // ID -> İsim eşleşmesi
+let pendingDocsPaths = []; // Onay bekleyenlerin yolları
+let denemeBarChart = null; // Grafik instance'ı
 
-// --- 2. ANA FONKSİYON: DENEMELER SAYFASI ---
-
-/**
- * "Genel Denemeler" sayfasının ana HTML iskeletini çizer ve verileri yükler.
- * @param {object} db - Firestore veritabanı referansı
- * @param {string} currentUserId - Giriş yapmış koçun UID'si
- * @param {string} appId - Uygulama ID'si
- */
-export function renderDenemelerSayfasi(db, currentUserId, appId) {
+export async function renderDenemelerSayfasi(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");
     
@@ -37,206 +30,211 @@ export function renderDenemelerSayfasi(db, currentUserId, appId) {
     
     // HTML İskeleti
     mainContentArea.innerHTML = `
+        <!-- Filtreleme Alanı -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="w-full md:w-1/3">
+                <label for="filterStudentSelect" class="block text-sm font-medium text-gray-700 mb-1">Öğrenci Filtrele</label>
+                <select id="filterStudentSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white">
+                    <option value="all">Tüm Öğrenciler</option>
+                    <option disabled>Yükleniyor...</option>
+                </select>
+            </div>
+            <div class="w-full md:w-auto flex justify-end">
+                 <button id="btnApproveAll" class="hidden bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow-sm transition-colors flex items-center">
+                    <i class="fa-solid fa-check-double mr-2"></i> Listelenenleri Onayla
+                </button>
+            </div>
+        </div>
+
         <!-- KPI Kartları -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-chart-line"></i></div>
                 <div>
-                    <p class="text-sm text-gray-500 font-medium">Ortalama Net (Onaylı)</p>
+                    <p class="text-sm text-gray-500 font-medium">Ortalama Net (Seçili)</p>
                     <h3 id="kpiAvgNet" class="text-2xl font-bold text-gray-800">0.00</h3>
                 </div>
             </div>
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-trophy"></i></div>
                 <div>
-                    <p class="text-sm text-gray-500 font-medium">En Yüksek Net (Onaylı)</p>
+                    <p class="text-sm text-gray-500 font-medium">En Yüksek Net</p>
                     <h3 id="kpiMaxNet" class="text-2xl font-bold text-gray-800">0.00</h3>
                 </div>
             </div>
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-file-signature"></i></div>
+                <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-clock"></i></div>
                 <div>
-                    <p class="text-sm text-gray-500 font-medium">Toplam Sınav (Onaylı)</p>
-                    <h3 id="kpiTotalExams" class="text-2xl font-bold text-gray-800">0</h3>
+                    <p class="text-sm text-gray-500 font-medium">Bekleyen Onaylar</p>
+                    <h3 id="kpiPendingCount" class="text-2xl font-bold text-gray-800">0</h3>
                 </div>
             </div>
         </div>
 
-        <!-- Grafik ve Filtreler -->
+        <!-- Grafik ve Bilgi Alanı -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <!-- Grafik Alanı -->
+            <!-- Grafik -->
             <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <h3 class="font-semibold text-gray-800 mb-4">Onaylı Netlerin Dağılımı (Son 10)</h3>
+                <h3 class="font-semibold text-gray-800 mb-4" id="chartTitle">Onaylı Netlerin Dağılımı</h3>
                 <div class="h-64 relative">
                     <canvas id="denemeBarChart"></canvas>
                 </div>
             </div>
             
-            <!-- Bilgi/Filtre Alanı -->
+            <!-- Bilgi -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <h3 class="font-semibold text-gray-800 mb-4">Bilgilendirme</h3>
                 <div class="space-y-4 text-sm text-gray-600">
-                    <p>Burada, <b>tüm öğrencilerinizin</b> girdiği deneme sınavlarını tek bir listede görebilirsiniz.</p>
+                    <p>Listeden öğrenci seçerek sadece o öğrenciye ait analizleri görebilirsiniz.</p>
                     <ul class="list-disc pl-5 space-y-2">
-                        <li>Sarı satırlar öğrenci tarafından girilen ve <b>onayınızı bekleyen</b> sınavlardır.</li>
-                        <li>Grafikler sadece <b>onaylanmış</b> sınavları baz alır.</li>
-                        <li>Yanlış girilen sınavları "Reddet/Sil" butonu ile silebilirsiniz.</li>
+                        <li>Sarı satırlar onay bekleyenlerdir.</li>
+                        <li>"Listelenenleri Onayla" butonu ile o an ekranda görünen tüm bekleyenleri tek seferde onaylayabilirsiniz.</li>
                     </ul>
                 </div>
             </div>
         </div>
 
-        <!-- Deneme Girişleri Listesi -->
-        <div>
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">Deneme Girişleri</h3>
-            <div id="denemelerListContainer" class="bg-white rounded-lg shadow overflow-hidden border border-gray-100">
-                <p class="text-center text-gray-400 p-8">Tüm denemeler yükleniyor...</p>
+        <!-- Liste -->
+        <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-100">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+                <h3 class="font-semibold text-gray-800" id="listTitle">Tüm Denemeler</h3>
+            </div>
+            <div id="denemelerListContainer">
+                <p class="text-center text-gray-400 p-8">Veriler yükleniyor...</p>
             </div>
         </div>
     `;
 
-    // Verileri yükle
-    loadAllDenemeler(db, currentUserId, appId);
+    // 1. Öğrenci Listesini Çek ve Haritala
+    await loadStudentsAndMap(db, currentUserId, appId);
+
+    // 2. Denemeleri Dinle
+    startDenemeListener(db, currentUserId, appId);
+    
+    // Event Listeners
+    document.getElementById('filterStudentSelect').addEventListener('change', () => applyFilterAndRender(db));
+    document.getElementById('btnApproveAll').addEventListener('click', () => approveFilteredPending(db));
 }
 
 /**
- * Tüm öğrencilerin 'denemeler' alt koleksiyonlarını CollectionGroup sorgusu ile çeker.
+ * Öğrenci listesini çeker ve Select kutusunu doldurur.
  */
-function loadAllDenemeler(db, currentUserId, appId) {
+async function loadStudentsAndMap(db, currentUserId, appId) {
+    const selectEl = document.getElementById('filterStudentSelect');
+    studentMap = {}; 
+
+    try {
+        const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
+        const snapshot = await getDocs(q);
+
+        selectEl.innerHTML = '<option value="all">Tüm Öğrenciler</option>';
+
+        snapshot.forEach(doc => {
+            const s = doc.data();
+            const fullName = `${s.ad} ${s.soyad}`;
+            studentMap[doc.id] = fullName;
+
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = fullName;
+            selectEl.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error("Öğrenci listesi hatası:", error);
+        selectEl.innerHTML = '<option disabled>Liste yüklenemedi</option>';
+    }
+}
+
+/**
+ * Deneme verilerini gerçek zamanlı dinler.
+ */
+function startDenemeListener(db, currentUserId, appId) {
     const listContainer = document.getElementById("denemelerListContainer");
 
-    // DİKKAT: Bu sorgu, 'denemeler' koleksiyon grubu için bir İNDEKS gerektirir.
-    // İndeks: kocId (ASC), onayDurumu (ASC), eklenmeTarihi (DESC)
-    // Eğer indeks yoksa konsolda bir link belirecektir.
     const q = query(
         collectionGroup(db, 'denemeler'),
         where('kocId', '==', currentUserId),
-        orderBy('onayDurumu', 'asc'), // 'bekliyor' olanlar üste gelsin
+        orderBy('onayDurumu', 'asc'),
         orderBy('eklenmeTarihi', 'desc')
     );
     
-    // Önceki dinleyiciyi temizle
     if (activeListeners.denemeUnsubscribe) activeListeners.denemeUnsubscribe();
 
     activeListeners.denemeUnsubscribe = onSnapshot(q, (snapshot) => {
-        const allDenemeler = [];
+        allDenemeData = []; // Sıfırla
+
         snapshot.forEach(doc => {
-            // parent.parent.id ile öğrenci ID'sini bulabiliriz ama 
-            // veriyi kaydederken 'studentAd' ve 'sinif' eklediğimiz için gerek yok.
-            allDenemeler.push({ id: doc.id, ...doc.data(), path: doc.ref.path });
+            const data = doc.data();
+            // studentId verisi dökümanın içinde var, yoksa map'ten bulmaya çalışalım
+            const sId = data.studentId || doc.ref.parent.parent.id;
+            const sName = data.studentAd || studentMap[sId] || "Bilinmiyor";
+
+            const entry = { 
+                id: doc.id, 
+                ...data, 
+                path: doc.ref.path,
+                studentId: sId,
+                studentAd: sName
+            };
+            allDenemeData.push(entry);
         });
         
-        // 1. Listeyi çiz
-        renderDenemelerList(allDenemeler, db);
-        
-        // 2. Sadece ONAYLANMIŞ olanlarla istatistikleri ve grafiği hesapla
-        const onayliDenemeler = allDenemeler.filter(d => d.onayDurumu === 'onaylandi');
-        calculateAndRenderStats(onayliDenemeler);
-        renderDenemelerChart(onayliDenemeler);
+        applyFilterAndRender(db);
 
     }, (error) => {
-        console.error("Tüm denemeler yüklenirken hata:", error);
-        if (error.code === 'failed-precondition') {
-            listContainer.innerHTML = `<p class="text-red-500 text-center p-8"><b>Veri Yüklenemedi!</b><br>Bu sayfanın çalışması için bir Firebase İndeksi gerekiyor. Lütfen F12 > Konsol'u açın ve görünen linke tıklayarak indeksi oluşturun.</p>`;
-        } else {
-            listContainer.innerHTML = `<p class="text-red-500 text-center p-8">Hata: ${error.message}</p>`;
-        }
+        console.error("Deneme verisi hatası:", error);
+        listContainer.innerHTML = `<p class="text-red-500 text-center p-8">Veriler yüklenemedi: ${error.message}</p>`;
     });
 }
 
 /**
- * KPI Kartlarını (Ortalama, Max, Toplam) hesaplar ve doldurur.
+ * Filtreleme ve Render İşlemleri
  */
-function calculateAndRenderStats(onayliDenemeler) {
-    if (onayliDenemeler.length === 0) {
-        document.getElementById('kpiAvgNet').textContent = "0.00";
-        document.getElementById('kpiMaxNet').textContent = "0.00";
-        document.getElementById('kpiTotalExams').textContent = "0";
-        return;
+function applyFilterAndRender(db) {
+    const selectedStudentId = document.getElementById('filterStudentSelect').value;
+    const listTitle = document.getElementById('listTitle');
+    const chartTitle = document.getElementById('chartTitle');
+    
+    let filteredData = [];
+    pendingDocsPaths = [];
+
+    if (selectedStudentId === 'all') {
+        filteredData = allDenemeData;
+        listTitle.textContent = "Tüm Denemeler";
+        chartTitle.textContent = "Tüm Öğrenciler - Net Dağılımı";
+    } else {
+        filteredData = allDenemeData.filter(item => item.studentId === selectedStudentId);
+        const name = studentMap[selectedStudentId] || "Seçili Öğrenci";
+        listTitle.textContent = `${name} - Deneme Geçmişi`;
+        chartTitle.textContent = `${name} - Net Gelişimi`;
     }
 
-    let totalNet = 0;
-    let maxNet = 0;
-    
-    onayliDenemeler.forEach(d => {
-        // Net değerini güvenli bir şekilde sayıya çevir
-        const net = parseFloat(d.toplamNet) || 0;
-        totalNet += net;
-        if (net > maxNet) {
-            maxNet = net;
+    // Bekleyenleri topla
+    filteredData.forEach(item => {
+        if (item.onayDurumu === 'bekliyor') {
+            pendingDocsPaths.push(item.path);
         }
     });
 
-    const avgNet = totalNet / onayliDenemeler.length;
-
-    document.getElementById('kpiAvgNet').textContent = avgNet.toFixed(2);
-    document.getElementById('kpiMaxNet').textContent = maxNet.toFixed(2);
-    document.getElementById('kpiTotalExams').textContent = onayliDenemeler.length;
-}
-
-/**
- * Onaylı denemelerin grafiğini çizer.
- */
-function renderDenemelerChart(onayliDenemeler) {
-    const ctx = document.getElementById('denemeBarChart');
-    if (!ctx) return;
-    
-    // Grafiği çizmeden önce eskisini yok et
-    if (denemeBarChart) {
-        denemeBarChart.destroy();
+    // Buton Kontrolü
+    const btnApproveAll = document.getElementById('btnApproveAll');
+    if (pendingDocsPaths.length > 0) {
+        btnApproveAll.classList.remove('hidden');
+        btnApproveAll.innerHTML = `<i class="fa-solid fa-check-double mr-2"></i> ${pendingDocsPaths.length} Kaydı Onayla`;
+    } else {
+        btnApproveAll.classList.add('hidden');
     }
 
-    // Veriyi tarihe göre sırala ve son 10 tanesini al
-    const sortedData = onayliDenemeler
-        .sort((a,b) => a.tarih.localeCompare(b.tarih))
-        .slice(-10); // Son 10
-    
-    const labels = sortedData.map(d => `${formatDateTR(d.tarih)} (${d.studentAd ? d.studentAd.split(' ')[0] : '?'})`);
-    const dataPoints = sortedData.map(d => (parseFloat(d.toplamNet) || 0).toFixed(2));
-    
-    denemeBarChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Toplam Net',
-                data: dataPoints,
-                backgroundColor: 'rgba(124, 58, 237, 0.6)', // purple-600 with opacity
-                borderColor: '#7c3aed',
-                borderWidth: 1,
-                borderRadius: 4,
-                barThickness: 20,
-            }]
-        },
-        options: {
-            indexAxis: 'y', // Yatay Bar Grafik
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { beginAtZero: true, grid: { display: true, color: '#f3f4f6' } },
-                y: { grid: { display: false } }
-            },
-            plugins: { 
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#1f2937',
-                    padding: 12,
-                    titleFont: { size: 13 },
-                    bodyFont: { size: 13 }
-                }
-            }
-        }
-    });
+    renderDenemelerList(filteredData, db);
+    calculateStatsAndChart(filteredData);
 }
 
-/**
- * Onaylama ve listeleme arayüzünü çizer.
- */
-function renderDenemelerList(allDenemeler, db) {
+function renderDenemelerList(entries, db) {
     const container = document.getElementById("denemelerListContainer");
 
-    if (allDenemeler.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-center p-8">Henüz girilmiş deneme yok.</p>';
+    if (entries.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center p-8">Kayıt bulunamadı.</p>';
         return;
     }
 
@@ -245,24 +243,24 @@ function renderDenemelerList(allDenemeler, db) {
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Öğrenci</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sınav Adı</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tür</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Öğrenci</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sınav Adı</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tür</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlem</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    ${allDenemeler.map(d => {
+                    ${entries.map(d => {
                         const isPending = d.onayDurumu === 'bekliyor';
                         const netVal = parseFloat(d.toplamNet) || 0;
                         
                         return `
                         <tr class="${isPending ? 'bg-yellow-50' : 'hover:bg-gray-50'} transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${formatDateTR(d.tarih)}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">${d.studentAd || 'Bilinmiyor'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">${d.studentAd}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${d.ad}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                 <span class="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">${d.tur}</span>
@@ -270,14 +268,13 @@ function renderDenemelerList(allDenemeler, db) {
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">${netVal.toFixed(2)}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 ${isPending ? 
-                                    '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200"><i class="fa-regular fa-clock mr-1"></i>Onay Bekliyor</span>' : 
-                                    '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 border border-green-200"><i class="fa-solid fa-check mr-1"></i>Onaylandı</span>'}
+                                    '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Onay Bekliyor</span>' : 
+                                    '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Onaylandı</span>'}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
                                 ${isPending ? 
-                                    `<button data-path="${d.path}" class="btn-onayla-deneme text-green-600 hover:text-green-800 font-bold mr-3 transition-colors" title="Onayla"><i class="fa-solid fa-check"></i></button>
-                                     <button data-path="${d.path}" class="btn-sil-deneme text-red-600 hover:text-red-800 transition-colors" title="Reddet/Sil"><i class="fa-solid fa-trash"></i></button>` :
-                                    `<button data-path="${d.path}" class="btn-sil-deneme text-gray-400 hover:text-red-600 transition-colors" title="Sil"><i class="fa-regular fa-trash-can"></i></button>`}
+                                    `<button data-path="${d.path}" class="btn-onayla-deneme text-green-600 hover:text-green-800 font-bold mr-3" title="Onayla"><i class="fa-solid fa-check"></i></button>` : ''}
+                                <button data-path="${d.path}" class="btn-sil-deneme text-red-400 hover:text-red-600" title="Sil"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                         `;
@@ -287,33 +284,102 @@ function renderDenemelerList(allDenemeler, db) {
         </div>
     `;
 
-    // Event Listeners - Onayla
-    document.querySelectorAll('.btn-onayla-deneme').forEach(btn => {
+    // Event Listeners
+    container.querySelectorAll('.btn-onayla-deneme').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const path = e.currentTarget.dataset.path;
-            try {
-                // Belge yolunu (path) kullanarak direkt güncelleme yapıyoruz
-                await updateDoc(doc(db, path), { onayDurumu: 'onaylandi' });
-                // onSnapshot tabloyu otomatik güncelleyecektir
-            } catch (error) {
-                console.error("Onay hatası:", error);
-                alert("Onaylanırken bir hata oluştu.");
-            }
+            await updateDoc(doc(db, path), { onayDurumu: 'onaylandi' });
         });
     });
     
-    // Event Listeners - Sil
-    document.querySelectorAll('.btn-sil-deneme').forEach(btn => {
+    container.querySelectorAll('.btn-sil-deneme').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const path = e.currentTarget.dataset.path;
-            if (confirm("Bu deneme girişini silmek istediğinize emin misiniz?")) {
-                try {
-                    await deleteDoc(doc(db, path));
-                } catch (error) {
-                    console.error("Silme hatası:", error);
-                    alert("Silinirken bir hata oluştu.");
-                }
-            }
+            if (confirm("Silinsin mi?")) await deleteDoc(doc(db, path));
         });
     });
+}
+
+function calculateStatsAndChart(entries) {
+    const onayli = entries.filter(d => d.onayDurumu === 'onaylandi');
+    const pendingCount = entries.filter(d => d.onayDurumu === 'bekliyor').length;
+
+    // KPI Hesapla
+    let totalNet = 0;
+    let maxNet = 0;
+    
+    onayli.forEach(d => {
+        const net = parseFloat(d.toplamNet) || 0;
+        totalNet += net;
+        if (net > maxNet) maxNet = net;
+    });
+
+    const avgNet = onayli.length > 0 ? (totalNet / onayli.length) : 0;
+
+    document.getElementById('kpiAvgNet').textContent = avgNet.toFixed(2);
+    document.getElementById('kpiMaxNet').textContent = maxNet.toFixed(2);
+    document.getElementById('kpiPendingCount').textContent = pendingCount;
+
+    // Grafik Çiz (Son 10 Onaylı)
+    renderChart(onayli);
+}
+
+function renderChart(onayliEntries) {
+    const ctx = document.getElementById('denemeBarChart');
+    if (!ctx) return;
+    
+    if (denemeBarChart) denemeBarChart.destroy();
+
+    // Tarihe göre eskiden yeniye sırala (Gelişimi görmek için)
+    const sortedData = onayliEntries
+        .sort((a,b) => a.tarih.localeCompare(b.tarih))
+        .slice(-15); // Son 15 veri
+    
+    const labels = sortedData.map(d => `${formatDateTR(d.tarih)} (${d.studentAd.split(' ')[0]})`);
+    const dataPoints = sortedData.map(d => (parseFloat(d.toplamNet) || 0).toFixed(2));
+    
+    denemeBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Net Sayısı',
+                data: dataPoints,
+                backgroundColor: 'rgba(124, 58, 237, 0.7)', // purple-600
+                borderColor: '#7c3aed',
+                borderWidth: 1,
+                borderRadius: 4,
+                barThickness: 20,
+            }]
+        },
+        options: {
+            indexAxis: 'x', // Dikey çubuklar (Zaman çizelgesi gibi olsun diye değiştirdim)
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                x: { grid: { display: false } }
+            },
+            plugins: { 
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+async function approveFilteredPending(db) {
+    if (pendingDocsPaths.length === 0) return;
+    if (!confirm(`${pendingDocsPaths.length} adet kaydı onaylamak istiyor musunuz?`)) return;
+    
+    const batch = writeBatch(db);
+    pendingDocsPaths.forEach(path => {
+        batch.update(doc(db, path), { onayDurumu: 'onaylandi' });
+    });
+    
+    try {
+        await batch.commit();
+    } catch (error) {
+        console.error("Toplu onay hatası:", error);
+        alert("Hata oluştu.");
+    }
 }

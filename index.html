@@ -244,42 +244,46 @@
             </div>
         </div>
     </div>
-    <!-- 4. SORU EKLE (Koç İçin) -->
-    <div id="addSoruModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-        <div class="relative w-full max-w-lg bg-white rounded-lg shadow-lg p-6 m-4">
-            <div class="flex justify-between items-center pb-4 border-b">
-                <h3 class="text-xl font-bold text-gray-800">Soru Girişi (Koç)</h3>
-                <button id="closeSoruModalButton" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+
+    <!-- 4. YENİ SORU VERİSİ EKLE MODALI (GÜNCELLENDİ) -->
+    <div id="addSoruModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-2xl font-semibold">Yeni Soru Verisi Ekle</h3>
+                <button id="closeSoruModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
             </div>
             <div class="mt-4 space-y-4">
                 <input type="hidden" id="currentStudentIdForSoruTakibi">
+                
+                <!-- YENİ: Global Ekleme İçin Öğrenci Seçimi -->
+                <div id="soruStudentSelectContainer" class="hidden bg-blue-50 p-3 rounded-md border border-blue-200">
+                    <label for="soruStudentSelect" class="block text-sm font-bold text-blue-700 mb-1">Öğrenci Seçin</label>
+                    <select id="soruStudentSelect" class="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-blue-500"></select>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
-                        <input type="date" id="soruTarihi" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
+                        <label for="soruTarihi" class="block text-sm font-medium text-gray-700">Tarih</label>
+                        <input type="date" id="soruTarihi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ders / Rutin</label>
-                        <input type="text" id="soruDers" placeholder="Matematik" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
+                        <label for="soruDers" class="block text-sm font-medium text-gray-700">Ders / Rutin</label>
+                        <input type="text" id="soruDers" placeholder="Örn: Matematik" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Konu</label>
-                    <input type="text" id="soruKonu" placeholder="Türev" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
-                </div>
-                <!-- D/Y/B İPTAL EDİLDİ, YERİNE ADET GELDİ -->
-                <div class="hidden"> <!-- Eski inputlar gizlendi, kod hatası vermesin diye tutuyoruz -->
-                    <input id="soruDogru" value="0"><input id="soruYanlis" value="0"><input id="soruBos" value="0">
+                    <label for="soruKonu" class="block text-sm font-medium text-gray-700">Konu</label>
+                    <input type="text" id="soruKonu" placeholder="Örn: Türev" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Soru / Sayfa Adedi</label>
-                    <input type="number" id="soruAdet" min="1" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500 font-bold text-blue-600" placeholder="50">
+                    <label for="soruAdet" class="block text-sm font-medium text-gray-700">Soru / Sayfa Adedi</label>
+                    <input type="number" id="soruAdet" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md font-bold text-blue-600" placeholder="0">
                 </div>
-                <p id="soruModalErrorMessage" class="text-sm text-red-600 hidden text-center"></p>
+                <p id="soruModalErrorMessage" class="text-sm text-red-600 hidden"></p>
             </div>
-            <div class="flex justify-end pt-4 mt-2 space-x-3">
-                <button id="cancelSoruModalButton" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">İptal</button>
-                <button id="saveSoruButton" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Kaydet</button>
+            <div class="flex justify-end pt-4 mt-4 border-t">
+                <button id="cancelSoruModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</button>
+                <button id="saveSoruButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Veriyi Kaydet</button>
             </div>
         </div>
     </div>

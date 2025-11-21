@@ -108,7 +108,7 @@ export async function renderDenemelerSayfasi(db, currentUserId, appId) {
         // Temizlik
         document.getElementById('denemeAdi').value = '';
         document.getElementById('denemeTarih').value = new Date().toISOString().split('T')[0];
-        document.getElementById('denemeNetGirisAlani').innerHTML = ''; // Inputları temizle
+        renderDenemeNetInputs('TYT'); // Varsayılan inputları çiz
         
         if (selectedStudentId === 'all') {
             selectContainer.classList.remove('hidden');
@@ -124,7 +124,6 @@ export async function renderDenemelerSayfasi(db, currentUserId, appId) {
 
 // --- YARDIMCI FONKSİYONLAR ---
 
-// Öğrenci Listesini ve Map'i Yükle
 async function loadStudentsAndMap(db, currentUserId, appId) {
     const selectEl = document.getElementById('filterStudentSelect');
     studentMap = {}; 
@@ -152,7 +151,6 @@ async function loadStudentsAndMap(db, currentUserId, appId) {
     }
 }
 
-// Denemeleri Dinle
 function startDenemeListener(db, currentUserId, appId) {
     const listContainer = document.getElementById("denemelerListContainer");
 
@@ -191,7 +189,6 @@ function startDenemeListener(db, currentUserId, appId) {
     });
 }
 
-// Filtreleme ve Render
 function applyFilterAndRender(db) {
     const selectedStudentId = document.getElementById('filterStudentSelect').value;
     const listTitle = document.getElementById('listTitle');
@@ -227,7 +224,6 @@ function applyFilterAndRender(db) {
     calculateStatsAndChart(filteredData);
 }
 
-// Listeyi Çiz
 function renderDenemelerList(entries, db) {
     const container = document.getElementById("denemelerListContainer");
 
@@ -275,7 +271,6 @@ function renderDenemelerList(entries, db) {
         </div>
     `;
 
-    // Eventler
     container.querySelectorAll('.btn-onayla-deneme').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             await updateDoc(doc(db, e.currentTarget.dataset.path), { onayDurumu: 'onaylandi' });
@@ -288,7 +283,6 @@ function renderDenemelerList(entries, db) {
     });
 }
 
-// KPI ve Grafik Hesapla
 function calculateStatsAndChart(entries) {
     const onayli = entries.filter(d => d.onayDurumu === 'onaylandi');
     const pendingCount = entries.filter(d => d.onayDurumu === 'bekliyor').length;
@@ -311,7 +305,6 @@ function calculateStatsAndChart(entries) {
     renderChart(onayli);
 }
 
-// Grafik Çiz
 function renderChart(onayliEntries) {
     const ctx = document.getElementById('denemeBarChart');
     if (!ctx) return;
@@ -345,7 +338,6 @@ function renderChart(onayliEntries) {
     });
 }
 
-// Toplu Onay
 async function approveFilteredPending(db) {
     if (pendingDocsPaths.length === 0) return;
     if (!confirm(`${pendingDocsPaths.length} adet kaydı onaylamak istiyor musunuz?`)) return;
@@ -365,7 +357,6 @@ async function approveFilteredPending(db) {
 
 // --- KAYDETME FONKSİYONU (Globalden Çağrılacak) ---
 export async function saveGlobalDeneme(db, currentUserId, appId) {
-    // Öğrenci ID'sini belirle
     let studentId = document.getElementById('currentStudentIdForDeneme').value;
     const selectContainer = document.getElementById('denemeStudentSelectContainer');
     
@@ -375,12 +366,10 @@ export async function saveGlobalDeneme(db, currentUserId, appId) {
 
     if (!studentId) { alert("Lütfen bir öğrenci seçin."); return; }
 
-    // Form Verileri
     const ad = document.getElementById('denemeAdi').value;
     const tur = document.getElementById('denemeTuru').value;
     const tarih = document.getElementById('denemeTarih').value;
     
-    // Netleri Topla
     let totalNet = 0;
     const netler = {};
     const katsayi = tur === 'LGS' ? 3 : 4;
@@ -397,7 +386,6 @@ export async function saveGlobalDeneme(db, currentUserId, appId) {
 
     const studentName = studentMap[studentId] || "Öğrenci";
 
-    // Kaydet
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "denemeler"), {
         ad, tur, tarih, toplamNet: totalNet, netler, 
         onayDurumu: 'onaylandi',
@@ -408,4 +396,33 @@ export async function saveGlobalDeneme(db, currentUserId, appId) {
     });
 
     document.getElementById('addDenemeModal').style.display = 'none';
+}
+
+// --- YENİ: INPUT RENDER FONKSİYONU (EXPORT EDİLDİ) ---
+export function renderDenemeNetInputs(tur) {
+    const container = document.getElementById('denemeNetGirisAlani');
+    if(!container) return;
+    
+    container.innerHTML = '';
+    const dersListeleri = {
+        'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'],
+        'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1'],
+        'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'],
+        'Diger': ['Genel']
+    };
+
+    const dersler = dersListeleri[tur] || dersListeleri['Diger'];
+
+    dersler.forEach(ders => {
+        container.innerHTML += `
+            <div class="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                <span class="text-sm font-medium text-gray-700 w-24 truncate">${ders}</span>
+                <div class="flex gap-2">
+                    <input type="number" placeholder="D" class="inp-deneme-d w-14 px-2 py-1 border border-green-200 rounded bg-green-50 text-center text-sm focus:ring-1 focus:ring-green-500 outline-none" data-ders="${ders}">
+                    <input type="number" placeholder="Y" class="inp-deneme-y w-14 px-2 py-1 border border-red-200 rounded bg-red-50 text-center text-sm focus:ring-1 focus:ring-red-500 outline-none" data-ders="${ders}">
+                    <input type="number" placeholder="B" class="inp-deneme-b w-14 px-2 py-1 border border-gray-200 rounded bg-gray-50 text-center text-sm focus:ring-1 focus:ring-gray-500 outline-none" data-ders="${ders}">
+                </div>
+            </div>
+        `;
+    });
 }

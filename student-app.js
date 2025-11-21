@@ -320,11 +320,9 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     });
 });
 
-
 // =================================================================
 // 7. DENEME SEKME YÖNETİMİ (GÜNCELLENDİ: AKORDİYON YAPISI)
 // =================================================================
-
 async function loadDenemelerTab() {
     const listEl = document.getElementById('studentDenemeList');
     if (!listEl) return;
@@ -405,8 +403,6 @@ async function loadDenemelerTab() {
         }).join('');
     });
 }
-
-// ... (calculateDenemeStats, renderStudentDenemeChart fonksiyonları aynı) ...
 function calculateDenemeStats(denemeler) { /* ... */ 
     const onayli = denemeler.filter(d => d.onayDurumu === 'onaylandi');
     let totalNet = 0, maxNet = 0;
@@ -473,72 +469,6 @@ document.getElementById('btnSaveModalSoru').addEventListener('click', async () =
         showToast("Bir hata oluştu", true);
     }
 });
-
-
-// =================================================================
-// 7. DENEME SEKME YÖNETİMİ
-// =================================================================
-
-async function loadDenemelerTab() {
-    const listEl = document.getElementById('studentDenemeList');
-    if (!listEl) return;
-
-    // Güvenlik kontrolü
-    if(!coachId || !studentDocId) {
-        listEl.innerHTML = '<p class="text-center text-red-500 py-4">Profil hatası. Lütfen yenileyin.</p>';
-        return;
-    }
-
-    // Yeni Ekle Butonu
-    const btnAdd = document.getElementById('btnAddNewDeneme');
-    if(btnAdd) {
-        const newBtn = btnAdd.cloneNode(true);
-        btnAdd.parentNode.replaceChild(newBtn, btnAdd);
-        newBtn.addEventListener('click', openDenemeModal);
-    }
-
-    const q = query(
-        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"),
-        orderBy("tarih", "desc")
-    );
-
-    // Dinleyiciyi kaydet
-    listeners.denemeler = onSnapshot(q, (snapshot) => {
-        const denemeler = [];
-        snapshot.forEach(doc => denemeler.push({ id: doc.id, ...doc.data() }));
-        
-        // İstatistik
-        calculateDenemeStats(denemeler);
-
-        // Liste
-        if (denemeler.length === 0) {
-            listEl.innerHTML = '<p class="text-center text-gray-400 py-8 text-sm">Henüz deneme girilmemiş.</p>';
-            return;
-        }
-
-        listEl.innerHTML = denemeler.map(d => {
-            const isPending = d.onayDurumu === 'bekliyor';
-            const net = parseFloat(d.toplamNet) || 0;
-            return `
-                <div class="bg-white p-4 rounded-xl border ${isPending ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'} shadow-sm transition-shadow hover:shadow-md">
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-gray-800 text-sm">${d.ad}</h4>
-                        <span class="text-[10px] px-2 py-1 rounded-full font-medium ${isPending ? 'bg-yellow-200 text-yellow-800' : 'bg-green-100 text-green-800'}">
-                            ${isPending ? 'Onay Bekliyor' : 'Onaylandı'}
-                        </span>
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-500">
-                        <div class="flex gap-2">
-                            <span class="bg-gray-100 px-2 py-0.5 rounded">${d.tur}</span>
-                            <span>${formatDateTR(d.tarih)}</span>
-                        </div>
-                        <span class="font-bold text-indigo-600 text-base">${net.toFixed(2)} Net</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    });
-}
 
 function calculateDenemeStats(denemeler) {
     const onayli = denemeler.filter(d => d.onayDurumu === 'onaylandi');

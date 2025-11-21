@@ -58,17 +58,17 @@ import {
     renderOgrenciDetaySayfasi, 
     saveNewStudent, 
     saveStudentChanges, 
-    saveNewSoruTakibi
+    saveNewKoclukNotu
 } from './modules/ogrencilerim.js';
 
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
 import { renderMuhasebeSayfasi, saveNewBorc, saveNewTahsilat } from './modules/muhasebe.js';
 import { renderMesajlarSayfasi } from './modules/mesajlar.js';
 import { renderDenemelerSayfasi } from './modules/denemeler.js';
-import { renderSoruTakibiSayfasi } from './modules/sorutakibi.js';
+import { renderSoruTakibiSayfasi, saveGlobalSoru } from './modules/sorutakibi.js'; 
 import { renderHedeflerSayfasi, saveGlobalHedef } from './modules/hedefler.js';
 import { renderOdevlerSayfasi, saveGlobalOdev } from './modules/odevler.js';
-import { saveGlobalDeneme } from './modules/denemeler.js';
+
 
 
 // =================================================================
@@ -247,23 +247,24 @@ addListener('editStudentClass', 'change', (e) => renderDersSecimi(e.target.value
 // Deneme Modalı
 addListener('closeDenemeModalButton', 'click', () => document.getElementById('addDenemeModal').style.display = 'none');
 addListener('cancelDenemeModalButton', 'click', () => document.getElementById('addDenemeModal').style.display = 'none');
-addListener('saveDenemeButton', 'click', () => saveNewDeneme(db, currentUserId, appId));
-addListener('denemeTuru', 'change', (e) => renderDenemeNetInputs(e.target.value));
+addListener('saveDenemeButton', 'click', () => saveGlobalDeneme(db, currentUserId, appId));
+addListener('denemeTuru', 'change', (e) => renderDenemeNetInputs(e.target.value)); // Bu helper ogrencilerim.js'den gelebilir veya helpers.js'ye taşınmalı
+
 
 // Soru Takibi Modalı
 addListener('closeSoruModalButton', 'click', () => document.getElementById('addSoruModal').style.display = 'none');
 addListener('cancelSoruModalButton', 'click', () => document.getElementById('addSoruModal').style.display = 'none');
-addListener('saveSoruButton', 'click', () => saveNewSoruTakibi(db, currentUserId, appId));
+addListener('saveSoruButton', 'click', () => saveGlobalSoru(db, currentUserId, appId));
 
 // Hedef Modalı
 addListener('closeHedefModalButton', 'click', () => document.getElementById('addHedefModal').style.display = 'none');
 addListener('cancelHedefModalButton', 'click', () => document.getElementById('addHedefModal').style.display = 'none');
-addListener('saveHedefButton', 'click', () => saveNewHedef(db, currentUserId, appId));
+addListener('saveHedefButton', 'click', () => saveGlobalHedef(db, currentUserId, appId));
 
 // Ödev Modalı
 addListener('closeOdevModalButton', 'click', () => document.getElementById('addOdevModal').style.display = 'none');
 addListener('cancelOdevModalButton', 'click', () => document.getElementById('addOdevModal').style.display = 'none');
-addListener('saveOdevButton', 'click', () => saveNewOdev(db, currentUserId, appId));
+addListener('saveOdevButton', 'click', () => saveGlobalOdev(db, currentUserId, appId));
 
 // Randevu Modalı
 addListener('closeRandevuModalButton', 'click', () => document.getElementById('addRandevuModal').style.display = 'none');

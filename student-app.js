@@ -50,6 +50,8 @@ const motivasyonSozleri = [
 let denemeChartInstance = null;
 let currentCalDate = new Date();
 let currentWeekOffset = 0;
+
+// Tüm dinleyicileri tek objede tutuyoruz
 let listeners = {
     chat: null,
     ajanda: null,
@@ -235,7 +237,7 @@ function loadActiveGoalsForDashboard() {
 
 
 // =================================================================
-// 5. TAB NAVİGASYONU
+// 5. TAB NAVİGASYONU (DÜZELTİLDİ - TEMİZLİK EKLENDİ)
 // =================================================================
 
 document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -252,9 +254,13 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
         document.getElementById(targetId).classList.remove('hidden');
 
-        // Temizlik
-        if (listeners.chat) { listeners.chat(); listeners.chat = null; }
-        if (listeners.ajanda) { listeners.ajanda(); listeners.ajanda = null; }
+        // TÜM Dinleyicileri temizle (Çakışmayı önlemek için)
+        for (const key in listeners) {
+            if (listeners[key]) {
+                listeners[key](); // Unsubscribe fonksiyonunu çağır
+                listeners[key] = null;
+            }
+        }
 
         // Yüklemeler
         if (targetId === 'tab-homework') loadHomeworksTab();
@@ -268,7 +274,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 
 // =================================================================
-// 6. MODAL VE DENEME EKLEME İŞLEMLERİ (DÜZELTİLEN BÖLÜM)
+// 6. MODAL VE DENEME EKLEME İŞLEMLERİ
 // =================================================================
 
 // Modal Kapatma
@@ -360,10 +366,9 @@ document.getElementById('btnSaveDeneme').addEventListener('click', async () => {
         document.getElementById('modalDenemeEkle').classList.add('hidden');
         showToast(`Deneme kaydedildi: ${totalNet.toFixed(2)} Net`);
         
-        // Eğer Deneme sekmesi açıksa listeyi yenile
-        if (!document.getElementById('tab-denemeler').classList.contains('hidden')) {
-            loadDenemelerTab();
-        }
+        // DÜZELTME: Manuel yüklemeyi kaldırdık. 
+        // Real-time listener (onSnapshot) sayfayı otomatik güncelleyecektir.
+        
     } catch (e) {
         console.error(e);
         showToast("Kayıt hatası", true);
@@ -409,17 +414,22 @@ document.getElementById('btnSaveModalSoru').addEventListener('click', async () =
 
 
 // =================================================================
-// 7. DENEME SEKME YÖNETİMİ
+// 7. DENEME SEKME YÖNETİMİ (DÜZELTİLDİ)
 // =================================================================
 
 async function loadDenemelerTab() {
     const listEl = document.getElementById('studentDenemeList');
     if (!listEl) return;
 
-    // Yeni Ekle Butonu (Denemeler sekmesi içindeki)
+    // Güvenlik kontrolü
+    if(!coachId || !studentDocId) {
+        listEl.innerHTML = '<p class="text-center text-red-500 py-4">Profil hatası. Lütfen yenileyin.</p>';
+        return;
+    }
+
+    // Yeni Ekle Butonu
     const btnAdd = document.getElementById('btnAddNewDeneme');
     if(btnAdd) {
-        // Temiz bir event listener eklemek için butonu klonla ve değiştir
         const newBtn = btnAdd.cloneNode(true);
         btnAdd.parentNode.replaceChild(newBtn, btnAdd);
         newBtn.addEventListener('click', openDenemeModal);
@@ -430,7 +440,8 @@ async function loadDenemelerTab() {
         orderBy("tarih", "desc")
     );
 
-    onSnapshot(q, (snapshot) => {
+    // Dinleyiciyi kaydet (Temizlik için önemli)
+    listeners.denemeler = onSnapshot(q, (snapshot) => {
         const denemeler = [];
         snapshot.forEach(doc => denemeler.push({ id: doc.id, ...doc.data() }));
         

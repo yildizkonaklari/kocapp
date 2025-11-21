@@ -7,10 +7,11 @@ import {
     onAuthStateChanged, 
     signOut 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// DÜZELTME: 'onSnapshot' buraya eklendi
 import { 
     getFirestore, 
     doc, getDoc, getDocs, collection, query, where, addDoc, updateDoc, 
-    serverTimestamp, orderBy, limit, deleteDoc, writeBatch 
+    serverTimestamp, orderBy, limit, deleteDoc, writeBatch, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- FİREBASE AYARLARI ---
@@ -204,8 +205,55 @@ async function updateHomeworkMetrics() {
     
     const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"));
     const snapshot = await getDocs(q);
-    // ... (Ödev metrikleri hesaplama mantığı öncekiyle aynı, yer kazanmak için kısaltıyorum)
-    // Burası zaten çalışıyordu.
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek).toISOString().split('T')[0];
+    const endOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (6 - dayOfWeek)).toISOString().split('T')[0];
+    
+    let weeklyTotal = 0;
+    let weeklyDone = 0;
+    let overdueList = [];
+
+    snapshot.forEach(doc => {
+        const odev = doc.data();
+        const isDone = odev.durum === 'tamamlandi';
+
+        if (odev.bitisTarihi >= startOfWeek && odev.bitisTarihi <= endOfWeek) {
+            weeklyTotal++;
+            if (isDone) weeklyDone++;
+        }
+
+        if (odev.bitisTarihi < todayStr && !isDone) {
+            overdueList.push({ id: doc.id, ...odev });
+        }
+    });
+
+    const progressPercent = weeklyTotal === 0 ? 0 : (weeklyDone / weeklyTotal) * 100;
+    const hText = document.getElementById('haftalikIlerlemeText');
+    const hBar = document.getElementById('haftalikIlerlemeBar');
+    if(hText) hText.textContent = `${weeklyDone} / ${weeklyTotal}`;
+    if(hBar) hBar.style.width = `${progressPercent}%`;
+    
+    const hText2 = document.getElementById('haftalikIlerlemeText2');
+    const hBar2 = document.getElementById('haftalikIlerlemeBar2');
+    if(hText2) hText2.textContent = `${weeklyDone} / ${weeklyTotal}`;
+    if(hBar2) hBar2.style.width = `${progressPercent}%`;
+
+    if (overdueList.length > 0) {
+        listEl.innerHTML = overdueList.sort((a,b) => a.bitisTarihi.localeCompare(b.bitisTarihi)).map(odev => `
+            <div class="bg-white p-3 rounded-xl border border-red-100 shadow-sm flex items-start gap-3">
+                <div class="mt-1 text-xl text-red-500"><i class="fa-solid fa-circle-exclamation"></i></div>
+                <div class="flex-1">
+                    <h4 class="font-semibold text-gray-800 text-sm">${odev.title}</h4>
+                    <p class="text-xs text-red-500 font-medium">${formatDateTR(odev.bitisTarihi)} (Gecikti)</p>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        listEl.innerHTML = `<p class="text-center text-gray-400 text-sm py-4 bg-white rounded-xl shadow-sm border border-gray-100">Gecikmiş ödevin yok! 🎉</p>`;
+    }
 }
 
 function loadActiveGoalsForDashboard() {
@@ -237,7 +285,7 @@ function loadActiveGoalsForDashboard() {
 
 
 // =================================================================
-// 5. TAB NAVİGASYONU (DÜZELTİLDİ - TEMİZLİK EKLENDİ)
+// 5. TAB NAVİGASYONU
 // =================================================================
 
 document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -254,7 +302,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
         document.getElementById(targetId).classList.remove('hidden');
 
-        // TÜM Dinleyicileri temizle (Çakışmayı önlemek için)
+        // TÜM Dinleyicileri temizle
         for (const key in listeners) {
             if (listeners[key]) {
                 listeners[key](); // Unsubscribe fonksiyonunu çağır
@@ -366,9 +414,10 @@ document.getElementById('btnSaveDeneme').addEventListener('click', async () => {
         document.getElementById('modalDenemeEkle').classList.add('hidden');
         showToast(`Deneme kaydedildi: ${totalNet.toFixed(2)} Net`);
         
-        // DÜZELTME: Manuel yüklemeyi kaldırdık. 
-        // Real-time listener (onSnapshot) sayfayı otomatik güncelleyecektir.
-        
+        // Eğer Deneme sekmesi açıksa listeyi yenile
+        if (!document.getElementById('tab-denemeler').classList.contains('hidden')) {
+            loadDenemelerTab(); // Bu fonksiyon artık tanımlı olduğu için hata vermeyecek
+        }
     } catch (e) {
         console.error(e);
         showToast("Kayıt hatası", true);
@@ -414,7 +463,7 @@ document.getElementById('btnSaveModalSoru').addEventListener('click', async () =
 
 
 // =================================================================
-// 7. DENEME SEKME YÖNETİMİ (DÜZELTİLDİ)
+// 7. DENEME SEKME YÖNETİMİ
 // =================================================================
 
 async function loadDenemelerTab() {
@@ -440,7 +489,7 @@ async function loadDenemelerTab() {
         orderBy("tarih", "desc")
     );
 
-    // Dinleyiciyi kaydet (Temizlik için önemli)
+    // Dinleyiciyi kaydet
     listeners.denemeler = onSnapshot(q, (snapshot) => {
         const denemeler = [];
         snapshot.forEach(doc => denemeler.push({ id: doc.id, ...doc.data() }));
@@ -530,21 +579,131 @@ function renderStudentDenemeChart(denemeler) {
 
 
 // =================================================================
-// 8. DİĞER FONKSİYONLAR
+// 8. DİĞER FONKSİYONLAR (ÖDEVLER, HEDEFLER, MESAJLAR, SORU TAKİBİ)
 // =================================================================
 
-// ... (Soru Takip, Ajanda, Mesajlar, Hedefler, Ödevler kodları buraya AYNEN gelecek) ...
-// Kodun tamamını korumak için önceki cevaptaki (bölüm 6, 7, 8) kodları buraya yapıştırdığınızdan emin olun.
-// Aşağıya sadece renderSoruTakibiGrid ve diğerlerinin çalıştığını varsayarak kısa hallerini ekliyorum.
+// --- ÖDEVLER ---
+async function loadHomeworksTab() {
+    const listEl = document.getElementById('studentOdevList');
+    if (!listEl) return;
+    listEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Yükleniyor...</p>';
+    
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), orderBy("bitisTarihi"));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) { listEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Ödev yok.</p>'; return; }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    listEl.innerHTML = snapshot.docs.map(doc => {
+        const d = doc.data();
+        const isDone = d.durum === 'tamamlandi';
+        const isLate = !isDone && d.bitisTarihi < todayStr;
+        const icon = isDone ? 'fa-solid fa-circle-check text-green-500' : (isLate ? 'fa-regular fa-circle text-red-500' : 'fa-regular fa-circle text-gray-300');
+        
+        return `
+        <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-3 ${isDone ? 'opacity-50' : ''}">
+            <button class="mt-1 text-xl" onclick="toggleOdev('${doc.id}', '${d.durum}')"><i class="${icon}"></i></button>
+            <div class="flex-1">
+                <h4 class="font-semibold text-sm ${isDone?'line-through':''}">${d.title}</h4>
+                <p class="text-xs text-gray-500 mt-1">${d.aciklama || ''}</p>
+                <div class="flex justify-between mt-2 text-xs text-gray-400">
+                    ${d.link ? `<a href="${d.link}" target="_blank" class="text-indigo-500">Link</a>` : '<span></span>'}
+                    <span class="${isLate?'text-red-500 font-bold':''}">${formatDateTR(d.bitisTarihi)}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.toggleOdev = async (id, status) => {
+    await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler", id), {
+        durum: status === 'tamamlandi' ? 'devam' : 'tamamlandi'
+    });
+    loadHomeworksTab(); updateHomeworkMetrics();
+};
+
+// --- HEDEFLER ---
+function loadGoalsTab() {
+    const listEl = document.getElementById('studentHedefList');
+    if(!listEl) return;
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), orderBy("olusturmaTarihi", "desc"));
+    
+    listeners.hedefler = onSnapshot(q, (snap) => {
+        if (snap.empty) { listEl.innerHTML = '<p class="text-center text-gray-400 text-sm">Hedef yok.</p>'; return; }
+        listEl.innerHTML = snap.docs.map(doc => {
+            const h = doc.data();
+            const isDone = h.durum === 'tamamlandi';
+            return `
+            <div class="bg-white p-4 rounded-xl border ${isDone ? 'border-green-200 bg-green-50' : 'border-gray-100'}">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full ${isDone?'bg-green-100 text-green-600':'bg-purple-100 text-purple-600'} flex items-center justify-center text-sm">
+                        <i class="fa-solid ${isDone?'fa-star':'fa-bullseye'}"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-sm ${isDone?'text-gray-500 line-through':''}">${h.title}</h4>
+                        <p class="text-xs text-gray-500">${h.aciklama || ''}</p>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    });
+}
+
+// --- MESAJLAR ---
+function loadStudentMessages() {
+    if (listeners.chat) return;
+    const container = document.getElementById('studentMessagesContainer');
+    if(!container) return;
+
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), orderBy("tarih"));
+    
+    listeners.chat = onSnapshot(q, (snap) => {
+        container.innerHTML = '';
+        snap.forEach(doc => {
+            const m = doc.data();
+            const isMe = m.gonderen === 'ogrenci';
+            container.innerHTML += `
+                <div class="flex w-full ${isMe ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-[80%] px-4 py-2 rounded-2xl text-sm ${isMe ? 'bg-indigo-600 text-white' : 'bg-white border'}">
+                        <p>${m.text}</p>
+                        <p class="text-[9px] opacity-70 text-right mt-1">${m.tarih?.toDate().toLocaleTimeString().slice(0,5)}</p>
+                    </div>
+                </div>`;
+        });
+        container.scrollTop = container.scrollHeight;
+    });
+}
+
+const chatForm = document.getElementById('studentChatForm');
+if(chatForm) {
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('studentMessageInput');
+        if(!input.value.trim()) return;
+        await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), {
+            text: input.value, gonderen: 'ogrenci', tarih: serverTimestamp(), okundu: false, kocId: coachId
+        });
+        input.value = '';
+    });
+}
+
+// --- SORU TAKİBİ (AKORDİYON) ---
 async function renderSoruTakibiGrid() {
-    // ... (Önceki cevaptaki renderSoruTakibiGrid fonksiyonu) ...
     const container = document.getElementById('weeklyAccordion');
     if(!container) return;
     if(!coachId || !studentDocId) { container.innerHTML='<p class="p-4">Hata</p>'; return; }
     
     const weekDates = getWeekDates(currentWeekOffset);
     document.getElementById('weekRangeTitle').textContent = `${formatDateTR(weekDates[0].dateStr)} - ${formatDateTR(weekDates[6].dateStr)}`;
+    
+    // Butonlar
+    const prevBtn = document.getElementById('prevWeekBtn');
+    const nextBtn = document.getElementById('nextWeekBtn');
+    if(prevBtn) prevBtn.onclick = () => { currentWeekOffset--; renderSoruTakibiGrid(); };
+    if(nextBtn) {
+        nextBtn.onclick = () => { currentWeekOffset++; renderSoruTakibiGrid(); };
+        nextBtn.disabled = currentWeekOffset >= 0;
+    }
     
     const weekData = await loadWeekSoruData(weekDates[0].dateStr, weekDates[6].dateStr);
     let html = '';
@@ -580,7 +739,7 @@ async function renderSoruTakibiGrid() {
     container.innerHTML = html;
 }
 
-// Helperlar
+// --- HELPERLAR ---
 window.toggleAccordion = (btn) => {
     const content = btn.nextElementSibling;
     const icon = btn.querySelector('i');
@@ -632,6 +791,74 @@ async function saveSoruData(docId, tarih, ders, adet, inputEl) {
     inputEl.parentElement.classList.remove('border-indigo-500');
     inputEl.parentElement.classList.add('border-green-500');
     setTimeout(() => inputEl.parentElement.classList.remove('border-green-500'), 1000);
+}
+
+// --- YARDIMCI: AJANDA ---
+function loadCalendarDataAndDraw(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
+    const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+    document.getElementById('currentMonthYear').textContent = date.toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
+
+    if (listeners.ajanda) listeners.ajanda();
+
+    const q = query(
+        collection(db, "artifacts", appId, "users", coachId, "ajandam"),
+        where("studentId", "==", studentDocId),
+        where("tarih", ">=", startOfMonth),
+        where("tarih", "<=", endOfMonth)
+    );
+
+    listeners.ajanda = onSnapshot(q, (snapshot) => {
+        const appointments = [];
+        snapshot.forEach(doc => appointments.push({ id: doc.id, ...doc.data() }));
+        drawCalendarGrid(year, month, appointments);
+        renderUpcomingAppointments(appointments);
+    });
+}
+
+function drawCalendarGrid(year, month, appointments) {
+    const grid = document.getElementById('calendarGrid');
+    if(!grid) return;
+    grid.innerHTML = '';
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const offset = firstDay === 0 ? 6 : firstDay - 1;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    for(let i=0; i<offset; i++) grid.innerHTML += `<div class="calendar-day other-month"></div>`;
+
+    for(let day=1; day<=daysInMonth; day++) {
+        const dateStr = `${year}-${(month+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+        const dayAppts = appointments.filter(a => a.tarih === dateStr);
+        const dayEl = document.createElement('div');
+        dayEl.className = `calendar-day ${dateStr === todayStr ? 'today' : ''}`;
+        let dotsHtml = `<div class="appointment-dots">`;
+        dayAppts.forEach(a => {
+            const color = a.durum === 'tamamlandi' ? 'dot-green' : (a.tarih < todayStr ? 'dot-red' : 'dot-blue');
+            dotsHtml += `<div class="dot ${color}"></div>`;
+        });
+        dotsHtml += `</div>`;
+        dayEl.innerHTML = `<div class="day-number">${day}</div>${dotsHtml}`;
+        if(dayAppts.length > 0) {
+            dayEl.onclick = () => {
+                const msg = dayAppts.map(a => `${a.baslangic}: ${a.baslik}`).join('\n');
+                alert(`${formatDateTR(dateStr)}\n\n${msg}`);
+            };
+        }
+        grid.appendChild(dayEl);
+    }
+}
+
+function renderUpcomingAppointments(appointments) {
+    const listEl = document.getElementById('appointmentListContainer');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcoming = appointments.filter(a => a.tarih >= todayStr && a.durum !== 'tamamlandi').sort((a,b) => a.tarih.localeCompare(b.tarih));
+    if (upcoming.length === 0) { listEl.innerHTML = '<p class="text-center text-gray-400 text-xs py-2">Bu ay için yaklaşan randevu yok.</p>'; return; }
+    listEl.innerHTML = upcoming.map(a => `<div class="p-3 bg-white border border-l-4 border-indigo-500 rounded shadow-sm"><div class="flex justify-between"><span class="font-bold text-gray-800 text-sm">${formatDateTR(a.tarih)}</span><span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">${a.baslangic}</span></div><p class="text-xs text-gray-600 mt-1">${a.baslik}</p></div>`).join('');
 }
 
 function showToast(msg, isError=false) {

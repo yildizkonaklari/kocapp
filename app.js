@@ -59,8 +59,6 @@ import {
     saveNewStudent, 
     saveStudentChanges, 
     saveNewSoruTakibi, 
-    saveNewHedef, 
-    saveNewOdev,
     saveNewKoclukNotu
 } from './modules/ogrencilerim.js';
 

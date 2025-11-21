@@ -239,8 +239,7 @@ function renderDenemelerList(entries, db) {
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Öğrenci</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sınav Adı</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tür</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sınav</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
                         <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlem</th>
@@ -250,27 +249,54 @@ function renderDenemelerList(entries, db) {
                     ${entries.map(d => {
                         const isPending = d.onayDurumu === 'bekliyor';
                         const netVal = parseFloat(d.toplamNet) || 0;
+                        
+                        // Detayları hazırla
+                        let detailsGrid = '';
+                        if (d.netler) {
+                            for (const [ders, stats] of Object.entries(d.netler)) {
+                                detailsGrid += `
+                                    <div class="bg-gray-50 p-2 rounded border border-gray-200 text-center">
+                                        <div class="text-xs text-gray-500 font-bold mb-1 truncate" title="${ders}">${ders}</div>
+                                        <div class="text-sm font-bold text-indigo-600">${stats.net}</div>
+                                        <div class="text-[10px] text-gray-400">D:${stats.d} Y:${stats.y}</div>
+                                    </div>`;
+                            }
+                        }
+
                         return `
-                        <tr class="${isPending ? 'bg-yellow-50' : 'hover:bg-gray-50'} transition-colors">
+                        <!-- ANA SATIR -->
+                        <tr class="${isPending ? 'bg-yellow-50' : 'hover:bg-gray-50'} transition-colors cursor-pointer" onclick="document.getElementById('detail-${d.id}').classList.toggle('hidden')">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${formatDateTR(d.tarih)}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">${d.studentAd}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${d.ad}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"><span class="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">${d.tur}</span></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                ${d.ad} <span class="text-xs bg-gray-200 px-1.5 py-0.5 rounded ml-1">${d.tur}</span>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">${netVal.toFixed(2)}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 ${isPending ? '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Onay Bekliyor</span>' : '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Onaylandı</span>'}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm" onclick="event.stopPropagation()">
                                 ${isPending ? `<button data-path="${d.path}" class="btn-onayla-deneme text-green-600 hover:text-green-800 font-bold mr-3">Onayla</button>` : ''}
-                                <button data-path="${d.path}" class="btn-sil-deneme text-red-400 hover:text-red-600">Sil</button>
+                                <button data-path="${d.path}" class="btn-sil-deneme text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
                             </td>
-                        </tr>`;
+                        </tr>
+                        
+                        <!-- DETAY SATIRI (Gizli) -->
+                        <tr id="detail-${d.id}" class="hidden bg-gray-50 border-b border-gray-200">
+                            <td colspan="6" class="px-6 py-4">
+                                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                    ${detailsGrid || '<p class="text-gray-400 text-sm">Detay bulunamadı.</p>'}
+                                </div>
+                            </td>
+                        </tr>
+                        `;
                     }).join('')}
                 </tbody>
             </table>
         </div>
     `;
 
+    // Event Listeners (Stop Propagation eklendiği için satır açılmadan çalışırlar)
     container.querySelectorAll('.btn-onayla-deneme').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             await updateDoc(doc(db, e.currentTarget.dataset.path), { onayDurumu: 'onaylandi' });

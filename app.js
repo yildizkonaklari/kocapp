@@ -59,7 +59,6 @@ import {
     saveNewStudent, 
     saveStudentChanges, 
     saveNewDeneme, 
-    renderDenemeNetInputs, 
     saveNewSoruTakibi, 
     saveNewHedef, 
     saveNewOdev,

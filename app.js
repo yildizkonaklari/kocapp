@@ -58,8 +58,7 @@ import {
     renderOgrenciDetaySayfasi, 
     saveNewStudent, 
     saveStudentChanges, 
-    saveNewSoruTakibi, 
-    saveNewKoclukNotu
+    saveNewSoruTakibi
 } from './modules/ogrencilerim.js';
 
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';

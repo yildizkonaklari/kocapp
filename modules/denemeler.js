@@ -1,149 +1,410 @@
+// === DENEMELER MODÜLÜ (FİLTRELİ) ===
+
 import { 
-    collection, collectionGroup, query, onSnapshot, updateDoc, deleteDoc, 
-    where, orderBy, getDocs, doc, addDoc, serverTimestamp 
+    doc, collection, collectionGroup, query, onSnapshot, updateDoc, deleteDoc, 
+    where, orderBy, writeBatch, getDocs, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
 
-let allGoals = [];
-let studentMap = {};
+// Modül Seviyesi Değişkenler
+let allDenemeData = []; // Tüm ham veri
+let studentMap = {};    // ID -> İsim eşleşmesi
+let pendingDocsPaths = []; // Onay bekleyenlerin yolları
+let denemeBarChart = null; // Grafik instance'ı
 
-export async function renderHedeflerSayfasi(db, currentUserId, appId) {
-    document.getElementById("mainContentTitle").textContent = "Hedef Yönetimi";
-    const area = document.getElementById("mainContentArea");
+export async function renderDenemelerSayfasi(db, currentUserId, appId) {
+    const mainContentTitle = document.getElementById("mainContentTitle");
+    const mainContentArea = document.getElementById("mainContentArea");
     
-    area.innerHTML = `
+    mainContentTitle.textContent = "Genel Deneme Analizi";
+    
+    // HTML İskeleti
+   mainContentArea.innerHTML = `
+        <!-- Üst Bar: Filtre ve Ekleme -->
         <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <div class="w-full md:w-1/3">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Öğrenci Filtrele</label>
-                <select id="filterGoalStudent" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500">
+                <select id="filterStudentSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500">
                     <option value="all">Tüm Öğrenciler</option>
+                    <option disabled>Yükleniyor...</option>
                 </select>
             </div>
-            <button id="btnAddNewGoal" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 shadow-sm flex items-center">
-                <i class="fa-solid fa-plus mr-2"></i> Yeni Hedef Ata
-            </button>
+            <div class="flex gap-2">
+                <button id="btnApproveAll" class="hidden bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow-sm flex items-center">
+                    <i class="fa-solid fa-check-double mr-2"></i> Onayla
+                </button>
+                <!-- YENİ BUTON -->
+                <button id="btnAddNewDeneme" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 shadow-sm flex items-center">
+                    <i class="fa-solid fa-plus mr-2"></i> Yeni Deneme Ekle
+                </button>
+            </div>
         </div>
-        <div id="goalsListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <p class="col-span-full text-center text-gray-400 p-8">Hedefler yükleniyor...</p>
+
+        <!-- ... (KPI Kartları, Grafik Alanı, Liste aynı) ... -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+             <!-- (KPI HTML KODLARI AYNI) -->
+             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100"><p class="text-sm text-gray-500">Ortalama Net</p><h3 id="kpiAvgNet" class="text-2xl font-bold text-gray-800">0.00</h3></div>
+             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100"><p class="text-sm text-gray-500">En Yüksek</p><h3 id="kpiMaxNet" class="text-2xl font-bold text-gray-800">0.00</h3></div>
+             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100"><p class="text-sm text-gray-500">Bekleyen</p><h3 id="kpiPendingCount" class="text-2xl font-bold text-gray-800">0</h3></div>
         </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-100"><h3 class="font-semibold mb-4">Net Dağılımı</h3><div class="h-64"><canvas id="denemeBarChart"></canvas></div></div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100"><h3 class="font-semibold mb-4">Bilgi</h3><p class="text-sm text-gray-600">Listeden öğrenci seçerek detaylı analiz yapabilir veya yeni deneme ekleyebilirsiniz.</p></div>
+        </div>
+        <div class="bg-white rounded-lg shadow border border-gray-100"><div class="px-6 py-4 border-b bg-gray-50"><h3 class="font-semibold text-gray-800" id="listTitle">Tüm Denemeler</h3></div><div id="denemelerListContainer"><p class="p-8 text-center text-gray-400">Yükleniyor...</p></div></div>
     `;
 
-    await loadStudentMap(db, currentUserId, appId);
-    startGoalListener(db, currentUserId, appId);
-
-    document.getElementById('filterGoalStudent').addEventListener('change', () => renderGoals(db));
+    await loadStudentsAndMap(db, currentUserId, appId);
+    startDenemeListener(db, currentUserId, appId);
     
-    // Ekle Butonu
-    document.getElementById('btnAddNewGoal').addEventListener('click', async () => {
-        const sid = document.getElementById('filterGoalStudent').value;
-        const modal = document.getElementById('addHedefModal');
+    // Event Listeners
+    document.getElementById('filterStudentSelect').addEventListener('change', () => applyFilterAndRender(db));
+    document.getElementById('btnApproveAll').addEventListener('click', () => approveFilteredPending(db));
+    
+    // YENİ: Ekle Butonu Mantığı
+    document.getElementById('btnAddNewDeneme').addEventListener('click', async () => {
+        const selectedStudentId = document.getElementById('filterStudentSelect').value;
+        const modal = document.getElementById('addDenemeModal');
+        const selectContainer = document.getElementById('denemeStudentSelectContainer');
+        const selectBox = document.getElementById('denemeStudentSelect');
         
-        document.getElementById('hedefTitle').value = '';
-        document.getElementById('hedefAciklama').value = '';
-        document.getElementById('hedefBitisTarihi').value = '';
-
-        if (sid === 'all') {
-            document.getElementById('hedefStudentSelectContainer').classList.remove('hidden');
-            await populateStudentSelect(db, currentUserId, appId, 'hedefStudentSelect');
+        // Temizlik
+        document.getElementById('denemeAdi').value = '';
+        document.getElementById('denemeTarih').value = new Date().toISOString().split('T')[0];
+        document.getElementById('denemeNetGirisAlani').innerHTML = '';
+        
+        if (selectedStudentId === 'all') {
+            // Eğer filtrede "Tümü" seçiliyse, modal içinde öğrenci seçtirt
+            selectContainer.classList.remove('hidden');
+            await populateStudentSelect(db, currentUserId, appId, 'denemeStudentSelect');
         } else {
-            document.getElementById('hedefStudentSelectContainer').classList.add('hidden');
-            document.getElementById('currentStudentIdForHedef').value = sid;
+            // Öğrenci zaten seçiliyse, gizli inputa yaz ve select'i gizle
+            selectContainer.classList.add('hidden');
+            document.getElementById('currentStudentIdForDeneme').value = selectedStudentId;
         }
+        
         modal.style.display = 'block';
     });
 }
 
-async function loadStudentMap(db, uid, appId) {
-    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad"));
-    const snap = await getDocs(q);
-    const select = document.getElementById('filterGoalStudent');
-    select.innerHTML = '<option value="all">Tüm Öğrenciler</option>';
-    studentMap = {};
-    snap.forEach(doc => {
-        const name = `${doc.data().ad} ${doc.data().soyad}`;
-        studentMap[doc.id] = name;
-        const opt = document.createElement('option');
-        opt.value = doc.id;
-        opt.textContent = name;
-        select.appendChild(opt);
+// --- KAYDETME FONKSİYONU (Globalden Çağrılacak) ---
+export async function saveGlobalDeneme(db, currentUserId, appId) {
+    // Öğrenci ID'sini belirle (Ya filtreden geldi ya da modal içindeki select'ten)
+    let studentId = document.getElementById('currentStudentIdForDeneme').value;
+    const selectContainer = document.getElementById('denemeStudentSelectContainer');
+    
+    if (!selectContainer.classList.contains('hidden')) {
+        studentId = document.getElementById('denemeStudentSelect').value;
+    }
+
+    if (!studentId) { alert("Lütfen bir öğrenci seçin."); return; }
+
+    // Diğer verileri al (Formdan)
+    const ad = document.getElementById('denemeAdi').value;
+    const tur = document.getElementById('denemeTuru').value;
+    const tarih = document.getElementById('denemeTarih').value;
+    
+    // Netleri topla (Basitçe toplam neti alıyoruz, detayları nesne olarak da saklayabiliriz)
+    let totalNet = 0;
+    const netler = {};
+    const katsayi = tur === 'LGS' ? 3 : 4;
+    document.querySelectorAll('.inp-deneme-d').forEach(inp => {
+        const ders = inp.dataset.ders;
+        const d = parseInt(inp.value)||0;
+        const y = parseInt(inp.parentElement.querySelector('.inp-deneme-y').value)||0;
+        const net = d - (y/katsayi);
+        totalNet += net;
+        netler[ders] = {d,y,net: net.toFixed(2)};
     });
+
+    // Öğrenci adını bul (UI için)
+    const studentName = studentMap[studentId] || "Öğrenci";
+
+    await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "denemeler"), {
+        ad, tur, tarih, toplamNet: totalNet, netler, 
+        onayDurumu: 'onaylandi', // Koç girdiği için direkt onaylı
+        kocId: currentUserId, studentId, studentAd: studentName,
+        eklenmeTarihi: serverTimestamp()
+    });
+
+    document.getElementById('addDenemeModal').style.display = 'none';
 }
 
-function startGoalListener(db, uid, appId) {
-    // İndeks gerektirebilir: collectionGroup 'hedefler' orderBy 'olusturmaTarihi'
-    const q = query(collectionGroup(db, 'hedefler'), where('kocId', '==', uid), orderBy('olusturmaTarihi', 'desc'));
+    // 1. Öğrenci Listesini Çek ve Haritala
+    await loadStudentsAndMap(db, currentUserId, appId);
+
+    // 2. Denemeleri Dinle
+    startDenemeListener(db, currentUserId, appId);
     
-    if (activeListeners.hedeflerUnsubscribe) activeListeners.hedeflerUnsubscribe();
-    
-    activeListeners.hedeflerUnsubscribe = onSnapshot(q, (snap) => {
-        allGoals = [];
-        snap.forEach(doc => {
-            // Parent ID'den öğrenciyi bul
-            const sid = doc.ref.parent.parent.id; 
-            allGoals.push({ id: doc.id, ...doc.data(), studentId: sid, path: doc.ref.path });
+    // Event Listeners
+    document.getElementById('filterStudentSelect').addEventListener('change', () => applyFilterAndRender(db));
+    document.getElementById('btnApproveAll').addEventListener('click', () => approveFilteredPending(db));
+}
+
+/**
+ * Öğrenci listesini çeker ve Select kutusunu doldurur.
+ */
+async function loadStudentsAndMap(db, currentUserId, appId) {
+    const selectEl = document.getElementById('filterStudentSelect');
+    studentMap = {}; 
+
+    try {
+        const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
+        const snapshot = await getDocs(q);
+
+        selectEl.innerHTML = '<option value="all">Tüm Öğrenciler</option>';
+
+        snapshot.forEach(doc => {
+            const s = doc.data();
+            const fullName = `${s.ad} ${s.soyad}`;
+            studentMap[doc.id] = fullName;
+
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = fullName;
+            selectEl.appendChild(option);
         });
-        renderGoals(db);
+
+    } catch (error) {
+        console.error("Öğrenci listesi hatası:", error);
+        selectEl.innerHTML = '<option disabled>Liste yüklenemedi</option>';
+    }
+}
+
+/**
+ * Deneme verilerini gerçek zamanlı dinler.
+ */
+function startDenemeListener(db, currentUserId, appId) {
+    const listContainer = document.getElementById("denemelerListContainer");
+
+    const q = query(
+        collectionGroup(db, 'denemeler'),
+        where('kocId', '==', currentUserId),
+        orderBy('onayDurumu', 'asc'),
+        orderBy('eklenmeTarihi', 'desc')
+    );
+    
+    if (activeListeners.denemeUnsubscribe) activeListeners.denemeUnsubscribe();
+
+    activeListeners.denemeUnsubscribe = onSnapshot(q, (snapshot) => {
+        allDenemeData = []; // Sıfırla
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            // studentId verisi dökümanın içinde var, yoksa map'ten bulmaya çalışalım
+            const sId = data.studentId || doc.ref.parent.parent.id;
+            const sName = data.studentAd || studentMap[sId] || "Bilinmiyor";
+
+            const entry = { 
+                id: doc.id, 
+                ...data, 
+                path: doc.ref.path,
+                studentId: sId,
+                studentAd: sName
+            };
+            allDenemeData.push(entry);
+        });
+        
+        applyFilterAndRender(db);
+
+    }, (error) => {
+        console.error("Deneme verisi hatası:", error);
+        listContainer.innerHTML = `<p class="text-red-500 text-center p-8">Veriler yüklenemedi: ${error.message}</p>`;
     });
 }
 
-function renderGoals(db) {
-    const container = document.getElementById('goalsListContainer');
-    const filter = document.getElementById('filterGoalStudent').value;
+/**
+ * Filtreleme ve Render İşlemleri
+ */
+function applyFilterAndRender(db) {
+    const selectedStudentId = document.getElementById('filterStudentSelect').value;
+    const listTitle = document.getElementById('listTitle');
+    const chartTitle = document.getElementById('chartTitle');
     
-    const filtered = filter === 'all' ? allGoals : allGoals.filter(g => g.studentId === filter);
-    
-    if (filtered.length === 0) {
-        container.innerHTML = '<p class="col-span-full text-center text-gray-400 p-8">Hedef bulunamadı.</p>';
+    let filteredData = [];
+    pendingDocsPaths = [];
+
+    if (selectedStudentId === 'all') {
+        filteredData = allDenemeData;
+        listTitle.textContent = "Tüm Denemeler";
+        chartTitle.textContent = "Tüm Öğrenciler - Net Dağılımı";
+    } else {
+        filteredData = allDenemeData.filter(item => item.studentId === selectedStudentId);
+        const name = studentMap[selectedStudentId] || "Seçili Öğrenci";
+        listTitle.textContent = `${name} - Deneme Geçmişi`;
+        chartTitle.textContent = `${name} - Net Gelişimi`;
+    }
+
+    // Bekleyenleri topla
+    filteredData.forEach(item => {
+        if (item.onayDurumu === 'bekliyor') {
+            pendingDocsPaths.push(item.path);
+        }
+    });
+
+    // Buton Kontrolü
+    const btnApproveAll = document.getElementById('btnApproveAll');
+    if (pendingDocsPaths.length > 0) {
+        btnApproveAll.classList.remove('hidden');
+        btnApproveAll.innerHTML = `<i class="fa-solid fa-check-double mr-2"></i> ${pendingDocsPaths.length} Kaydı Onayla`;
+    } else {
+        btnApproveAll.classList.add('hidden');
+    }
+
+    renderDenemelerList(filteredData, db);
+    calculateStatsAndChart(filteredData);
+}
+
+function renderDenemelerList(entries, db) {
+    const container = document.getElementById("denemelerListContainer");
+
+    if (entries.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center p-8">Kayıt bulunamadı.</p>';
         return;
     }
 
-    container.innerHTML = filtered.map(g => {
-        const isDone = g.durum === 'tamamlandi';
-        const sName = studentMap[g.studentId] || 'Öğrenci';
-        return `
-        <div class="bg-white p-4 rounded-xl border ${isDone ? 'border-green-200 bg-green-50' : 'border-gray-200'} shadow-sm relative group">
-            <div class="flex justify-between items-start mb-2">
-                <span class="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded">${sName}</span>
-                <span class="text-xs text-gray-500">${formatDateTR(g.bitisTarihi)}</span>
-            </div>
-            <h4 class="font-bold text-gray-800 ${isDone ? 'line-through text-gray-500' : ''}">${g.title}</h4>
-            <p class="text-sm text-gray-600 mt-1">${g.aciklama || ''}</p>
-            <div class="mt-4 flex justify-end gap-2">
-                <button class="text-xs px-3 py-1 rounded border ${isDone ? 'border-gray-400 text-gray-600' : 'border-green-500 text-green-600 hover:bg-green-50'}" 
-                        onclick="toggleGlobalGoalStatus('${g.path}', '${g.durum}')">
-                    ${isDone ? 'Geri Al' : 'Tamamla'}
-                </button>
-                <button class="text-xs px-3 py-1 rounded border border-red-200 text-red-500 hover:bg-red-50" 
-                        onclick="deleteGlobalDoc('${g.path}')">Sil</button>
-            </div>
+    container.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Öğrenci</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sınav Adı</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tür</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${entries.map(d => {
+                        const isPending = d.onayDurumu === 'bekliyor';
+                        const netVal = parseFloat(d.toplamNet) || 0;
+                        
+                        return `
+                        <tr class="${isPending ? 'bg-yellow-50' : 'hover:bg-gray-50'} transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${formatDateTR(d.tarih)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">${d.studentAd}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${d.ad}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                <span class="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">${d.tur}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-600">${netVal.toFixed(2)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                ${isPending ? 
+                                    '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Onay Bekliyor</span>' : 
+                                    '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Onaylandı</span>'}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                                ${isPending ? 
+                                    `<button data-path="${d.path}" class="btn-onayla-deneme text-green-600 hover:text-green-800 font-bold mr-3" title="Onayla"><i class="fa-solid fa-check"></i></button>` : ''}
+                                <button data-path="${d.path}" class="btn-sil-deneme text-red-400 hover:text-red-600" title="Sil"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
         </div>
-        `;
-    }).join('');
+    `;
+
+    // Event Listeners
+    container.querySelectorAll('.btn-onayla-deneme').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const path = e.currentTarget.dataset.path;
+            await updateDoc(doc(db, path), { onayDurumu: 'onaylandi' });
+        });
+    });
     
-    // Window fonksiyonlarını ata (app.js'de tanımlı olmayanlar için helper)
-    window.toggleGlobalGoalStatus = async (path, current) => {
-        await updateDoc(doc(db, path), { durum: current === 'tamamlandi' ? 'devam' : 'tamamlandi' });
-    };
-    window.deleteGlobalDoc = async (path) => {
-        if(confirm('Silinsin mi?')) await deleteDoc(doc(db, path));
-    };
+    container.querySelectorAll('.btn-sil-deneme').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const path = e.currentTarget.dataset.path;
+            if (confirm("Silinsin mi?")) await deleteDoc(doc(db, path));
+        });
+    });
 }
 
-// Kaydetme Fonksiyonu
-export async function saveGlobalHedef(db, uid, appId) {
-    let sid = document.getElementById('currentStudentIdForHedef').value;
-    if (!document.getElementById('hedefStudentSelectContainer').classList.contains('hidden')) {
-        sid = document.getElementById('hedefStudentSelect').value;
-    }
-    if (!sid) { alert('Öğrenci seçin'); return; }
+function calculateStatsAndChart(entries) {
+    const onayli = entries.filter(d => d.onayDurumu === 'onaylandi');
+    const pendingCount = entries.filter(d => d.onayDurumu === 'bekliyor').length;
 
-    await addDoc(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), {
-        title: document.getElementById('hedefTitle').value,
-        aciklama: document.getElementById('hedefAciklama').value,
-        bitisTarihi: document.getElementById('hedefBitisTarihi').value,
-        durum: 'devam',
-        kocId: uid,
-        olusturmaTarihi: serverTimestamp()
+    // KPI Hesapla
+    let totalNet = 0;
+    let maxNet = 0;
+    
+    onayli.forEach(d => {
+        const net = parseFloat(d.toplamNet) || 0;
+        totalNet += net;
+        if (net > maxNet) maxNet = net;
     });
-    document.getElementById('addHedefModal').style.display = 'none';
+
+    const avgNet = onayli.length > 0 ? (totalNet / onayli.length) : 0;
+
+    document.getElementById('kpiAvgNet').textContent = avgNet.toFixed(2);
+    document.getElementById('kpiMaxNet').textContent = maxNet.toFixed(2);
+    document.getElementById('kpiPendingCount').textContent = pendingCount;
+
+    // Grafik Çiz (Son 10 Onaylı)
+    renderChart(onayli);
+}
+
+function renderChart(onayliEntries) {
+    const ctx = document.getElementById('denemeBarChart');
+    if (!ctx) return;
+    
+    if (denemeBarChart) denemeBarChart.destroy();
+
+    // Tarihe göre eskiden yeniye sırala (Gelişimi görmek için)
+    const sortedData = onayliEntries
+        .sort((a,b) => a.tarih.localeCompare(b.tarih))
+        .slice(-15); // Son 15 veri
+    
+    const labels = sortedData.map(d => `${formatDateTR(d.tarih)} (${d.studentAd.split(' ')[0]})`);
+    const dataPoints = sortedData.map(d => (parseFloat(d.toplamNet) || 0).toFixed(2));
+    
+    denemeBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Net Sayısı',
+                data: dataPoints,
+                backgroundColor: 'rgba(124, 58, 237, 0.7)', // purple-600
+                borderColor: '#7c3aed',
+                borderWidth: 1,
+                borderRadius: 4,
+                barThickness: 20,
+            }]
+        },
+        options: {
+            indexAxis: 'x', // Dikey çubuklar (Zaman çizelgesi gibi olsun diye değiştirdim)
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                x: { grid: { display: false } }
+            },
+            plugins: { 
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+async function approveFilteredPending(db) {
+    if (pendingDocsPaths.length === 0) return;
+    if (!confirm(`${pendingDocsPaths.length} adet kaydı onaylamak istiyor musunuz?`)) return;
+    
+    const batch = writeBatch(db);
+    pendingDocsPaths.forEach(path => {
+        batch.update(doc(db, path), { onayDurumu: 'onaylandi' });
+    });
+    
+    try {
+        await batch.commit();
+    } catch (error) {
+        console.error("Toplu onay hatası:", error);
+        alert("Hata oluştu.");
+    }
 }

@@ -261,14 +261,19 @@ function loadActiveGoalsForDashboard() {
     });
 }
 
-// --- 5. TAB NAVİGASYONU ---
+// =================================================================
+// 5. TAB NAVİGASYONU
+// =================================================================
+
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
+        const currentBtn = e.currentTarget.closest('.nav-btn');
+        
+        // Buton stillerini güncelle
         document.querySelectorAll('.nav-btn').forEach(b => {
             b.classList.remove('active', 'text-indigo-600');
             b.classList.add('text-gray-400');
         });
-        const currentBtn = e.currentTarget.closest('.nav-btn');
         currentBtn.classList.add('active', 'text-indigo-600');
         currentBtn.classList.remove('text-gray-400');
 
@@ -276,53 +281,77 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
         document.getElementById(targetId).classList.remove('hidden');
 
+        // Dinleyicileri temizle
         if (listeners.chat) { listeners.chat(); listeners.chat = null; }
         if (listeners.ajanda) { listeners.ajanda(); listeners.ajanda = null; }
 
+        // Sekme Yüklemeleri
         if (targetId === 'tab-homework') loadHomeworksTab();
         else if (targetId === 'tab-messages') loadStudentMessages();
-        else if (targetId === 'tab-tracking') { 
-            currentWeekOffset = 0; 
-            renderSoruTakibiGrid(); 
-        }
+        else if (targetId === 'tab-tracking') { currentWeekOffset = 0; renderSoruTakibiGrid(); }
         else if (targetId === 'tab-ajanda') { currentCalDate = new Date(); loadCalendarDataAndDraw(currentCalDate); }
         else if (targetId === 'tab-goals') loadGoalsTab();
         else if (targetId === 'tab-denemeler') loadDenemelerTab(); // YENİ
-
     });
 });
 
-// --- YENİ: DENEMELER SEKMESİ ---
+
+// =================================================================
+// YENİ: DENEMELER SEKMESİ (ANALİZ VE GRAFİK)
+// =================================================================
 
 async function loadDenemelerTab() {
     const listEl = document.getElementById('studentDenemeList');
-    listEl.innerHTML = '<p class="text-center text-gray-400 py-4">Yükleniyor...</p>';
+    if (!listEl) return;
     
+    // Yeni Ekle Butonu
+    const btnAdd = document.getElementById('btnAddNewDeneme');
+    if(btnAdd) {
+        // Event listener'ı temizleyip yeniden ekle (çoklu eklemeyi önlemek için cloneNode)
+        const newBtn = btnAdd.cloneNode(true);
+        btnAdd.parentNode.replaceChild(newBtn, btnAdd);
+        newBtn.addEventListener('click', () => {
+             document.getElementById('modalDenemeEkle').classList.remove('hidden');
+             renderDenemeInputs('TYT');
+             document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0];
+        });
+    }
+
     const q = query(
         collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"),
         orderBy("tarih", "desc")
     );
 
     onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
-            listEl.innerHTML = '<p class="text-center text-gray-400 py-8">Henüz deneme girilmemiş.</p>';
+        const denemeler = [];
+        snapshot.forEach(doc => denemeler.push({ id: doc.id, ...doc.data() }));
+
+        // İstatistik Hesapla
+        calculateDenemeStats(denemeler);
+
+        // Listeyi Doldur
+        if (denemeler.length === 0) {
+            listEl.innerHTML = '<p class="text-center text-gray-400 py-8 text-sm">Henüz deneme girilmemiş.</p>';
             return;
         }
 
-        listEl.innerHTML = snapshot.docs.map(doc => {
-            const d = doc.data();
+        listEl.innerHTML = denemeler.map(d => {
             const isPending = d.onayDurumu === 'bekliyor';
+            const net = parseFloat(d.toplamNet) || 0;
             return `
-                <div class="bg-white p-4 rounded-xl border ${isPending ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'} shadow-sm">
+                <div class="bg-white p-4 rounded-xl border ${isPending ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'} shadow-sm transition-shadow hover:shadow-md">
                     <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-gray-800">${d.ad}</h4>
-                        <span class="text-xs px-2 py-1 rounded-full ${isPending ? 'bg-yellow-200 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                        <h4 class="font-bold text-gray-800 text-sm">${d.ad}</h4>
+                        <span class="text-[10px] px-2 py-1 rounded-full font-medium ${isPending ? 'bg-yellow-200 text-yellow-800' : 'bg-green-100 text-green-800'}">
                             ${isPending ? 'Onay Bekliyor' : 'Onaylandı'}
                         </span>
                     </div>
-                    <div class="flex justify-between text-sm text-gray-600">
-                        <span>${d.tur} • ${formatDateTR(d.tarih)}</span>
-                        <span class="font-bold text-indigo-600 text-lg">${d.toplamNet.toFixed(2)} Net</span>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <div class="flex gap-2">
+                            <span class="bg-gray-100 px-2 py-0.5 rounded">${d.tur}</span>
+                            <span>${formatDateTR(d.tarih)}</span>
+                        </div>
+                        <span class="font-bold text-indigo-600 text-base">${net.toFixed(2)} Net</span>
                     </div>
                 </div>
             `;
@@ -330,232 +359,68 @@ async function loadDenemelerTab() {
     });
 }
 
-// --- DENEME EKLEME MODALI MANTIĞI ---
-// (Dinamik Ders Girişi)
-
-const dersListeleri = {
-    'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'],
-    'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1'],
-    'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'],
-    'Diger': ['Genel']
-};
-
-// Modal Açma
-const openDenemeModal = () => {
-    document.getElementById('modalDenemeEkle').classList.remove('hidden');
-    renderDenemeInputs('TYT'); // Varsayılan
-    document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0];
-};
-
-document.getElementById('btnOpenDenemeEkle').addEventListener('click', openDenemeModal);
-if(document.getElementById('btnAddNewDeneme')) document.getElementById('btnAddNewDeneme').addEventListener('click', openDenemeModal);
-
-// Tür değişince inputları yenile
-document.getElementById('inpDenemeTur').addEventListener('change', (e) => {
-    renderDenemeInputs(e.target.value);
-});
-
-function renderDenemeInputs(tur) {
-    const container = document.getElementById('denemeDersContainer');
-    container.innerHTML = '';
-    const dersler = dersListeleri[tur] || dersListeleri['Diger'];
-
-    dersler.forEach(ders => {
-        container.innerHTML += `
-            <div class="flex items-center justify-between text-sm py-1 border-b border-gray-50 last:border-0">
-                <span class="text-gray-700 w-24 truncate font-medium">${ders}</span>
-                <div class="flex gap-2">
-                    <input type="number" placeholder="D" class="inp-deneme-d w-12 p-2 bg-green-50 border border-green-100 rounded text-center text-sm outline-none" data-ders="${ders}">
-                    <input type="number" placeholder="Y" class="inp-deneme-y w-12 p-2 bg-red-50 border border-red-100 rounded text-center text-sm outline-none" data-ders="${ders}">
-                    <input type="number" placeholder="B" class="inp-deneme-b w-12 p-2 bg-gray-50 border border-gray-200 rounded text-center text-sm outline-none" data-ders="${ders}">
-                </div>
-            </div>
-        `;
-    });
-}
-
-// Kaydetme
-document.getElementById('btnSaveDeneme').addEventListener('click', async () => {
-    const ad = document.getElementById('inpDenemeAd').value || "Deneme";
-    const tur = document.getElementById('inpDenemeTur').value;
-    const tarih = document.getElementById('inpDenemeTarih').value;
+function calculateDenemeStats(denemeler) {
+    // Sadece onaylı denemeleri dikkate al
+    const onayli = denemeler.filter(d => d.onayDurumu === 'onaylandi');
     
-    // Profil bilgilerini al
-    const studentAd = document.getElementById('headerStudentName').textContent;
-    const sinif = document.getElementById('profileClass').textContent;
-
     let totalNet = 0;
-    const netler = {};
-    const katsayi = tur === 'LGS' ? 3 : 4;
+    let maxNet = 0;
 
-    document.querySelectorAll('.inp-deneme-d').forEach(input => {
-        const ders = input.dataset.ders;
-        const d = parseInt(input.value) || 0;
-        const y = parseInt(input.parentElement.querySelector('.inp-deneme-y').value) || 0;
-        const b = parseInt(input.parentElement.querySelector('.inp-deneme-b').value) || 0;
-        
-        const net = d - (y / katsayi);
+    onayli.forEach(d => {
+        const net = parseFloat(d.toplamNet) || 0;
         totalNet += net;
-        
-        netler[ders] = { d, y, b, net: net.toFixed(2) };
+        if (net > maxNet) maxNet = net;
     });
 
-    try {
-        await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), {
-            ad, tur, tarih,
-            toplamNet: totalNet,
-            netler: netler,
-            onayDurumu: 'bekliyor',
-            kocId: coachId,
-            studentAd: studentAd, // Koç panelinde görünmesi için
-            sinif: sinif,
-            eklenmeTarihi: serverTimestamp()
-        });
+    const avg = onayli.length > 0 ? (totalNet / onayli.length) : 0;
 
-        document.getElementById('modalDenemeEkle').classList.add('hidden');
-        showToast(`Deneme kaydedildi: ${totalNet.toFixed(2)} Net`);
-        
-        // Sekme açıksa yenile
-        if (!document.getElementById('tab-denemeler').classList.contains('hidden')) {
-            loadDenemelerTab();
-        }
-    } catch (e) {
-        console.error(e);
-        showToast("Hata oluştu", true);
-    }
-});// --- YENİ: DENEMELER SEKMESİ ---
+    document.getElementById('studentKpiAvg').textContent = avg.toFixed(2);
+    document.getElementById('studentKpiMax').textContent = maxNet.toFixed(2);
+    document.getElementById('studentKpiTotal').textContent = denemeler.length; // Toplamda bekleyenler de sayılır
 
-async function loadDenemelerTab() {
-    const listEl = document.getElementById('studentDenemeList');
-    listEl.innerHTML = '<p class="text-center text-gray-400 py-4">Yükleniyor...</p>';
-    
-    const q = query(
-        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"),
-        orderBy("tarih", "desc")
-    );
-
-    onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
-            listEl.innerHTML = '<p class="text-center text-gray-400 py-8">Henüz deneme girilmemiş.</p>';
-            return;
-        }
-
-        listEl.innerHTML = snapshot.docs.map(doc => {
-            const d = doc.data();
-            const isPending = d.onayDurumu === 'bekliyor';
-            return `
-                <div class="bg-white p-4 rounded-xl border ${isPending ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'} shadow-sm">
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-gray-800">${d.ad}</h4>
-                        <span class="text-xs px-2 py-1 rounded-full ${isPending ? 'bg-yellow-200 text-yellow-800' : 'bg-green-100 text-green-800'}">
-                            ${isPending ? 'Onay Bekliyor' : 'Onaylandı'}
-                        </span>
-                    </div>
-                    <div class="flex justify-between text-sm text-gray-600">
-                        <span>${d.tur} • ${formatDateTR(d.tarih)}</span>
-                        <span class="font-bold text-indigo-600 text-lg">${d.toplamNet.toFixed(2)} Net</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    });
+    // Grafik Çiz
+    renderStudentDenemeChart(onayli);
 }
 
-// --- DENEME EKLEME MODALI MANTIĞI ---
-// (Dinamik Ders Girişi)
+function renderStudentDenemeChart(denemeler) {
+    const ctx = document.getElementById('studentDenemeChart');
+    if (!ctx) return;
+    
+    // Tarihe göre eskiden yeniye sırala
+    const sortedData = [...denemeler].sort((a,b) => a.tarih.localeCompare(b.tarih)).slice(-10); // Son 10
+    
+    const labels = sortedData.map(d => formatDateTR(d.tarih).substring(0, 5)); // Sadece Gün.Ay
+    const dataPoints = sortedData.map(d => (parseFloat(d.toplamNet) || 0).toFixed(2));
 
-const dersListeleri = {
-    'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'],
-    'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1'],
-    'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'],
-    'Diger': ['Genel']
-};
+    if (denemeChartInstance) denemeChartInstance.destroy();
 
-// Modal Açma
-const openDenemeModal = () => {
-    document.getElementById('modalDenemeEkle').classList.remove('hidden');
-    renderDenemeInputs('TYT'); // Varsayılan
-    document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0];
-};
-
-document.getElementById('btnOpenDenemeEkle').addEventListener('click', openDenemeModal);
-if(document.getElementById('btnAddNewDeneme')) document.getElementById('btnAddNewDeneme').addEventListener('click', openDenemeModal);
-
-// Tür değişince inputları yenile
-document.getElementById('inpDenemeTur').addEventListener('change', (e) => {
-    renderDenemeInputs(e.target.value);
-});
-
-function renderDenemeInputs(tur) {
-    const container = document.getElementById('denemeDersContainer');
-    container.innerHTML = '';
-    const dersler = dersListeleri[tur] || dersListeleri['Diger'];
-
-    dersler.forEach(ders => {
-        container.innerHTML += `
-            <div class="flex items-center justify-between text-sm py-1 border-b border-gray-50 last:border-0">
-                <span class="text-gray-700 w-24 truncate font-medium">${ders}</span>
-                <div class="flex gap-2">
-                    <input type="number" placeholder="D" class="inp-deneme-d w-12 p-2 bg-green-50 border border-green-100 rounded text-center text-sm outline-none" data-ders="${ders}">
-                    <input type="number" placeholder="Y" class="inp-deneme-y w-12 p-2 bg-red-50 border border-red-100 rounded text-center text-sm outline-none" data-ders="${ders}">
-                    <input type="number" placeholder="B" class="inp-deneme-b w-12 p-2 bg-gray-50 border border-gray-200 rounded text-center text-sm outline-none" data-ders="${ders}">
-                </div>
-            </div>
-        `;
+    denemeChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Net',
+                data: dataPoints,
+                borderColor: '#7c3aed', // Indigo/Purple
+                backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#7c3aed',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: false, grid: { display: false } },
+                x: { grid: { display: false } }
+            }
+        }
     });
 }
-
-// Kaydetme
-document.getElementById('btnSaveDeneme').addEventListener('click', async () => {
-    const ad = document.getElementById('inpDenemeAd').value || "Deneme";
-    const tur = document.getElementById('inpDenemeTur').value;
-    const tarih = document.getElementById('inpDenemeTarih').value;
-    
-    // Profil bilgilerini al
-    const studentAd = document.getElementById('headerStudentName').textContent;
-    const sinif = document.getElementById('profileClass').textContent;
-
-    let totalNet = 0;
-    const netler = {};
-    const katsayi = tur === 'LGS' ? 3 : 4;
-
-    document.querySelectorAll('.inp-deneme-d').forEach(input => {
-        const ders = input.dataset.ders;
-        const d = parseInt(input.value) || 0;
-        const y = parseInt(input.parentElement.querySelector('.inp-deneme-y').value) || 0;
-        const b = parseInt(input.parentElement.querySelector('.inp-deneme-b').value) || 0;
-        
-        const net = d - (y / katsayi);
-        totalNet += net;
-        
-        netler[ders] = { d, y, b, net: net.toFixed(2) };
-    });
-
-    try {
-        await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), {
-            ad, tur, tarih,
-            toplamNet: totalNet,
-            netler: netler,
-            onayDurumu: 'bekliyor',
-            kocId: coachId,
-            studentAd: studentAd, // Koç panelinde görünmesi için
-            sinif: sinif,
-            eklenmeTarihi: serverTimestamp()
-        });
-
-        document.getElementById('modalDenemeEkle').classList.add('hidden');
-        showToast(`Deneme kaydedildi: ${totalNet.toFixed(2)} Net`);
-        
-        // Sekme açıksa yenile
-        if (!document.getElementById('tab-denemeler').classList.contains('hidden')) {
-            loadDenemelerTab();
-        }
-    } catch (e) {
-        console.error(e);
-        showToast("Hata oluştu", true);
-    }
-});
-
 // =================================================================
 // 6. SORU TAKİBİ (YENİ AKORDİYON SİSTEMİ)
 // =================================================================

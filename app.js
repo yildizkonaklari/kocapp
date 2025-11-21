@@ -71,6 +71,9 @@ import { renderMuhasebeSayfasi, saveNewBorc, saveNewTahsilat } from './modules/m
 import { renderMesajlarSayfasi } from './modules/mesajlar.js';
 import { renderDenemelerSayfasi } from './modules/denemeler.js';
 import { renderSoruTakibiSayfasi } from './modules/sorutakibi.js';
+import { renderHedeflerSayfasi, saveGlobalHedef } from './modules/hedefler.js';
+import { renderOdevlerSayfasi, saveGlobalOdev } from './modules/odevler.js';
+import { saveGlobalDeneme } from './modules/denemeler.js';
 
 
 // =================================================================
@@ -199,6 +202,8 @@ function navigateToPage(pageId) {
             case 'mesajlar': renderMesajlarSayfasi(db, currentUserId, appId); break;
             case 'denemeler': renderDenemelerSayfasi(db, currentUserId, appId); break;
             case 'sorutakibi': renderSoruTakibiSayfasi(db, currentUserId, appId); break;
+            case 'hedefler': renderHedeflerSayfasi(db, currentUserId, appId); break;
+            case 'odevler': renderOdevlerSayfasi(db, currentUserId, appId); break;
             
             case 'hedefler': 
             case 'odevler':
@@ -279,6 +284,9 @@ addListener('closeBorcModalButton', 'click', () => document.getElementById('addB
 addListener('cancelBorcModalButton', 'click', () => document.getElementById('addBorcModal').style.display = 'none');
 addListener('saveBorcButton', 'click', () => saveNewBorc(db, currentUserId, appId));
 
+addListener('saveDenemeButton', 'click', () => saveGlobalDeneme(db, currentUserId, appId));
+addListener('saveHedefButton', 'click', () => saveGlobalHedef(db, currentUserId, appId));
+addListener('saveOdevButton', 'click', () => saveGlobalOdev(db, currentUserId, appId));
 
 // --- PROFİL AYARLARI ---
 const profileModal = document.getElementById("profileModal");

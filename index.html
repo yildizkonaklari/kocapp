@@ -203,45 +203,47 @@
         </div>
     </div>
 
-    <!-- 3. DENEME EKLE -->
-    <div id="addDenemeModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-        <div class="relative w-full max-w-3xl bg-white rounded-lg shadow-lg p-6 m-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center pb-4 border-b">
-                <h3 class="text-xl font-bold text-gray-800">Yeni Deneme Sonucu Ekle</h3>
-                <button id="closeDenemeModalButton" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+  <!-- 3. YENİ DENEME EKLE MODALI (GÜNCELLENDİ) -->
+    <div id="addDenemeModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-2xl font-semibold">Yeni Deneme Sonucu Ekle</h3>
+                <button id="closeDenemeModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
             </div>
             <div class="mt-4 space-y-4">
                 <input type="hidden" id="currentStudentIdForDeneme">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- YENİ: Global Ekleme İçin Öğrenci Seçimi -->
+                <div id="denemeStudentSelectContainer" class="hidden bg-purple-50 p-3 rounded-md border border-purple-200">
+                    <label for="denemeStudentSelect" class="block text-sm font-bold text-purple-700 mb-1">Öğrenci Seçin</label>
+                    <select id="denemeStudentSelect" class="w-full px-3 py-2 border border-purple-300 rounded-md focus:outline-none focus:ring-purple-500"></select>
+                </div>
+
+                <div>
+                    <label for="denemeAdi" class="block text-sm font-medium text-gray-700">Sınav Adı (Yayın)</label>
+                    <input type="text" id="denemeAdi" placeholder="Örn: 3D TYT Genel Deneme 1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Sınav Türü</label>
-                        <select id="denemeTuru" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                        <label for="denemeTarihi" class="block text-sm font-medium text-gray-700">Sınav Tarihi</label>
+                        <input type="date" id="denemeTarihi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label for="denemeTuru" class="block text-sm font-medium text-gray-700">Sınav Türü</label>
+                        <select id="denemeTuru" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
                             <option value="TYT">TYT</option><option value="AYT">AYT</option><option value="LGS">LGS</option><option value="YDS">YDS</option><option value="Diger">Diğer</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Yayın Adı</label>
-                        <input type="text" id="denemeAdi" placeholder="Örn: 3D Yayınları" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
-                        <input type="date" id="denemeTarih" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
                 </div>
-                
-                <!-- Dinamik Ders Alanları -->
-                <div id="denemeNetGirisAlani" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <!-- JS dolduracak -->
-                </div>
-                <p id="denemeModalErrorMessage" class="text-sm text-red-600 hidden text-center"></p>
+                <div id="denemeNetGirisAlani" class="p-4 bg-gray-50 rounded-md min-h-[200px] max-h-[40vh] overflow-y-auto"></div>
+                <p id="denemeModalErrorMessage" class="text-sm text-red-600 hidden"></p>
             </div>
-            <div class="flex justify-end pt-4 mt-2 space-x-3">
-                <button id="cancelDenemeModalButton" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">İptal</button>
-                <button id="saveDenemeButton" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Kaydet</button>
+            <div class="flex justify-end pt-4 mt-4 border-t">
+                <button id="cancelDenemeModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</button>
+                <button id="saveDenemeButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Denemeyi Kaydet</button>
             </div>
         </div>
     </div>
-
     <!-- 4. SORU EKLE (Koç İçin) -->
     <div id="addSoruModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
         <div class="relative w-full max-w-lg bg-white rounded-lg shadow-lg p-6 m-4">
@@ -282,89 +284,89 @@
         </div>
     </div>
 
-    <!-- 5. HEDEF EKLE -->
-    <div id="addHedefModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-        <div class="relative w-full max-w-lg bg-white rounded-lg shadow-lg p-6 m-4">
-            <div class="flex justify-between items-center pb-4 border-b">
-                <h3 class="text-xl font-bold text-gray-800">Yeni Hedef</h3>
-                <button id="closeHedefModalButton" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+    <!-- 5. YENİ HEDEF EKLE MODALI (GÜNCELLENDİ) -->
+    <div id="addHedefModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-2xl font-semibold">Yeni Hedef Oluştur</h3>
+                <button id="closeHedefModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
             </div>
             <div class="mt-4 space-y-4">
                 <input type="hidden" id="currentStudentIdForHedef">
+                
+                <!-- YENİ: Global Ekleme İçin Öğrenci Seçimi -->
+                <div id="hedefStudentSelectContainer" class="hidden bg-purple-50 p-3 rounded-md border border-purple-200">
+                    <label for="hedefStudentSelect" class="block text-sm font-bold text-purple-700 mb-1">Öğrenci Seçin</label>
+                    <select id="hedefStudentSelect" class="w-full px-3 py-2 border border-purple-300 rounded-md focus:outline-none focus:ring-purple-500"></select>
+                </div>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Hedef Başlığı</label>
-                    <input type="text" id="hedefTitle" placeholder="Örn: TYT Mat 25 Net" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
+                    <label for="hedefTitle" class="block text-sm font-medium text-gray-700">Hedef Başlığı</label>
+                    <input type="text" id="hedefTitle" placeholder="Örn: TYT Mat 25 Net" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Bitiş Tarihi</label>
-                    <input type="date" id="hedefBitisTarihi" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
+                    <label for="hedefBitisTarihi" class="block text-sm font-medium text-gray-700">Bitiş Tarihi</label>
+                    <input type="date" id="hedefBitisTarihi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
-                    <textarea id="hedefAciklama" rows="3" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                    <label for="hedefAciklama" class="block text-sm font-medium text-gray-700">Açıklama</label>
+                    <textarea id="hedefAciklama" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"></textarea>
                 </div>
-                <p id="hedefModalErrorMessage" class="text-sm text-red-600 hidden text-center"></p>
+                <p id="hedefModalErrorMessage" class="text-sm text-red-600 hidden"></p>
             </div>
-            <div class="flex justify-end pt-4 mt-2 space-x-3">
-                <button id="cancelHedefModalButton" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">İptal</button>
-                <button id="saveHedefButton" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Kaydet</button>
+            <div class="flex justify-end pt-4 mt-4 border-t">
+                <button id="cancelHedefModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</button>
+                <button id="saveHedefButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Hedefi Kaydet</button>
             </div>
         </div>
     </div>
 
-    <!-- 6. ÖDEV EKLE -->
-    <div id="addOdevModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-        <div class="relative w-full max-w-lg bg-white rounded-lg shadow-lg p-6 m-4">
-            <div class="flex justify-between items-center pb-4 border-b">
-                <h3 class="text-xl font-bold text-gray-800">Yeni Ödev Planla</h3>
-                <button id="closeOdevModalButton" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+    <!-- 6. YENİ ÖDEV EKLE MODALI (GÜNCELLENDİ) -->
+    <div id="addOdevModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-2xl font-semibold">Yeni Ödev Planla</h3>
+                <button id="closeOdevModalButton" class="text-gray-400 hover:text-gray-600">&times;</button>
             </div>
             <div class="mt-4 space-y-4">
                 <input type="hidden" id="currentStudentIdForOdev">
+                
+                <!-- YENİ: Global Ekleme İçin Öğrenci Seçimi -->
+                <div id="odevStudentSelectContainer" class="hidden bg-purple-50 p-3 rounded-md border border-purple-200">
+                    <label for="odevStudentSelect" class="block text-sm font-bold text-purple-700 mb-1">Öğrenci Seçin</label>
+                    <select id="odevStudentSelect" class="w-full px-3 py-2 border border-purple-300 rounded-md focus:outline-none focus:ring-purple-500"></select>
+                </div>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Ödev Türü</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ödev Türü</label>
                     <div class="grid grid-cols-3 gap-2">
-                        <label class="cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center hover:bg-purple-50 has-[:checked]:bg-purple-100 has-[:checked]:border-purple-500">
+                        <label class="cursor-pointer border rounded-md p-2 flex flex-col items-center justify-center hover:bg-purple-50 transition-colors has-[:checked]:bg-purple-100 has-[:checked]:border-purple-500">
                             <input type="radio" name="odevTuru" value="serbest" class="sr-only" checked>
-                            <span class="text-sm font-bold text-purple-900">Tek Sefer</span>
+                            <span class="text-sm font-semibold text-purple-900">Serbest</span>
                         </label>
-                        <label class="cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center hover:bg-blue-50 has-[:checked]:bg-blue-100 has-[:checked]:border-blue-500">
+                        <label class="cursor-pointer border rounded-md p-2 flex flex-col items-center justify-center hover:bg-blue-50 transition-colors has-[:checked]:bg-blue-100 has-[:checked]:border-blue-500">
                             <input type="radio" name="odevTuru" value="gunluk" class="sr-only">
-                            <span class="text-sm font-bold text-blue-900">Günlük</span>
+                            <span class="text-sm font-semibold text-blue-900">Günlük</span>
                         </label>
-                        <label class="cursor-pointer border rounded-lg p-2 flex flex-col items-center justify-center hover:bg-green-50 has-[:checked]:bg-green-100 has-[:checked]:border-green-500">
+                        <label class="cursor-pointer border rounded-md p-2 flex flex-col items-center justify-center hover:bg-green-50 transition-colors has-[:checked]:bg-green-100 has-[:checked]:border-green-500">
                             <input type="radio" name="odevTuru" value="haftalik" class="sr-only">
-                            <span class="text-sm font-bold text-green-900">Haftalık</span>
+                            <span class="text-sm font-semibold text-green-900">Haftalık</span>
                         </label>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Başlık</label>
-                    <input type="text" id="odevTitle" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
-                </div>
+                <!-- ... (Diğer alanlar aynı: Başlık, Tarihler, Açıklama, Link) ... -->
+                <div><label for="odevTitle" class="block text-sm font-medium text-gray-700">Başlık</label><input type="text" id="odevTitle" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Başlangıç</label>
-                        <input type="date" id="odevBaslangicTarihi" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Bitiş</label>
-                        <input type="date" id="odevBitisTarihi" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
-                    </div>
+                    <div><label for="odevBaslangicTarihi" class="block text-sm font-medium text-gray-700">Başlangıç</label><input type="date" id="odevBaslangicTarihi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                    <div><label for="odevBitisTarihi" class="block text-sm font-medium text-gray-700">Bitiş</label><input type="date" id="odevBitisTarihi" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
-                    <textarea id="odevAciklama" rows="2" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Link (Video/PDF)</label>
-                    <input type="url" id="odevLink" placeholder="https://..." class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
-                </div>
-                <p id="odevModalErrorMessage" class="text-sm text-red-600 hidden text-center"></p>
+                <div><label for="odevAciklama" class="block text-sm font-medium text-gray-700">Açıklama</label><textarea id="odevAciklama" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></textarea></div>
+                <div><label for="odevLink" class="block text-sm font-medium text-gray-700">Link</label><input type="url" id="odevLink" placeholder="https://..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                <p id="odevModalErrorMessage" class="text-sm text-red-600 hidden"></p>
             </div>
-            <div class="flex justify-end pt-4 mt-2 space-x-3">
-                <button id="cancelOdevModalButton" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">İptal</button>
-                <button id="saveOdevButton" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Planla</button>
+            <div class="flex justify-end pt-4 mt-4 border-t">
+                <button id="cancelOdevModalButton" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md mr-2 hover:bg-gray-300">İptal</button>
+                <button id="saveOdevButton" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">Planı Oluştur</button>
             </div>
         </div>
     </div>

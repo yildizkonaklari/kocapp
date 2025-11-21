@@ -5,10 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Öğrenci Paneli</title>
     
+    <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Font Awesome (İkonlar) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 3. Chart.js (Grafikler) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- 4. Özel Stiller -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- YENİ: Alt Menü İkon Düzeltmesi -->
+    <style>
+        /* Ortadaki yuvarlak butonun konumu ve gölgesi */
+        .bottom-nav-center-btn {
+            margin-top: -1.5rem; /* -mt-5 e denk gelir, kesilmeyi önler */
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
 
@@ -92,7 +108,9 @@
 
         <!-- 2. SEKMESİ: ÖDEVLER -->
         <div id="tab-homework" class="tab-content hidden space-y-4">
-            <!-- ... (İçerik aynı) ... -->
+             <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold text-gray-800">Ödevlerim</h2>
+            </div>
              <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-sm font-semibold text-gray-700">Haftalık İlerleme</h3>
@@ -107,7 +125,6 @@
 
         <!-- 3. SEKMESİ: SORU TAKİBİ -->
         <div id="tab-tracking" class="tab-content hidden space-y-4">
-            <!-- ... (Akordiyon yapısı aynı) ... -->
              <div class="flex justify-between items-center">
                 <h2 class="text-lg font-bold text-gray-800">Soru Takibi</h2>
                 <p class="text-xs text-gray-500">Haftalık Çizelge</p>
@@ -175,14 +192,13 @@
         <div id="tab-ajanda" class="tab-content hidden space-y-4">
              <h2 class="text-lg font-bold text-gray-800">Ajandam</h2>
              <div class="bg-white rounded-lg shadow border border-gray-200">
-                <!-- ... (Takvim içeriği aynı) ... -->
                 <div class="flex justify-between items-center p-3 border-b border-gray-200">
                     <button id="prevMonth" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button>
                     <h2 id="currentMonthYear" class="text-base font-bold text-gray-800 text-center">...</h2>
                     <button id="nextMonth" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
                 <div id="calendarHeader" class="grid grid-cols-7 p-2 border-b border-gray-200 bg-gray-50">
-                    <div class="calendar-header">Pzt</div><div class="calendar-header">Sal</div><div class="calendar-header">Çar</div><div class="calendar-header">Per</div><div class="calendar-header">Cum</div><div class="calendar-header">Cmt</div><div class="calendar-header">Paz</div>
+                    <div class="calendar-header">Pzt</div><div class="calendar-header">Sal</div><div class="calendar-header">Çar</div><div class="calendar-header">Per</div><div class="calendar-header">Cum</div><div class="calendar-header text-red-500">Cmt</div><div class="calendar-header text-red-500">Paz</div>
                 </div>
                 <div id="calendarGrid" class="relative p-1"></div>
             </div>
@@ -194,7 +210,6 @@
 
         <!-- 7. MESAJLAR -->
         <div id="tab-messages" class="tab-content hidden flex flex-col h-full pb-20">
-            <!-- ... (Mesajlaşma aynı) ... -->
              <div class="bg-white p-4 border-b border-gray-200 flex items-center gap-3 shadow-sm shrink-0">
                 <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><i class="fa-solid fa-user-tie"></i></div>
                 <div><h3 class="font-bold text-gray-800 text-sm">Koçum</h3><p class="text-xs text-green-500 flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Çevrimiçi</p></div>
@@ -210,7 +225,6 @@
 
         <!-- 8. PROFİL -->
         <div id="tab-profile" class="tab-content hidden space-y-4">
-            <!-- ... (Profil aynı) ... -->
             <h2 class="text-lg font-bold text-gray-800">Profilim</h2>
             <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4">
                 <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl font-bold" id="profileAvatar"></div>
@@ -223,23 +237,45 @@
 
     </main>
 
-    <!-- ALT NAVİGASYON -->
+    <!-- ALT NAVİGASYON (GÜNCELLENDİ) -->
     <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-20 overflow-x-auto">
-        <div class="flex justify-between items-center h-16 px-4 min-w-[360px]">
-            <button class="nav-btn active flex flex-col items-center justify-center w-14 h-full text-indigo-600" data-target="tab-home"><i class="fa-solid fa-house text-lg mb-1"></i><span class="text-[9px] font-medium">Ana Sayfa</span></button>
-            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400" data-target="tab-homework"><i class="fa-solid fa-list-check text-lg mb-1"></i><span class="text-[9px] font-medium">Ödevler</span></button>
-            <!-- Takip (Ortada) -->
-            <button class="nav-btn flex flex-col items-center justify-center w-16 h-full text-gray-400 relative" data-target="tab-tracking">
-                <div class="-mt-8 w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg border-4 border-gray-50 text-white"><i class="fa-solid fa-pen-to-square text-lg"></i></div><span class="text-[9px] font-medium mt-1">Takip</span>
+        <div class="flex justify-between items-end h-16 px-4 min-w-[360px] relative">
+            <!-- Ana Sayfa -->
+            <button class="nav-btn active flex flex-col items-center justify-center w-14 h-full text-indigo-600 pb-1" data-target="tab-home">
+                <i class="fa-solid fa-house text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Ana Sayfa</span>
             </button>
-            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400" data-target="tab-goals"><i class="fa-solid fa-bullseye text-lg mb-1"></i><span class="text-[9px] font-medium">Hedef</span></button>
-            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400" data-target="tab-profile"><i class="fa-solid fa-bars text-lg mb-1"></i><span class="text-[9px] font-medium">Menü</span></button>
+            <!-- Ödevler -->
+            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400 pb-1" data-target="tab-homework">
+                <i class="fa-solid fa-list-check text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Ödevler</span>
+            </button>
+            
+            <!-- TAKİP (ORTA BUTON - DÜZELTİLDİ) -->
+            <div class="relative w-16 h-full flex justify-center z-10">
+                <button class="nav-btn flex flex-col items-center justify-center w-16 h-20 absolute bottom-0" data-target="tab-tracking">
+                    <div class="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg border-4 border-gray-50 text-white bottom-nav-center-btn">
+                        <i class="fa-solid fa-pen-to-square text-xl"></i>
+                    </div>
+                    <span class="text-[9px] font-medium mt-1 text-gray-500">Takip</span>
+                </button>
+            </div>
+            
+            <!-- Hedef -->
+            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400 pb-1" data-target="tab-goals">
+                <i class="fa-solid fa-bullseye text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Hedef</span>
+            </button>
+            
+            <!-- PROFİLİM (DÜZELTİLDİ) -->
+            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400 pb-1" data-target="tab-profile">
+                <i class="fa-regular fa-user text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Profilim</span>
+            </button>
         </div>
     </nav>
 
-    <!-- MODALLAR -->
-
-    <!-- 1. SORU EKLE MODALI -->
+    <!-- MODALLAR (Aynı kalıyor) -->
     <div id="modalSoruEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center">
         <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up">
             <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Hızlı Soru Gir</h3><button class="close-modal text-gray-400 p-2"><i class="fa-solid fa-xmark"></i></button></div>
@@ -263,7 +299,6 @@
         </div>
     </div>
 
-    <!-- 2. DENEME EKLE MODALI -->
     <div id="modalDenemeEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center">
         <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Deneme Sonucu Gir</h3><button class="close-modal text-gray-400 p-2"><i class="fa-solid fa-xmark"></i></button></div>
@@ -277,7 +312,6 @@
         </div>
     </div>
     
-    <!-- 3. POMODORO VE PROFIL MODALLARI (Aynı) -->
     <div id="modalPomodoro" class="hidden fixed inset-0 bg-indigo-900 z-50 flex flex-col items-center justify-center p-6 text-white transition-opacity duration-300">
         <button class="absolute top-6 right-6 text-white/50 hover:text-white text-2xl close-modal"><i class="fa-solid fa-xmark"></i></button>
         <div class="text-center w-full max-w-sm"><h2 class="text-2xl font-bold mb-2">Odaklanma Modu</h2><div class="w-64 h-64 mx-auto mb-10 rounded-full border-4 border-indigo-400 flex items-center justify-center relative bg-indigo-800 shadow-2xl" id="timerCircle"><div class="text-center"><div id="timerDisplay" class="text-6xl font-mono font-bold">25:00</div><div id="timerStatus" class="text-indigo-300 text-sm mt-2">DERS</div></div></div><div class="flex justify-center gap-4"><button id="btnTimerStart" class="w-16 h-16 rounded-full bg-white text-indigo-600 text-xl flex items-center justify-center shadow-lg active:scale-90 transition-transform"><i class="fa-solid fa-play"></i></button><button id="btnTimerReset" class="w-16 h-16 rounded-full bg-indigo-700 text-white text-xl flex items-center justify-center shadow-lg active:scale-90 transition-transform"><i class="fa-solid fa-rotate-right"></i></button></div></div>

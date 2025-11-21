@@ -322,108 +322,121 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 
 // =================================================================
-// 6. MODAL VE DENEME EKLEME İŞLEMLERİ
+// 7. DENEME SEKME YÖNETİMİ (GÜNCELLENDİ: AKORDİYON YAPISI)
 // =================================================================
 
-// Modal Kapatma
-document.querySelectorAll('.close-modal').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.currentTarget.closest('.fixed').classList.add('hidden');
-    });
-});
+async function loadDenemelerTab() {
+    const listEl = document.getElementById('studentDenemeList');
+    if (!listEl) return;
 
-// --- DENEME EKLEME ---
+    if(!coachId || !studentDocId) { listEl.innerHTML = '<p class="text-center text-red-500 py-4">Hata.</p>'; return; }
 
-// 1. Modalı Açma
-const openDenemeModal = () => {
-    document.getElementById('modalDenemeEkle').classList.remove('hidden');
-    const turSelect = document.getElementById('inpDenemeTur');
-    renderDenemeInputs(turSelect.value || 'TYT'); // Varsayılan olarak seçili olanı render et
-    document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0];
-};
+    // Yeni Ekle Butonu (Klonlama ile listener temizliği)
+    const btnAdd = document.getElementById('btnAddNewDeneme');
+    if(btnAdd) {
+        const newBtn = btnAdd.cloneNode(true);
+        btnAdd.parentNode.replaceChild(newBtn, btnAdd);
+        newBtn.addEventListener('click', openDenemeModal);
+    }
 
-const btnDeneme1 = document.getElementById('btnOpenDenemeEkle'); // Ana Sayfa
-if(btnDeneme1) btnDeneme1.addEventListener('click', openDenemeModal);
+    const q = query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"),
+        orderBy("tarih", "desc")
+    );
 
-// 2. Dersleri Render Etme Fonksiyonu
-function renderDenemeInputs(tur) {
-    const container = document.getElementById('denemeDersContainer');
-    if(!container) return;
-    
-    container.innerHTML = '';
-    const dersler = SINAV_DERSLERI[tur] || SINAV_DERSLERI['Diger'];
+    listeners.denemeler = onSnapshot(q, (snapshot) => {
+        const denemeler = [];
+        snapshot.forEach(doc => denemeler.push({ id: doc.id, ...doc.data() }));
+        calculateDenemeStats(denemeler);
 
-    dersler.forEach(ders => {
-        container.innerHTML += `
-            <div class="flex items-center justify-between text-sm py-2 border-b border-gray-100 last:border-0">
-                <span class="text-gray-700 w-24 truncate font-medium">${ders}</span>
-                <div class="flex gap-2">
-                    <input type="number" placeholder="D" class="inp-deneme-d w-12 p-2 bg-green-50 border border-green-100 rounded text-center text-sm outline-none focus:ring-1 focus:ring-green-400" data-ders="${ders}">
-                    <input type="number" placeholder="Y" class="inp-deneme-y w-12 p-2 bg-red-50 border border-red-100 rounded text-center text-sm outline-none focus:ring-1 focus:ring-red-400" data-ders="${ders}">
-                    <input type="number" placeholder="B" class="inp-deneme-b w-12 p-2 bg-gray-50 border border-gray-200 rounded text-center text-sm outline-none focus:ring-1 focus:ring-gray-400" data-ders="${ders}">
+        if (denemeler.length === 0) {
+            listEl.innerHTML = '<p class="text-center text-gray-400 py-8 text-sm">Henüz deneme girilmemiş.</p>';
+            return;
+        }
+
+        // AKORDİYON LİSTESİ OLUŞTURULUYOR
+        listEl.innerHTML = denemeler.map(d => {
+            const isPending = d.onayDurumu === 'bekliyor';
+            const net = parseFloat(d.toplamNet) || 0;
+            
+            // Detay Gridini Hazırla
+            let detailsHtml = '';
+            if (d.netler) {
+                detailsHtml = `<div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-600">`;
+                for (const [ders, stats] of Object.entries(d.netler)) {
+                    detailsHtml += `
+                        <div class="flex justify-between bg-gray-50 p-2 rounded">
+                            <span class="font-medium truncate mr-1">${ders}</span>
+                            <span class="font-bold text-indigo-600">${stats.net} N</span>
+                        </div>`;
+                }
+                detailsHtml += `</div>`;
+            } else {
+                detailsHtml = `<p class="text-xs text-gray-400 mt-2 text-center">Detay yok.</p>`;
+            }
+
+            return `
+                <div class="bg-white p-4 rounded-xl border ${isPending ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'} shadow-sm transition-all mb-3 cursor-pointer" onclick="this.querySelector('.deneme-details').classList.toggle('hidden')">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-gray-800 text-sm truncate pr-2">${d.ad}</h4>
+                        <div class="flex flex-col items-end">
+                            <span class="text-[10px] px-2 py-1 rounded-full font-medium mb-1 ${isPending ? 'bg-yellow-200 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                ${isPending ? 'Bekliyor' : 'Onaylı'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 items-end">
+                        <div class="flex flex-col">
+                            <span class="mb-1 bg-gray-100 px-1.5 py-0.5 rounded w-max">${d.tur}</span>
+                            <span><i class="fa-regular fa-calendar mr-1"></i>${formatDateTR(d.tarih)}</span>
+                        </div>
+                        <div class="text-right">
+                             <span class="block text-[10px] text-gray-400 mb-0.5">Toplam Net</span>
+                             <span class="font-bold text-indigo-600 text-lg">${net.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- GİZLİ DETAY ALANI -->
+                    <div class="deneme-details hidden animate-fade-in">
+                        ${detailsHtml}
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }).join('');
     });
 }
 
-// 3. Tür Değişince Inputları Yenile
-document.getElementById('inpDenemeTur').addEventListener('change', (e) => {
-    renderDenemeInputs(e.target.value);
-});
-
-// 4. Kaydetme
-document.getElementById('btnSaveDeneme').addEventListener('click', async () => {
-    const ad = document.getElementById('inpDenemeAd').value || "Deneme";
-    const tur = document.getElementById('inpDenemeTur').value;
-    const tarih = document.getElementById('inpDenemeTarih').value;
-    const studentAd = document.getElementById('headerStudentName').textContent;
-    const sinif = document.getElementById('profileClass').textContent;
-
-    if(!tarih) { showToast('Lütfen tarih seçin', true); return; }
-
-    let totalNet = 0;
-    const netler = {};
-    const katsayi = tur === 'LGS' ? 3 : 4;
-
-    document.querySelectorAll('.inp-deneme-d').forEach(input => {
-        const ders = input.dataset.ders;
-        const d = parseInt(input.value) || 0;
-        const y = parseInt(input.parentElement.querySelector('.inp-deneme-y').value) || 0;
-        const b = parseInt(input.parentElement.querySelector('.inp-deneme-b').value) || 0;
-        
-        const net = d - (y / katsayi);
-        totalNet += net;
-        
-        netler[ders] = { d, y, b, net: net.toFixed(2) };
+// ... (calculateDenemeStats, renderStudentDenemeChart fonksiyonları aynı) ...
+function calculateDenemeStats(denemeler) { /* ... */ 
+    const onayli = denemeler.filter(d => d.onayDurumu === 'onaylandi');
+    let totalNet = 0, maxNet = 0;
+    onayli.forEach(d => {
+        const net = parseFloat(d.toplamNet) || 0;
+        totalNet += net; if (net > maxNet) maxNet = net;
     });
+    const avg = onayli.length > 0 ? (totalNet / onayli.length) : 0;
+    if(document.getElementById('studentKpiAvg')) document.getElementById('studentKpiAvg').textContent = avg.toFixed(2);
+    if(document.getElementById('studentKpiMax')) document.getElementById('studentKpiMax').textContent = maxNet.toFixed(2);
+    if(document.getElementById('studentKpiTotal')) document.getElementById('studentKpiTotal').textContent = denemeler.length;
+    renderStudentDenemeChart(onayli);
+}
 
-    try {
-        await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), {
-            ad, tur, tarih,
-            toplamNet: totalNet,
-            netler: netler,
-            onayDurumu: 'bekliyor',
-            kocId: coachId,
-            studentId: studentDocId,
-            studentAd: studentAd,
-            sinif: sinif,
-            eklenmeTarihi: serverTimestamp()
-        });
-
-        document.getElementById('modalDenemeEkle').classList.add('hidden');
-        showToast(`Deneme kaydedildi: ${totalNet.toFixed(2)} Net`);
-        
-        // Eğer Deneme sekmesi açıksa listeyi yenile
-        if (!document.getElementById('tab-denemeler').classList.contains('hidden')) {
-            loadDenemelerTab(); // Bu fonksiyon artık tanımlı olduğu için hata vermeyecek
-        }
-    } catch (e) {
-        console.error(e);
-        showToast("Kayıt hatası", true);
-    }
-});
-
+function renderStudentDenemeChart(denemeler) { /* ... */ 
+    const ctx = document.getElementById('studentDenemeChart');
+    if (!ctx) return;
+    const sortedData = [...denemeler].sort((a,b) => a.tarih.localeCompare(b.tarih)).slice(-10);
+    const labels = sortedData.map(d => formatDateTR(d.tarih).substring(0, 5));
+    const dataPoints = sortedData.map(d => (parseFloat(d.toplamNet) || 0).toFixed(2));
+    if (denemeChartInstance) denemeChartInstance.destroy();
+    denemeChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{ label: 'Net', data: dataPoints, borderColor: '#7c3aed', backgroundColor: 'rgba(124, 58, 237, 0.1)', tension: 0.4, fill: true, pointRadius: 4 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false, grid: { display: false } }, x: { grid: { display: false } } } }
+    });
+}
 
 // --- SORU EKLEME MODALI ---
 const modalSoru = document.getElementById('modalSoruEkle');

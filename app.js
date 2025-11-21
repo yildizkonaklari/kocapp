@@ -58,7 +58,6 @@ import {
     renderOgrenciDetaySayfasi, 
     saveNewStudent, 
     saveStudentChanges, 
-    saveNewDeneme, 
     saveNewSoruTakibi, 
     saveNewHedef, 
     saveNewOdev,

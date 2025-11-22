@@ -9,43 +9,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* Bildirim Rozeti Animasyonu */
-        @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
-        .animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
-        #notificationDropdown { transform-origin: top right; transition: all 0.2s ease-out; }
-        #notificationDropdown.hidden { transform: scale(0.95); opacity: 0; pointer-events: none; }
-    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
 
-    <!-- HATA GÖSTERİCİ -->
-    <div id="globalErrorDisplay" class="hidden fixed top-0 left-0 w-full bg-red-600 text-white p-4 z-[9999] text-xs font-mono overflow-auto max-h-40"></div>
-
     <!-- HEADER -->
-    <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-30 shrink-0 relative">
+    <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-50 shrink-0 relative">
         <div>
             <p class="text-xs text-gray-500 font-medium">Hoş geldin,</p>
-            <h1 id="headerStudentName" class="text-lg font-bold text-indigo-900 leading-tight">Öğrenci</h1>
+            <h1 id="headerStudentName" class="text-lg font-bold text-indigo-900 leading-tight">...</h1>
         </div>
         
         <div class="flex items-center gap-4">
             <!-- Mesajlar İkonu -->
-            <button id="btnHeaderMessages" class="relative text-gray-500 hover:text-indigo-600 transition-colors p-1">
-                <i class="fa-regular fa-envelope text-xl"></i>
-                <span id="headerUnreadMsgCount" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">0</span>
+            <button id="btnHeaderMessages" class="relative text-gray-500 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-gray-100">
+                <i class="fa-regular fa-envelope text-2xl"></i>
+                <span id="headerUnreadMsgCount" class="hidden absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">0</span>
             </button>
 
             <!-- Bildirimler İkonu -->
             <div class="relative">
-                <button id="btnHeaderNotifications" class="relative text-gray-500 hover:text-indigo-600 transition-colors p-1">
-                    <i class="fa-regular fa-bell text-xl"></i>
-                    <span id="headerNotificationDot" class="hidden absolute top-0 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                <button id="btnHeaderNotifications" class="relative text-gray-500 hover:text-indigo-600 transition-colors p-2 rounded-full hover:bg-gray-100">
+                    <i class="fa-regular fa-bell text-2xl"></i>
+                    <span id="headerNotificationDot" class="hidden absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                 </button>
                 <!-- Dropdown -->
-                <div id="notificationDropdown" class="hidden absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 z-50 max-h-[80vh] overflow-hidden flex flex-col">
+                <div id="notificationDropdown" class="hidden absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 z-50 max-h-[80vh] overflow-hidden flex flex-col animate-scale-in">
                     <div class="p-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                        <h3 class="text-sm font-bold text-gray-700">Son Hareketler</h3>
+                        <h3 class="text-sm font-bold text-gray-700">Bildirimler</h3>
                         <button id="btnCloseNotifications" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     <div id="notificationList" class="overflow-y-auto p-2 space-y-1 max-h-80">
@@ -57,16 +47,18 @@
     </header>
 
     <!-- MAIN CONTENT -->
-    <main id="mainContent" class="flex-1 overflow-y-auto no-scrollbar p-4 pb-24">
+    <main id="mainContent" class="flex-1 overflow-y-auto no-scrollbar p-4 pb-28">
         
         <!-- 1. SEKMESİ: ANA SAYFA -->
         <div id="tab-home" class="tab-content space-y-6">
+            <!-- Motivasyon -->
             <div class="bg-gradient-to-r from-purple-700 to-indigo-600 text-white rounded-xl p-5 relative overflow-hidden shadow-lg shadow-indigo-200">
                 <div class="absolute -right-4 -bottom-4 text-white/10 text-8xl"><i class="fa-solid fa-quote-right"></i></div>
                 <p class="text-xs font-bold text-purple-200 uppercase tracking-wider mb-2">GÜNÜN SÖZÜ</p>
                 <p class="text-lg font-medium italic relative z-10" id="motivasyonSozu">...</p>
             </div>
             
+            <!-- Hızlı Eylemler -->
             <div class="grid grid-cols-3 gap-3">
                 <button id="btnOpenSoruEkle" class="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-xl shadow-sm active:scale-95 transition-transform">
                     <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-2"><i class="fa-solid fa-plus"></i></div>
@@ -82,6 +74,7 @@
                 </button>
             </div>
 
+            <!-- İlerlemeler -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-sm font-semibold text-gray-700">Haftalık Ödev İlerlemesi</h3>
@@ -105,10 +98,7 @@
         </div>
 
         <!-- 2. SEKMESİ: ÖDEVLER (Önceden boştu, şimdi dolu) -->
-        <div id="tab-homework" class="tab-content hidden space-y-4">
-             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-800">Ödevlerim</h2>
-            </div>
+     <div id="tab-homework" class="tab-content hidden space-y-4">
              <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-sm font-semibold text-gray-700">Haftalık İlerleme</h3>
@@ -118,18 +108,10 @@
                     <div id="haftalikIlerlemeBar2" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
             </div>
-            <!-- JS'in verileri basacağı liste -->
-            <div id="studentOdevList" class="space-y-3 pb-20">
-                <p class="text-center text-gray-400 py-8">Ödevler yükleniyor...</p>
-            </div>
+            <div id="studentOdevList" class="space-y-3 pb-20"></div>
         </div>
 
-        <!-- 3. SEKMESİ: SORU TAKİBİ -->
         <div id="tab-tracking" class="tab-content hidden space-y-4">
-             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-800">Soru Takibi</h2>
-                <p class="text-xs text-gray-500">Haftalık Çizelge</p>
-            </div>
             <div class="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm border">
                 <button id="prevWeekBtn" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button>
                 <h2 id="weekRangeTitle" class="text-sm font-bold text-indigo-600 text-center">...</h2>
@@ -140,7 +122,6 @@
             </div>
         </div>
         
-        <!-- 4. SEKMESİ: DENEMELER -->
         <div id="tab-denemeler" class="tab-content hidden space-y-4">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="text-lg font-bold text-gray-800">Deneme Analizi</h2>
@@ -148,23 +129,6 @@
                     <i class="fa-solid fa-plus mr-2"></i> Yeni Ekle
                 </button>
             </div>
-            
-            <!-- KPI Kartları -->
-            <div class="grid grid-cols-3 gap-2">
-                <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm text-center">
-                    <p class="text-[10px] text-gray-500 font-medium uppercase">Ortalama</p>
-                    <h3 id="studentKpiAvg" class="text-lg font-bold text-purple-600">0.00</h3>
-                </div>
-                <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm text-center">
-                    <p class="text-[10px] text-gray-500 font-medium uppercase">En Yüksek</p>
-                    <h3 id="studentKpiMax" class="text-lg font-bold text-green-600">0.00</h3>
-                </div>
-                <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm text-center">
-                    <p class="text-[10px] text-gray-500 font-medium uppercase">Toplam</p>
-                    <h3 id="studentKpiTotal" class="text-lg font-bold text-gray-800">0</h3>
-                </div>
-            </div>
-
             <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                 <h3 class="text-xs font-bold text-gray-500 mb-3 uppercase">Net Gelişimi</h3>
                 <div class="h-48"><canvas id="studentDenemeChart"></canvas></div>
@@ -172,16 +136,11 @@
             <div id="studentDenemeList" class="space-y-3 pb-20"></div>
         </div>
 
-        <!-- 5. HEDEFLER (Önceden boştu, şimdi dolu) -->
         <div id="tab-goals" class="tab-content hidden space-y-4">
-             <h2 class="text-lg font-bold text-gray-800 mb-2">Tüm Hedeflerim</h2>
-            <!-- JS'in verileri basacağı liste -->
-            <div id="studentHedefList" class="space-y-3 pb-20">
-                 <p class="text-center text-gray-400 py-8">Hedefler yükleniyor...</p>
-            </div>
+            <h2 class="text-lg font-bold text-gray-800 mb-2">Tüm Hedeflerim</h2>
+            <div id="studentHedefList" class="space-y-3 pb-20"></div>
         </div>
         
-        <!-- 6. AJANDA -->
         <div id="tab-ajanda" class="tab-content hidden space-y-4">
              <h2 class="text-lg font-bold text-gray-800">Ajandam</h2>
              <div class="bg-white rounded-lg shadow border border-gray-200">
@@ -201,19 +160,12 @@
             </div>
         </div>
 
-        <!-- 7. MESAJLAR (Önceden boştu, şimdi dolu) -->
         <div id="tab-messages" class="tab-content hidden flex flex-col h-full pb-20 relative">
              <div class="bg-white p-4 border-b border-gray-200 flex items-center gap-3 shadow-sm shrink-0 sticky top-0 z-10">
                 <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><i class="fa-solid fa-user-tie"></i></div>
                 <div><h3 class="font-bold text-gray-800 text-sm">Koçum</h3><p class="text-xs text-green-500 flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Çevrimiçi</p></div>
             </div>
-            
-            <!-- JS'in mesajları basacağı liste -->
-            <div id="studentMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 h-[calc(100vh-180px)]">
-                <p class="text-center text-gray-400 py-8">Mesajlar yükleniyor...</p>
-            </div>
-            
-            <!-- Mesaj Gönderme Alanı (Sabit) -->
+            <div id="studentMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 h-[calc(100vh-180px)]"></div>
             <div class="p-3 bg-white border-t border-gray-200 shrink-0 fixed bottom-16 left-0 w-full z-20">
                 <form id="studentChatForm" class="flex gap-2">
                     <input type="text" id="studentMessageInput" placeholder="Mesaj yaz..." class="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="off">
@@ -222,8 +174,8 @@
             </div>
         </div>
 
-        <!-- 8. PROFİL -->
-       <div id="tab-profile" class="tab-content hidden space-y-6 p-4">
+        <!-- 8. SEKMESİ: PROFİL (GÜNCELLENDİ - EKSİK BİLGİLER) -->
+        <div id="tab-profile" class="tab-content hidden space-y-6 p-4">
             <h2 class="text-xl font-bold text-gray-800">Profilim</h2>
             
             <div class="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center gap-4 text-center border border-gray-100">
@@ -260,10 +212,11 @@
                 </button>
             </div>
         </div>
+
     </main>
 
-    <!-- ALT NAVİGASYON -->
-     <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-40 h-16 pb-safe overflow-visible">
+    <!-- ALT NAVİGASYON (DÜZELTİLDİ - TAŞMA YOK) -->
+    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-40 h-16 pb-safe overflow-visible">
         <div class="flex justify-between items-end h-full px-4 relative">
             
             <button class="nav-btn active flex flex-col items-center justify-center w-1/5 h-full text-indigo-600 pb-1" data-target="tab-home">
@@ -297,7 +250,6 @@
             </button>
         </div>
     </nav>
-
     <!-- MODALLAR (Aynı) -->
     <div id="modalSoruEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center">
         <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up">

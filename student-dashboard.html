@@ -215,41 +215,44 @@
 
     </main>
 
-    <!-- ALT NAVİGASYON (DÜZELTİLDİ - TAŞMA YOK) -->
-    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-40 h-16 pb-safe overflow-visible">
-        <div class="flex justify-between items-end h-full px-4 relative">
+
+    <!-- ALT NAVİGASYON (DİNAMİK BUTON) -->
+    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-40 overflow-visible shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+        <div class="flex justify-between items-end h-16 px-4 relative">
             
             <button class="nav-btn active flex flex-col items-center justify-center w-1/5 h-full text-indigo-600 pb-1" data-target="tab-home">
-                <i class="fa-solid fa-house text-lg mb-1"></i>
-                <span class="text-[9px] font-medium">Ana Sayfa</span>
+                <i class="fa-solid fa-house text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Ana Sayfa</span>
             </button>
             
-            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 pb-1" data-target="tab-homework">
-                <i class="fa-solid fa-list-check text-lg mb-1"></i>
-                <span class="text-[9px] font-medium">Ödevler</span>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-homework">
+                <i class="fa-solid fa-list-check text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Ödevler</span>
             </button>
             
-            <!-- ORTA BUTON (Yukarı Taşan) -->
+            <!-- TAKİP BUTONU (Varsayılan: Beyaz Zemin, Mavi İkon) -->
             <div class="relative w-1/5 h-full flex justify-center z-50">
-                <button class="nav-btn flex flex-col items-center justify-center absolute bottom-3 w-16" data-target="tab-tracking">
-                    <div class="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_8px_15px_rgba(79,70,229,0.3)] border-4 border-white bottom-nav-center-btn transform transition-transform active:scale-95">
-                        <i class="fa-solid fa-pen-to-square text-xl text-white"></i>
+                <button class="nav-btn flex flex-col items-center justify-center w-16 absolute bottom-0" data-target="tab-tracking">
+                    <!-- JS ile classları değişecek -->
+                    <div class="w-14 h-14 bg-white text-indigo-600 rounded-full flex items-center justify-center bottom-nav-center-btn">
+                        <i class="fa-solid fa-pen-to-square text-2xl"></i>
                     </div>
-                    <span class="text-[9px] font-medium mt-1 text-gray-500">Takip</span>
+                    <span class="text-[10px] font-medium mt-8 text-gray-500">Takip</span>
                 </button>
             </div>
             
-            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 pb-1" data-target="tab-goals">
-                <i class="fa-solid fa-bullseye text-lg mb-1"></i>
-                <span class="text-[9px] font-medium">Hedef</span>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-goals">
+                <i class="fa-solid fa-bullseye text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Hedef</span>
             </button>
             
-            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 pb-1" data-target="tab-profile">
-                <i class="fa-regular fa-user text-lg mb-1"></i>
-                <span class="text-[9px] font-medium">Profilim</span>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-profile">
+                <i class="fa-regular fa-user text-xl mb-1"></i>
+                <span class="text-[10px] font-medium">Profilim</span>
             </button>
         </div>
     </nav>
+
     <!-- MODALLAR (Aynı) -->
     <div id="modalSoruEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center">
         <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up">

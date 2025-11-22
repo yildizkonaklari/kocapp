@@ -764,7 +764,3 @@ if(btnMatch) {
 }
 
 document.getElementById('btnLogout').onclick = () => signOut(auth);
-
-// Butonlar (Takvim)
-document.getElementById('prevMonth').onclick = () => { currentCalDate.setMonth(currentCalDate.getMonth()-1); loadCalendarDataAndDraw(currentCalDate); };
-document.getElementById('nextMonth').onclick = () => { currentCalDate.setMonth(currentCalDate.getMonth()+1); loadCalendarDataAndDraw(currentCalDate); };

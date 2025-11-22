@@ -193,14 +193,32 @@ if (btnMatch) {
 // =================================================================
 
 function enableHeaderIcons() {
-    // Mesaj İkonu
+    // 1. MESAJLAR İKONU
     const btnMsg = document.getElementById('btnHeaderMessages');
     if(btnMsg) {
         btnMsg.onclick = (e) => {
             e.preventDefault();
-            // Mesajlar sekmesini açan nav butonunu tetikle
-            const msgTabBtn = document.querySelector('.nav-btn[data-target="tab-messages"]');
-            if (msgTabBtn) msgTabBtn.click();
+            
+            // Manuel Sayfa Değişimi (Nav butonuna ihtiyaç duymadan)
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            const msgTab = document.getElementById('tab-messages');
+            if(msgTab) msgTab.classList.remove('hidden');
+            
+            // Alt menüdeki aktiflikleri kaldır
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('active', 'text-indigo-600');
+                b.classList.add('text-gray-400');
+                const centerIcon = b.querySelector('.bottom-nav-center-btn');
+                if(centerIcon) {
+                    centerIcon.classList.replace('bg-indigo-600', 'bg-white');
+                    centerIcon.classList.remove('text-white');
+                }
+            });
+
+            // Dinleyicileri temizle ve mesajları yükle
+            for(let k in listeners) { if(listeners[k] && k!=='notifications') { listeners[k](); listeners[k]=null; } }
+            markMessagesAsRead();
+            loadStudentMessages();
         };
         listenUnreadMessages();
     }

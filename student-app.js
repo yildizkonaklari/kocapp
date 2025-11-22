@@ -292,118 +292,45 @@ function listenUnreadMessages() {
 async function loadDashboardData() {
     if (!coachId || !studentDocId) return;
 
+    // Motivasyon
     const soz = motivasyonSozleri[Math.floor(Math.random() * motivasyonSozleri.length)];
     if(document.getElementById('motivasyonSozu')) document.getElementById('motivasyonSozu').textContent = `"${soz}"`;
 
+    // Profil Verileri
     const studentRef = doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId);
-    const studentSnap = await getDoc(studentRef);
+    const snap = await getDoc(studentRef);
     
-    if (studentSnap.exists()) {
-        const data = studentSnap.data();
-        if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = data.ad;
-        if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${data.ad} ${data.soyad}`;
-        if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = data.sinif;
+    if (snap.exists()) {
+        const d = snap.data();
         
-        const initials = (data.ad[0] || '') + (data.soyad[0] || '');
+        // Header
+        if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
+        
+        // Profil Sayfası - Temel Bilgiler
+        if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
+        if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = d.sinif;
+        
+        // Profil Sayfası - Detaylar
+        if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email; // Auth'dan gelen email
+        
+        // Koç adını çekmek için koçun profilini okumamız gerekebilir, 
+        // şimdilik sadece ID'yi veya varsa öğrenci dökümanındaki 'kocAd' alanını yazalım.
+        // Basitlik için "Koçum" yazıyoruz, istenirse veritabanından çekilebilir.
+        if(document.getElementById('profileCoachName')) document.getElementById('profileCoachName').textContent = "Atanmış Koç";
+
+        // Avatar
+        const initials = (d.ad[0] || '') + (d.soyad[0] || '');
         if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = initials.toUpperCase();
         
-        studentDersler = data.takipDersleri || (['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(data.sinif) ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE']);
+        studentDersler = d.takipDersleri || DERS_HAVUZU['LISE'];
     }
     
     await updateHomeworkMetrics();
     loadActiveGoalsForDashboard();
 }
 
-async function updateHomeworkMetrics() {
-    const listEl = document.getElementById('gecikmisOdevlerList');
-    if(!listEl) return;
-    
-    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"));
-    const snapshot = await getDocs(q);
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const today = new Date();
-    const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1;
-    const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek).toISOString().split('T')[0];
-    const endOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (6 - dayOfWeek)).toISOString().split('T')[0];
-    
-    let weeklyTotal = 0;
-    let weeklyDone = 0;
-    let overdueList = [];
-
-    snapshot.forEach(doc => {
-        const odev = doc.data();
-        const isDone = odev.durum === 'tamamlandi';
-
-        if (odev.bitisTarihi >= startOfWeek && odev.bitisTarihi <= endOfWeek) {
-            weeklyTotal++;
-            if (isDone) weeklyDone++;
-        }
-
-        if (odev.bitisTarihi < todayStr && !isDone) {
-            overdueList.push({ id: doc.id, ...odev });
-        }
-    });
-
-    const progressPercent = weeklyTotal === 0 ? 0 : (weeklyDone / weeklyTotal) * 100;
-    const hText = document.getElementById('haftalikIlerlemeText');
-    const hBar = document.getElementById('haftalikIlerlemeBar');
-    if(hText) hText.textContent = `${weeklyDone} / ${weeklyTotal}`;
-    if(hBar) hBar.style.width = `${progressPercent}%`;
-    
-    // Profil sekmesindeki progress bar için
-    const hText2 = document.getElementById('haftalikIlerlemeText2');
-    const hBar2 = document.getElementById('haftalikIlerlemeBar2');
-    if(hText2) hText2.textContent = `${weeklyDone} / ${weeklyTotal}`;
-    if(hBar2) hBar2.style.width = `${progressPercent}%`;
-
-    if (overdueList.length > 0) {
-        listEl.innerHTML = overdueList.sort((a,b) => a.bitisTarihi.localeCompare(b.bitisTarihi)).map(odev => `
-            <div class="bg-white p-3 rounded-xl border border-red-100 shadow-sm flex items-start gap-3">
-                <div class="mt-1 text-xl text-red-500"><i class="fa-solid fa-circle-exclamation"></i></div>
-                <div class="flex-1">
-                    <h4 class="font-semibold text-gray-800 text-sm">${odev.title}</h4>
-                    <p class="text-xs text-red-500 font-medium">${formatDateTR(odev.bitisTarihi)} (Gecikti)</p>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        listEl.innerHTML = `<p class="text-center text-gray-400 text-sm py-4 bg-white rounded-xl shadow-sm border border-gray-100">Gecikmiş ödevin yok! 🎉</p>`;
-    }
-}
-
-function loadActiveGoalsForDashboard() {
-    const listEl = document.getElementById('dashboardHedefList');
-    if(!listEl) return;
-    
-    const q = query(
-        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"),
-        where("durum", "!=", "tamamlandi"),
-        orderBy("durum"),
-        limit(3)
-    );
-
-    if(listeners.activeGoals) listeners.activeGoals();
-
-    listeners.activeGoals = onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
-            listEl.innerHTML = `<p class="text-center text-gray-400 text-sm py-4 bg-white rounded-xl shadow-sm border border-gray-100">Aktif hedefin yok.</p>`;
-            return;
-        }
-        listEl.innerHTML = snapshot.docs.map(doc => {
-            const hedef = doc.data();
-            return `
-            <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs"><i class="fa-solid fa-bullseye"></i></div>
-                <div class="flex-1"><p class="text-sm font-medium text-gray-700">${hedef.title}</p></div>
-            </div>`;
-        }).join('');
-    });
-}
-
-
 // =================================================================
-// 6. TAB NAVİGASYONU
+// 5. TAB NAVİGASYONU (SADELEŞTİRİLDİ)
 // =================================================================
 
 document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -411,41 +338,39 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         const currentBtn = e.currentTarget.closest('.nav-btn');
         const targetId = currentBtn.dataset.target;
         
-        // Stil Güncelleme
+        // Tüm butonlardan active sınıfını kaldır
         document.querySelectorAll('.nav-btn').forEach(b => {
-            b.classList.remove('active', 'text-indigo-600');
+            b.classList.remove('active');
             b.classList.add('text-gray-400');
-            const icon = b.querySelector('.bottom-nav-center-btn');
-            if(icon) { icon.classList.remove('bg-indigo-600', 'text-white'); icon.classList.add('bg-white', 'text-indigo-600'); }
+            b.classList.remove('text-purple-600');
         });
         
-        currentBtn.classList.add('active', 'text-indigo-600');
+        // Tıklanan butona active sınıfı ekle
+        currentBtn.classList.add('active');
         currentBtn.classList.remove('text-gray-400');
-        const centerIcon = currentBtn.querySelector('.bottom-nav-center-btn'); 
-        if(centerIcon) { centerIcon.classList.replace('bg-white', 'bg-indigo-600'); centerIcon.classList.add('text-white'); }
+        currentBtn.classList.add('text-purple-600'); // Tema rengi
 
-        // Sekme Değişimi
+        // Sekme içeriğini değiştir
         document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
         document.getElementById(targetId).classList.remove('hidden');
 
-        // Dinleyicileri Temizle
+        // Dinleyicileri temizle
         for(let key in listeners) { 
             if(listeners[key] && key !== 'notifications' && key !== 'activeGoals') { 
                 listeners[key](); listeners[key]=null; 
             } 
         }
 
-        // İlgili Fonksiyonu Çağır
+        // Sayfa yükleme fonksiyonları
         if (targetId === 'tab-homework') loadHomeworksTab();
         else if (targetId === 'tab-messages') { markMessagesAsRead(); loadStudentMessages(); }
         else if (targetId === 'tab-tracking') { currentWeekOffset = 0; renderSoruTakibiGrid(); }
         else if (targetId === 'tab-ajanda') { currentCalDate = new Date(); loadCalendarDataAndDraw(currentCalDate); }
         else if (targetId === 'tab-goals') loadGoalsTab();
         else if (targetId === 'tab-denemeler') loadDenemelerTab();
-        else if (targetId === 'tab-home') { loadDashboardData(); }
+        else if (targetId === 'tab-home') loadDashboardData();
     });
 });
-
 
 // =================================================================
 // 7. SEKMELERİN İÇERİĞİ (ÖDEV, HEDEF, DENEME, AJANDA, SORU, MESAJ)

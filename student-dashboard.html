@@ -9,22 +9,60 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
+     <style>
+        /* Bildirim Rozeti Animasyonu */
+        @keyframes ping {
+            75%, 100% { transform: scale(2); opacity: 0; }
+        }
+        .animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        
+        /* Bildirim Dropdown */
+        #notificationDropdown {
+            transform-origin: top right;
+            transition: all 0.2s ease-out;
+        }
+        #notificationDropdown.hidden { transform: scale(0.95); opacity: 0; pointer-events: none; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
 
     <!-- === HATA GÖSTERİCİ (Tablette Hata Olursa Görünür) === -->
     <div id="globalErrorDisplay" class="hidden fixed top-0 left-0 w-full bg-red-600 text-white p-4 z-[9999] text-xs font-mono overflow-auto max-h-40"></div>
 
-    <!-- HEADER -->
-    <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-10 shrink-0">
+    <!-- HEADER (GÜNCELLENDİ) -->
+    <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-30 shrink-0 relative">
         <div>
             <p class="text-xs text-gray-500 font-medium">Hoş geldin,</p>
             <h1 id="headerStudentName" class="text-lg font-bold text-indigo-900 leading-tight">Öğrenci</h1>
         </div>
-        <button id="btnOpenPomodoro" class="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full text-xs font-bold border border-indigo-100 active:scale-95 transition-transform">
-            <i class="fa-solid fa-stopwatch"></i>
-            <span>Odaklan</span>
-        </button>
+        
+        <div class="flex items-center gap-4">
+            <!-- 1. MESAJLAR İKONU -->
+            <button id="btnHeaderMessages" class="relative text-gray-500 hover:text-indigo-600 transition-colors p-1">
+                <i class="fa-regular fa-envelope text-xl"></i>
+                <!-- Okunmamış Mesaj Sayısı (JS ile güncellenecek) -->
+                <span id="headerUnreadMsgCount" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">0</span>
+            </button>
+
+            <!-- 2. BİLDİRİMLER İKONU -->
+            <div class="relative">
+                <button id="btnHeaderNotifications" class="relative text-gray-500 hover:text-indigo-600 transition-colors p-1">
+                    <i class="fa-regular fa-bell text-xl"></i>
+                    <span id="headerNotificationDot" class="hidden absolute top-0 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+
+                <!-- Bildirim Dropdown Menüsü -->
+                <div id="notificationDropdown" class="hidden absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 z-50 max-h-[80vh] overflow-hidden flex flex-col">
+                    <div class="p-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h3 class="text-sm font-bold text-gray-700">Son Hareketler</h3>
+                        <button id="btnCloseNotifications" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div id="notificationList" class="overflow-y-auto p-2 space-y-1 max-h-80">
+                        <p class="text-center text-gray-400 text-xs py-4">Bildirim yok.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </header>
 
     <!-- MAIN CONTENT -->

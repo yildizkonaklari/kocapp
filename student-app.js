@@ -139,7 +139,94 @@ if (btnMatch) {
         } catch (e) { console.error(e); }
     });
 }
+// =================================================================
+// 4. HEADER VE BİLDİRİMLER (DÜZELTİLDİ)
+// =================================================================
+function enableHeaderIcons() {
+    const btnMsg = document.getElementById('btnHeaderMessages');
+    const btnNotif = document.getElementById('btnHeaderNotifications');
+    
+    if(btnMsg) {
+        btnMsg.onclick = (e) => {
+            e.preventDefault();
+            document.querySelector('.nav-btn[data-target="tab-messages"]')?.click();
+        };
+        listenUnreadMessages();
+    }
 
+    if(btnNotif) {
+        btnNotif.onclick = (e) => {
+            e.stopPropagation();
+            document.getElementById('notificationDropdown').classList.toggle('hidden');
+            document.getElementById('headerNotificationDot').classList.add('hidden');
+        };
+        loadNotifications();
+    }
+    
+    document.addEventListener('click', (e) => {
+        const drop = document.getElementById('notificationDropdown');
+        if (drop && !drop.classList.contains('hidden') && !drop.contains(e.target) && !btnNotif.contains(e.target)) {
+            drop.classList.add('hidden');
+        }
+    });
+}
+
+function loadNotifications() {
+    // (Bildirim yükleme kodu öncekiyle aynı)
+    const list = document.getElementById('notificationList');
+    if(!list) return;
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), orderBy("olusturmaTarihi", "desc"), limit(5));
+    listeners.notifications = onSnapshot(q, (snap) => {
+        let html = '';
+        snap.forEach(d => html += `<div class="p-2 border-b hover:bg-gray-50"><p class="text-xs font-bold">Yeni Hedef</p><p class="text-xs text-gray-600">${d.data().title}</p></div>`);
+        list.innerHTML = html || '<p class="text-center text-gray-400 text-xs p-2">Bildirim yok.</p>';
+        if(!snap.empty) document.getElementById('headerNotificationDot').classList.remove('hidden');
+    });
+}
+
+function listenUnreadMessages() {
+     const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), where("gonderen", "==", "koc"), where("okundu", "==", false));
+     onSnapshot(q, (snap) => {
+         const badge = document.getElementById('headerUnreadMsgCount');
+         if(snap.size > 0) { badge.textContent = snap.size; badge.classList.remove('hidden'); }
+         else badge.classList.add('hidden');
+     });
+}
+
+// =================================================================
+// 5. DASHBOARD VE PROFİL VERİLERİ (GÜNCELLENDİ)
+// =================================================================
+
+async function loadDashboardData() {
+    if (!coachId || !studentDocId) return;
+    
+    // Profil Verilerini Çek ve Yerleştir
+    const studentRef = doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId);
+    const snap = await getDoc(studentRef);
+    
+    if (snap.exists()) {
+        const d = snap.data();
+        const adSoyad = `${d.ad} ${d.soyad}`;
+        const sinif = d.sinif;
+        
+        // Header
+        if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
+        
+        // Profil Sayfası (DÜZELTİLDİ)
+        if(document.getElementById('profileName')) document.getElementById('profileName').textContent = adSoyad;
+        if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = sinif;
+        
+        // Avatar (Ad Soyad Baş Harfleri)
+        const initials = (d.ad[0] || '') + (d.soyad[0] || '');
+        if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = initials.toUpperCase();
+        
+        studentDersler = d.takipDersleri || DERS_HAVUZU['LISE'];
+    }
+    
+    // Diğer yüklemeler
+    updateHomeworkMetrics();
+    loadActiveGoalsForDashboard();
+}
 
 // =================================================================
 // 4. SEKMELERİ YÜKLEME FONKSİYONLARI (Tanımlamalar)

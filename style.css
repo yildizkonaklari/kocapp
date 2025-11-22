@@ -150,14 +150,6 @@
 
 /* --- 4. MOBİL ALT MENÜ (BOTTOM NAVIGATION) --- */
 
-/* ... (Önceki temel stiller: scrollbar, animasyonlar vb. aynı) ... */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-
-@keyframes slide-up { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
-
 /* --- YENİLENEN TAKİP BUTONU STİLİ --- */
 /* Ortadaki Yuvarlak Buton */
 .bottom-nav-center-btn {

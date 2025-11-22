@@ -100,18 +100,44 @@ if (btnMatch) {
 // 4. HEADER
 // =================================================================
 function enableHeaderIcons() {
+    // MESAJLAR İKONU (DÜZELTİLDİ)
     const btnMsg = document.getElementById('btnHeaderMessages');
-    if(btnMsg) btnMsg.onclick = () => document.querySelector('.nav-btn[data-target="tab-messages"]')?.click();
+    if(btnMsg) {
+        btnMsg.onclick = (e) => {
+            e.preventDefault();
+            // 1. Tüm sekmeleri gizle
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            // 2. Mesaj sekmesini aç
+            document.getElementById('tab-messages').classList.remove('hidden');
+            
+            // 3. Alt menüdeki butonların aktifliğini kaldır
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('active', 'text-indigo-600');
+                b.classList.add('text-gray-400');
+                const icon = b.querySelector('.bottom-nav-center-btn');
+                if(icon) {
+                    icon.classList.remove('bg-indigo-600', 'text-white');
+                    icon.classList.add('bg-white', 'text-indigo-600');
+                }
+            });
 
+            // 4. Mesajları yükle
+            for(let k in listeners) { if(listeners[k] && k!=='notifications') { listeners[k](); listeners[k]=null; } }
+            markMessagesAsRead();
+            loadStudentMessages();
+        };
+        listenUnreadMessages();
+    }
+
+    // ... (Bildirimler kodu aynı) ...
     const btnNotif = document.getElementById('btnHeaderNotifications');
     const dropNotif = document.getElementById('notificationDropdown');
-    if(btnNotif) {
+    if(btnNotif && dropNotif) {
         btnNotif.onclick = (e) => { e.stopPropagation(); dropNotif.classList.toggle('hidden'); document.getElementById('headerNotificationDot').classList.add('hidden'); };
         document.getElementById('btnCloseNotifications').onclick = () => dropNotif.classList.add('hidden');
         document.addEventListener('click', (e) => { if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.add('hidden'); });
         loadNotifications();
     }
-    listenUnreadMessages();
 }
 function loadNotifications() {
     const list = document.getElementById('notificationList'); if(!list) return;

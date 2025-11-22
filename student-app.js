@@ -786,20 +786,7 @@ document.getElementById('btnSaveModalSoru').onclick = async () => {
         if(!document.getElementById('tab-tracking').classList.contains('hidden')) renderSoruTakibiGrid();
     }
 };
-const btnMatch = document.getElementById('btnMatchProfile');
-if (btnMatch) {
-    btnMatch.onclick = async () => {
-        const name = document.getElementById('matchName').value.trim(), surname = document.getElementById('matchSurname').value.trim();
-        if (!name || !surname) return;
-        const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"), where("ad", "==", name), where("soyad", "==", surname));
-        const s = await getDocs(q);
-        if (!s.empty) {
-            studentDocId = s.docs[0].id;
-            await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), { linkedDocId: studentDocId });
-            document.getElementById('modalMatchProfile').classList.add('hidden'); loadDashboardData();
-        } else document.getElementById('matchError').classList.remove('hidden');
-    };
-}
+
 // Helperlar
 window.toggleAccordion = (btn) => {
     const content = btn.nextElementSibling;

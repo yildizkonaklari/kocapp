@@ -152,19 +152,67 @@ function updateUIForLoggedInUser(user) {
 function navigateToPage(pageId) {
     cleanUpListeners();
     
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active', 'bg-purple-100', 'text-purple-700', 'font-semibold'));
-    const sidebarLink = document.getElementById(`nav-${pageId}`);
-    if (sidebarLink) sidebarLink.classList.add('active', 'bg-purple-100', 'text-purple-700', 'font-semibold');
-    
-    document.querySelectorAll('.bottom-nav-btn').forEach(l => {
-        l.classList.remove('active', 'text-purple-600');
-        l.classList.add('text-gray-500');
+
+// =================================================================
+// 5. TAB NAVİGASYONU (RENK DEĞİŞİMİ GERİ GELDİ)
+// =================================================================
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const currentBtn = e.currentTarget.closest('.nav-btn');
+        const targetId = currentBtn.dataset.target;
+        
+        // 1. Önce tüm butonları pasif hale getir
+        document.querySelectorAll('.nav-btn').forEach(b => {
+            b.classList.remove('active', 'text-indigo-600');
+            b.classList.add('text-gray-400');
+        });
+
+        // 2. Tıklanan butonu aktif yap
+        // Eğer orta buton DEĞİLSE metnini renklendir
+        if (!currentBtn.querySelector('.bottom-nav-center-btn')) {
+            currentBtn.classList.add('active', 'text-indigo-600');
+            currentBtn.classList.remove('text-gray-400');
+        } else {
+            currentBtn.classList.add('active'); // Orta buton için sadece active class ekle (scale efekti için)
+        }
+
+        // 3. Orta Butonun Rengini Yönet (DİNAMİK KISIM)
+        const centerBtnDiv = document.querySelector('.bottom-nav-center-btn');
+        if (centerBtnDiv) {
+            if (targetId === 'tab-tracking') {
+                // Takip sayfasındaysak: Mavi Zemin, Beyaz Kalem
+                centerBtnDiv.classList.remove('bg-white', 'text-indigo-600');
+                centerBtnDiv.classList.add('bg-indigo-600', 'text-white');
+            } else {
+                // Diğer sayfalardaysak: Beyaz Zemin, Mavi Kalem
+                centerBtnDiv.classList.remove('bg-indigo-600', 'text-white');
+                centerBtnDiv.classList.add('bg-white', 'text-indigo-600');
+            }
+        }
+
+        // 4. Sekme içeriğini değiştir
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+        document.getElementById(targetId).classList.remove('hidden');
+
+        // 5. Dinleyicileri temizle
+        for(let key in listeners) { 
+            if(listeners[key] && key !== 'notifications' && key !== 'activeGoals') { 
+                listeners[key](); listeners[key]=null; 
+            } 
+        }
+
+        // 6. Sayfa yükleme fonksiyonları
+        if (targetId === 'tab-homework') loadHomeworksTab();
+        else if (targetId === 'tab-messages') { markMessagesAsRead(); loadStudentMessages(); }
+        else if (targetId === 'tab-tracking') { currentWeekOffset = 0; renderSoruTakibiGrid(); }
+        else if (targetId === 'tab-ajanda') { currentCalDate = new Date(); loadCalendarDataAndDraw(currentCalDate); }
+        else if (targetId === 'tab-goals') loadGoalsTab();
+        else if (targetId === 'tab-denemeler') loadDenemelerTab();
+        else if (targetId === 'tab-home') loadDashboardData();
     });
-    const bottomLink = document.querySelector(`.bottom-nav-btn[data-page="${pageId}"]`);
-    if (bottomLink) {
-        bottomLink.classList.add('active', 'text-purple-600');
-        bottomLink.classList.remove('text-gray-500');
-    }
+});
+
 
     try {
         switch(pageId) {

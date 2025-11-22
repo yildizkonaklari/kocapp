@@ -223,44 +223,77 @@
         </div>
 
         <!-- 8. PROFİL -->
-        <div id="tab-profile" class="tab-content hidden space-y-4">
-            <h2 class="text-lg font-bold text-gray-800">Profilim</h2>
-            <div class="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4">
-                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-2xl font-bold" id="profileAvatar"></div>
-                <div><h3 id="profileName" class="font-bold text-gray-900">...</h3><p id="profileClass" class="text-sm text-gray-500">...</p></div>
+       <div id="tab-profile" class="tab-content hidden space-y-6 p-4">
+            <h2 class="text-xl font-bold text-gray-800">Profilim</h2>
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center gap-4 text-center border border-gray-100">
+                <!-- Avatar -->
+                <div id="profileAvatar" class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl font-bold shadow-inner">
+                    <!-- JS ile dolacak -->
+                </div>
+                <div>
+                    <h3 id="profileName" class="text-xl font-bold text-gray-900">Yükleniyor...</h3>
+                    <span id="profileClass" class="inline-block bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium mt-1">...</span>
+                </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm divide-y divide-gray-100 overflow-hidden">
-                <button id="btnLogout" class="w-full px-4 py-4 text-left flex justify-between items-center hover:bg-red-50 text-red-600"><span class="text-sm font-medium">Çıkış Yap</span><i class="fa-solid fa-arrow-right-from-bracket text-xs"></i></button>
+
+            <div class="bg-white rounded-xl shadow-sm divide-y divide-gray-100 overflow-hidden border border-gray-100">
+                 <button class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-gray-50 group">
+                    <div class="flex items-center text-gray-700">
+                        <i class="fa-regular fa-id-card w-8 text-gray-400 group-hover:text-indigo-500"></i>
+                        <span class="font-medium">Hesap Bilgileri</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-300 text-sm"></i>
+                </button>
+                 <button class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-gray-50 group">
+                    <div class="flex items-center text-gray-700">
+                        <i class="fa-solid fa-gear w-8 text-gray-400 group-hover:text-indigo-500"></i>
+                        <span class="font-medium">Ayarlar</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-300 text-sm"></i>
+                </button>
+                <button id="btnLogout" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-red-50 text-red-600 group">
+                    <div class="flex items-center font-medium">
+                        <i class="fa-solid fa-arrow-right-from-bracket w-8 text-red-400 group-hover:text-red-600"></i>
+                        Çıkış Yap
+                    </div>
+                </button>
             </div>
         </div>
-
     </main>
 
     <!-- ALT NAVİGASYON -->
-    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-20 overflow-x-auto">
-        <div class="flex justify-between items-end h-16 px-4 min-w-[360px] relative">
-            <button class="nav-btn active flex flex-col items-center justify-center w-14 h-full text-indigo-600 pb-1" data-target="tab-home">
-                <i class="fa-solid fa-house text-lg mb-1"></i><span class="text-[9px] font-medium">Ana Sayfa</span>
-            </button>
-            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400 pb-1" data-target="tab-homework">
-                <i class="fa-solid fa-list-check text-lg mb-1"></i><span class="text-[9px] font-medium">Ödevler</span>
+     <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-40 h-16 pb-safe overflow-visible">
+        <div class="flex justify-between items-end h-full px-4 relative">
+            
+            <button class="nav-btn active flex flex-col items-center justify-center w-1/5 h-full text-indigo-600 pb-1" data-target="tab-home">
+                <i class="fa-solid fa-house text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Ana Sayfa</span>
             </button>
             
-            <div class="relative w-16 h-full flex justify-center z-10">
-                <button class="nav-btn flex flex-col items-center justify-center w-16 h-20 absolute bottom-0" data-target="tab-tracking">
-                    <div class="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg border-4 border-gray-50 text-white bottom-nav-center-btn">
-                        <i class="fa-solid fa-pen-to-square text-xl"></i>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 pb-1" data-target="tab-homework">
+                <i class="fa-solid fa-list-check text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Ödevler</span>
+            </button>
+            
+            <!-- ORTA BUTON (Yukarı Taşan) -->
+            <div class="relative w-1/5 h-full flex justify-center z-50">
+                <button class="nav-btn flex flex-col items-center justify-center absolute bottom-3 w-16" data-target="tab-tracking">
+                    <div class="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_8px_15px_rgba(79,70,229,0.3)] border-4 border-white bottom-nav-center-btn transform transition-transform active:scale-95">
+                        <i class="fa-solid fa-pen-to-square text-xl text-white"></i>
                     </div>
                     <span class="text-[9px] font-medium mt-1 text-gray-500">Takip</span>
                 </button>
             </div>
             
-            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400 pb-1" data-target="tab-goals">
-                <i class="fa-solid fa-bullseye text-lg mb-1"></i><span class="text-[9px] font-medium">Hedef</span>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 pb-1" data-target="tab-goals">
+                <i class="fa-solid fa-bullseye text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Hedef</span>
             </button>
             
-            <button class="nav-btn flex flex-col items-center justify-center w-14 h-full text-gray-400 pb-1" data-target="tab-profile">
-                <i class="fa-regular fa-user text-lg mb-1"></i><span class="text-[9px] font-medium">Profilim</span>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 pb-1" data-target="tab-profile">
+                <i class="fa-regular fa-user text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Profilim</span>
             </button>
         </div>
     </nav>

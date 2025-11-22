@@ -288,46 +288,76 @@ function listenUnreadMessages() {
 // =================================================================
 // 5. DASHBOARD VE PROFİL YÖNETİMİ
 // =================================================================
+// =================================================================
+// 4. DASHBOARD VERİLERİ
+// =================================================================
 
 async function loadDashboardData() {
     if (!coachId || !studentDocId) return;
 
-    // Motivasyon
-    const soz = motivasyonSozleri[Math.floor(Math.random() * motivasyonSozleri.length)];
+    const soz = "Başarı, her gün tekrarlanan küçük çabaların toplamıdır.";
     if(document.getElementById('motivasyonSozu')) document.getElementById('motivasyonSozu').textContent = `"${soz}"`;
 
-    // Profil Verileri
     const studentRef = doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId);
-    const snap = await getDoc(studentRef);
+    getDoc(studentRef).then(snap => {
+        if (snap.exists()) {
+            const d = snap.data();
+            if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
+            if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
+            if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = d.sinif;
+            const initials = (d.ad[0]||'') + (d.soyad[0]||'');
+            if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = initials.toUpperCase();
+            studentDersler = d.takipDersleri || DERS_HAVUZU['LISE'];
+        }
+    });
     
-    if (snap.exists()) {
-        const d = snap.data();
-        
-        // Header
-        if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
-        
-        // Profil Sayfası - Temel Bilgiler
-        if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
-        if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = d.sinif;
-        
-        // Profil Sayfası - Detaylar
-        if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email; // Auth'dan gelen email
-        
-        // Koç adını çekmek için koçun profilini okumamız gerekebilir, 
-        // şimdilik sadece ID'yi veya varsa öğrenci dökümanındaki 'kocAd' alanını yazalım.
-        // Basitlik için "Koçum" yazıyoruz, istenirse veritabanından çekilebilir.
-        if(document.getElementById('profileCoachName')) document.getElementById('profileCoachName').textContent = "Atanmış Koç";
-
-        // Avatar
-        const initials = (d.ad[0] || '') + (d.soyad[0] || '');
-        if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = initials.toUpperCase();
-        
-        studentDersler = d.takipDersleri || DERS_HAVUZU['LISE'];
-    }
-    
-    await updateHomeworkMetrics();
+    updateHomeworkMetrics();
     loadActiveGoalsForDashboard();
 }
+
+async function updateHomeworkMetrics() {
+    const listEl = document.getElementById('gecikmisOdevlerList');
+    if(!listEl) return;
+    
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"));
+    const snapshot = await getDocs(q);
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    let total = 0, done = 0, overdueList = [];
+
+    snapshot.forEach(doc => {
+        const d = doc.data();
+        total++;
+        if(d.durum === 'tamamlandi') done++;
+        if (d.bitisTarihi < todayStr && d.durum !== 'tamamlandi') overdueList.push({ id: doc.id, ...d });
+    });
+
+    const percent = total === 0 ? 0 : (done / total) * 100;
+    if(document.getElementById('haftalikIlerlemeText')) document.getElementById('haftalikIlerlemeText').textContent = `${done} / ${total}`;
+    if(document.getElementById('haftalikIlerlemeBar')) document.getElementById('haftalikIlerlemeBar').style.width = `${percent}%`;
+
+    if (overdueList.length > 0) {
+        listEl.innerHTML = overdueList.map(d => `
+            <div class="bg-white p-3 rounded-xl border border-red-100 shadow-sm flex items-start gap-3 mb-2">
+                <div class="mt-1 text-xl text-red-500"><i class="fa-solid fa-circle-exclamation"></i></div>
+                <div class="flex-1"><h4 class="font-semibold text-gray-800 text-sm">${d.title}</h4><p class="text-xs text-red-500 font-medium">${formatDateTR(d.bitisTarihi)} (Gecikti)</p></div>
+            </div>`).join('');
+    } else {
+        listEl.innerHTML = `<p class="text-center text-gray-400 text-sm py-4">Gecikmiş ödevin yok! 🎉</p>`;
+    }
+}
+
+function loadActiveGoalsForDashboard() {
+    const list = document.getElementById('dashboardHedefList');
+    if(!list) return;
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), where("durum", "!=", "tamamlandi"), limit(3));
+    if(listeners.activeGoals) listeners.activeGoals();
+    listeners.activeGoals = onSnapshot(q, (snap) => {
+        if (snap.empty) { list.innerHTML = `<p class="text-center text-gray-400 text-sm py-4">Aktif hedefin yok.</p>`; return; }
+        list.innerHTML = snap.docs.map(d => `<div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm mb-2"><p class="text-sm font-medium text-gray-700">${d.data().title}</p></div>`).join('');
+    });
+}
+
 
 // =================================================================
 // 5. TAB NAVİGASYONU (SADELEŞTİRİLDİ)

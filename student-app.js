@@ -388,7 +388,134 @@ function renderStudentDenemeChart(data) {
     if (denemeChartInstance) denemeChartInstance.destroy();
     denemeChartInstance = new Chart(ctx, { type: 'line', data: { labels: sorted.map(d => formatDateTR(d.tarih).slice(0,5)), datasets: [{ label: 'Net', data: sorted.map(d => d.toplamNet), borderColor: '#7c3aed', tension: 0.4 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
 }
+// --- AJANDA ---
+function loadCalendarDataAndDraw(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
+    const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0];
 
+    document.getElementById('currentMonthYear').textContent = date.toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
+
+    if (listeners.ajanda) listeners.ajanda();
+
+    const q = query(
+        collection(db, "artifacts", appId, "users", coachId, "ajandam"),
+        where("studentId", "==", studentDocId),
+        where("tarih", ">=", startOfMonth),
+        where("tarih", "<=", endOfMonth)
+    );
+
+    listeners.ajanda = onSnapshot(q, (snapshot) => {
+        const appointments = [];
+        snapshot.forEach(doc => appointments.push({ id: doc.id, ...doc.data() }));
+        drawCalendarGrid(year, month, appointments);
+        renderUpcomingAppointments(appointments);
+    }, (error) => console.error("Takvim hatası:", error));
+}
+
+function drawCalendarGrid(year, month, appointments) {
+    const grid = document.getElementById('calendarGrid'); if (!grid) return; grid.innerHTML = '';
+    const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); const offset = firstDay === 0 ? 6 : firstDay - 1; const todayStr = new Date().toISOString().split('T')[0];
+    for (let i = 0; i < offset; i++) grid.innerHTML += `<div class="bg-gray-50 min-h-[80px]"></div>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        const dayAppts = appointments.filter(a => a.tarih === dateStr);
+        const isToday = dateStr === todayStr;
+        let dotsHtml = `<div class="flex flex-wrap gap-1 mt-1 px-1">`; dayAppts.forEach(a => { const color = a.durum === 'tamamlandi' ? 'bg-green-500' : (a.tarih < todayStr ? 'bg-red-400' : 'bg-blue-500'); dotsHtml += `<div class="h-2 w-2 rounded-full ${color}"></div>`; }); dotsHtml += `</div>`;
+        const dayEl = document.createElement('div');
+        dayEl.className = `bg-white min-h-[80px] p-1 border border-gray-100`;
+        dayEl.innerHTML = `<div class="flex justify-between items-start"><span class="text-sm font-medium ${isToday ? 'bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : 'text-gray-700'}">${day}</span></div>${dotsHtml}`;
+        if (dayAppts.length > 0) dayEl.onclick = () => alert(`📅 ${formatDateTR(dateStr)}\n\n${dayAppts.map(a => `⏰ ${a.baslangic}: ${a.baslik}`).join('\n')}`);
+        grid.appendChild(dayEl);
+    }
+}
+
+function renderUpcomingAppointments(appointments) {
+    const listEl = document.getElementById('appointmentListContainer'); if(!listEl) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcoming = appointments.filter(a => a.tarih >= todayStr && a.durum !== 'tamamlandi').sort((a,b) => a.tarih.localeCompare(b.tarih));
+    if (upcoming.length === 0) { listEl.innerHTML = '<p class="text-center text-gray-400 text-xs py-2">Yaklaşan randevu yok.</p>'; return; }
+    listEl.innerHTML = upcoming.map(a => `<div class="p-3 bg-white border-l-4 border-indigo-500 rounded shadow-sm mb-2"><div class="flex justify-between"><span class="font-bold text-gray-800 text-sm">${formatDateTR(a.tarih)}</span><span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">${a.baslangic}</span></div><p class="text-xs text-gray-600 mt-1">${a.baslik}</p></div>`).join('');
+}
+
+// --- MESAJLAR ---
+function loadStudentMessages() {
+    if (listeners.chat) return;
+    const container = document.getElementById('studentMessagesContainer'); if(!container) return;
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), orderBy("tarih"));
+    listeners.chat = onSnapshot(q, (snap) => {
+        container.innerHTML = '';
+        snap.forEach(doc => {
+            const m = doc.data(); const isMe = m.gonderen === 'ogrenci';
+            container.innerHTML += `<div class="flex w-full ${isMe ? 'justify-end' : 'justify-start'}"><div class="max-w-[80%] px-4 py-2 rounded-2xl text-sm ${isMe ? 'bg-indigo-600 text-white' : 'bg-white border'}"><p>${m.text}</p><p class="text-[9px] opacity-70 text-right mt-1">${m.tarih?.toDate().toLocaleTimeString().slice(0,5)}</p></div></div>`;
+        });
+        container.scrollTop = container.scrollHeight;
+    });
+}
+const chatForm = document.getElementById('studentChatForm');
+if(chatForm) {
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault(); const input = document.getElementById('studentMessageInput'); if(!input.value.trim()) return;
+        await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), { text: input.value, gonderen: 'ogrenci', tarih: serverTimestamp(), okundu: false, kocId: coachId });
+        input.value = '';
+    });
+}
+async function markMessagesAsRead() {
+    const batch = writeBatch(db);
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), where("gonderen", "==", "koc"), where("okundu", "==", false));
+    const snap = await getDocs(q);
+    snap.forEach(doc => batch.update(doc.ref, { okundu: true }));
+    await batch.commit();
+}
+
+// --- SORU TAKİBİ (AKORDİYON) ---
+async function renderSoruTakibiGrid() {
+    const container = document.getElementById('weeklyAccordion');
+    if(!container) return;
+    if(!coachId || !studentDocId) { container.innerHTML='<p class="p-4 text-center">Profil hatası.</p>'; return; }
+    
+    container.innerHTML = '<p class="p-4 text-center text-gray-400">Yükleniyor...</p>';
+    const dates = getWeekDates(currentWeekOffset);
+    document.getElementById('weekRangeTitle').textContent = `${formatDateTR(dates[0].dateStr)} - ${formatDateTR(dates[6].dateStr)}`;
+    
+    const prevBtn = document.getElementById('prevWeekBtn');
+    const nextBtn = document.getElementById('nextWeekBtn');
+    if(prevBtn) prevBtn.onclick = () => { currentWeekOffset--; renderSoruTakibiGrid(); };
+    if(nextBtn) { nextBtn.onclick = () => { currentWeekOffset++; renderSoruTakibiGrid(); }; nextBtn.disabled = currentWeekOffset >= 0; }
+    
+    const weekData = await loadWeekSoruData(dates[0].dateStr, dates[6].dateStr);
+    let html = '';
+    
+    dates.forEach(day => {
+        const dayData = weekData.filter(d => d.tarih === day.dateStr);
+        const isExpanded = day.isToday;
+        html += `
+        <div class="accordion-item border-b border-gray-100 last:border-0">
+            <button class="accordion-header w-full flex justify-between items-center p-4 rounded-xl border mb-2 text-left ${isExpanded ? 'bg-purple-50 border-purple-500 text-purple-700' : 'bg-white border-gray-200'}" onclick="toggleAccordion(this)" aria-expanded="${isExpanded}">
+                <span class="font-bold text-lg">${day.dayNum} ${day.dayName}</span><i class="fa-solid fa-chevron-down transition-transform ${isExpanded ? 'rotate-180' : ''}"></i>
+            </button>
+            <div class="accordion-content ${isExpanded ? '' : 'hidden'} px-1 pb-4">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    ${studentDersler.map(ders => {
+                        const r = dayData.find(d => d.ders === ders);
+                        return `<div class="subject-card"><label class="block text-xs font-semibold text-gray-500 mb-1 uppercase text-center truncate w-full">${ders}</label><input type="number" class="text-3xl font-bold text-center text-gray-800 w-full outline-none bg-transparent placeholder-gray-200" placeholder="0" value="${r?r.adet:''}" data-tarih="${day.dateStr}" data-ders="${ders}" data-doc-id="${r?r.id:''}" onblur="saveInput(this)"></div>`;
+                    }).join('')}
+                </div>
+                <div class="text-left">
+                    <button class="routine-btn" onclick="toggleRoutines(this)"><i class="fa-solid fa-list-check mr-2"></i> Rutinler</button>
+                    <div class="hidden mt-3 grid grid-cols-2 gap-3 p-3 bg-gray-100 rounded-xl border border-gray-200">
+                        ${studentRutinler.map(rutin => {
+                            const r = dayData.find(d => d.ders === rutin);
+                            return `<div class="subject-card bg-white"><label class="block text-xs font-semibold text-gray-500 mb-1 uppercase text-center">${rutin}</label><input type="number" class="text-2xl font-bold text-center text-gray-800 w-full outline-none placeholder-gray-200" placeholder="0" value="${r?r.adet:''}" data-tarih="${day.dateStr}" data-ders="${rutin}" data-doc-id="${r?r.id:''}" onblur="saveInput(this)"></div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
 // --- MODAL VE KAYIT İŞLEMLERİ ---
 
 // Deneme Modal

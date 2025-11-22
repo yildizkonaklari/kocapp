@@ -275,3 +275,20 @@
     box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); transition: transform 0.1s;
 }
 .routine-btn:active { transform: scale(0.95); }
+/* Alt Menü Taşma Ayarı */
+nav.fixed.bottom-0 {
+    overflow: visible !important; /* Butonun yukarı taşmasına izin ver */
+}
+
+/* Orta Butonun Konumu */
+.bottom-nav-center-btn {
+    margin-top: -2rem; /* Biraz daha yukarı kaldır */
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+}
+
+/* Profil Avatar */
+#profileAvatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

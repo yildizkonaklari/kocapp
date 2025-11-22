@@ -96,24 +96,14 @@ async function initializeStudentApp(uid) {
             coachId = profileData.kocId;
             studentDocId = profileData.linkedDocId;
             
-            if (coachId && studentDocId) {
-                loadDashboardData(); 
-            } else {
-                const modal = document.getElementById('modalMatchProfile');
-                if(modal) {
-                    modal.classList.remove('hidden');
-                    modal.style.display = 'flex';
-                }
-            }
-        } else {
-            console.error("Profil ayarı bulunamadı.");
-            signOut(auth);
+             if (coachId && studentDocId) {
+                loadDashboardData();
+                loadNotifications(); // YENİ: Bildirimleri Yükle
+                listenUnreadMessages(); // YENİ: Okunmamış Mesajları Dinle
+            } else document.getElementById('modalMatchProfile').classList.remove('hidden');
         }
-    } catch (error) { 
-        console.error("Başlatma hatası:", error); 
-    }
+    } catch (e) { console.error(e); }
 }
-
 // Profil Eşleştirme Butonu
 const btnMatch = document.getElementById('btnMatchProfile');
 if (btnMatch) {
@@ -165,6 +155,95 @@ if (btnMatch) {
         } finally {
             btnMatch.disabled = false;
             btnMatch.textContent = "Profili Eşleştir";
+        }
+    });
+}
+
+// =================================================================
+// 4. HEADER: BİLDİRİMLER VE MESAJLAR (YENİ)
+// =================================================================
+
+// Mesaj İkonuna Tıklama
+document.getElementById('btnHeaderMessages').addEventListener('click', () => {
+    // Mesajlar sekmesine git
+    const messagesBtn = document.querySelector('.nav-btn[data-target="tab-messages"]');
+    if (messagesBtn) messagesBtn.click();
+});
+
+// Bildirim İkonuna Tıklama
+const btnNotif = document.getElementById('btnHeaderNotifications');
+const dropNotif = document.getElementById('notificationDropdown');
+if(btnNotif && dropNotif) {
+    btnNotif.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropNotif.classList.toggle('hidden');
+        // Okundu olarak işaretle (Kırmızı noktayı kaldır)
+        document.getElementById('headerNotificationDot').classList.add('hidden');
+    });
+    
+    document.getElementById('btnCloseNotifications').addEventListener('click', () => dropNotif.classList.add('hidden'));
+    
+    // Dışarı tıklayınca kapat
+    document.addEventListener('click', (e) => {
+        if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) {
+            dropNotif.classList.add('hidden');
+        }
+    });
+}
+
+// Bildirimleri Yükle (Son 10 İşlem)
+function loadNotifications() {
+    const list = document.getElementById('notificationList');
+    if (!list) return;
+
+    // Koçun öğrenci için yaptığı işlemleri dinle (Basitçe 'hedefler' ve 'odevler'deki son eklemeler)
+    // Daha gelişmiş bir sistem için ayrı bir 'notifications' koleksiyonu olması gerekir.
+    // Şimdilik 'hedefler' koleksiyonunu örnek olarak kullanıyoruz.
+    
+    const q = query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"),
+        orderBy("olusturmaTarihi", "desc"),
+        limit(5)
+    );
+
+    listeners.notifications = onSnapshot(q, (snap) => {
+        let html = '';
+        if(snap.empty) html = '<p class="text-center text-gray-400 text-xs py-4">Bildirim yok.</p>';
+        
+        snap.forEach(doc => {
+            const d = doc.data();
+            html += `
+            <div class="p-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
+                <p class="text-xs font-semibold text-gray-800">Yeni Hedef: ${d.title}</p>
+                <p class="text-[10px] text-gray-400">${d.olusturmaTarihi ? new Date(d.olusturmaTarihi.toDate()).toLocaleDateString() : ''}</p>
+            </div>`;
+        });
+        
+        // Ödevleri de ekleyebiliriz (Basitlik için şimdilik sadece hedefler)
+        list.innerHTML = html;
+        
+        // Yeni veri geldiyse noktayı göster (İlk yükleme hariç kontrol edilebilir)
+        if(!snap.empty) document.getElementById('headerNotificationDot').classList.remove('hidden');
+    });
+}
+
+// Okunmamış Mesaj Sayısını Dinle
+function listenUnreadMessages() {
+    const q = query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"),
+        where("gonderen", "==", "koc"),
+        where("okundu", "==", false)
+    );
+    
+    onSnapshot(q, (snap) => {
+        const count = snap.size;
+        const badge = document.getElementById('headerUnreadMsgCount');
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+            badge.classList.add('animate-pulse');
+        } else {
+            badge.classList.add('hidden');
         }
     });
 }

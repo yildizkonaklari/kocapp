@@ -316,8 +316,10 @@ function loadStudentMessages() {
 
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-        const currentBtn = e.currentTarget.closest('.nav-btn');
-        const targetId = currentBtn.dataset.target;
+        // ... (Önceki kod) ...
+        const targetId = e.currentTarget.dataset.target || e.currentTarget.closest('.nav-btn').dataset.target;
+        // ... (Gizle/Göster) ...
+        if (targetId === 'tab-messages') { markMessagesAsRead(); loadStudentMessages(); }
         
         // Stil Güncelleme
         document.querySelectorAll('.nav-btn').forEach(b => {
@@ -357,20 +359,31 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 async function loadDashboardData() {
     if (!coachId || !studentDocId) return;
-
-    const soz = motivasyonSozleri[Math.floor(Math.random() * motivasyonSozleri.length)];
-    if(document.getElementById('motivasyonSozu')) document.getElementById('motivasyonSozu').textContent = `"${soz}"`;
-
-    const studentRef = doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId);
-    getDoc(studentRef).then(snap => {
-        if (snap.exists()) {
-            const d = snap.data();
-            if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
-            if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
-            studentDersler = d.takipDersleri || DERS_HAVUZU['LISE'];
-        }
-    });
     
+    // Profil Verilerini Çek ve Yerleştir
+    const studentRef = doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId);
+    const snap = await getDoc(studentRef);
+    
+    if (snap.exists()) {
+        const d = snap.data();
+        const adSoyad = `${d.ad} ${d.soyad}`;
+        const sinif = d.sinif;
+        
+        // Header
+        if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
+        
+        // Profil Sayfası (DÜZELTİLDİ)
+        if(document.getElementById('profileName')) document.getElementById('profileName').textContent = adSoyad;
+        if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = sinif;
+        
+        // Avatar (Ad Soyad Baş Harfleri)
+        const initials = (d.ad[0] || '') + (d.soyad[0] || '');
+        if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = initials.toUpperCase();
+        
+        studentDersler = d.takipDersleri || DERS_HAVUZU['LISE'];
+    }
+    
+    // Diğer yüklemeler
     updateHomeworkMetrics();
     loadActiveGoalsForDashboard();
 }

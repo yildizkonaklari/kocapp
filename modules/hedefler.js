@@ -70,8 +70,14 @@ async function loadStudentMap(db, uid, appId) {
 }
 
 function startGoalListener(db, uid, appId) {
-    // İndeks gerektirebilir: collectionGroup 'hedefler' orderBy 'olusturmaTarihi'
-    const q = query(collectionGroup(db, 'hedefler'), where('kocId', '==', uid), orderBy('olusturmaTarihi', 'desc'));
+    const container = document.getElementById('goalsListContainer');
+    
+    // İndeks Gerektiren Sorgu: hedefler (Collection Group) -> kocId ASC, olusturmaTarihi DESC
+    const q = query(
+        collectionGroup(db, 'hedefler'), 
+        where('kocId', '==', uid), 
+        orderBy('olusturmaTarihi', 'desc')
+    );
     
     if (activeListeners.hedeflerUnsubscribe) activeListeners.hedeflerUnsubscribe();
     
@@ -83,6 +89,18 @@ function startGoalListener(db, uid, appId) {
             allGoals.push({ id: doc.id, ...doc.data(), studentId: sid, path: doc.ref.path });
         });
         renderGoals(db);
+    }, (error) => {
+        console.error("Hedefler yüklenirken hata:", error);
+        if (error.code === 'failed-precondition') {
+            container.innerHTML = `
+                <div class="col-span-full bg-red-50 border-l-4 border-red-500 p-4 text-red-700">
+                    <p class="font-bold">Veritabanı İndeksi Eksik</p>
+                    <p class="text-sm">Bu sayfanın çalışması için bir indeks gerekiyor. Lütfen aşağıdaki linke tıklayıp indeksi oluşturun:</p>
+                    <a href="${error.message.match(/https:\/\/[^\s]+/)?.[0]}" target="_blank" class="text-blue-600 underline text-xs break-all mt-2 block">İndeks Oluşturmak İçin Tıklayın</a>
+                </div>`;
+        } else {
+            container.innerHTML = `<p class="col-span-full text-center text-red-500 p-8">Hata: ${error.message}</p>`;
+        }
     });
 }
 
@@ -93,7 +111,7 @@ function renderGoals(db) {
     const filtered = filter === 'all' ? allGoals : allGoals.filter(g => g.studentId === filter);
     
     if (filtered.length === 0) {
-        container.innerHTML = '<p class="col-span-full text-center text-gray-400 p-8">Hedef bulunamadı.</p>';
+        container.innerHTML = '<p class="col-span-full text-center text-gray-400 p-8">Kayıtlı hedef bulunamadı.</p>';
         return;
     }
 
@@ -101,13 +119,13 @@ function renderGoals(db) {
         const isDone = g.durum === 'tamamlandi';
         const sName = studentMap[g.studentId] || 'Öğrenci';
         return `
-        <div class="bg-white p-4 rounded-xl border ${isDone ? 'border-green-200 bg-green-50' : 'border-gray-200'} shadow-sm relative group">
+        <div class="bg-white p-4 rounded-xl border ${isDone ? 'border-green-200 bg-green-50' : 'border-gray-200'} shadow-sm relative group transition-shadow hover:shadow-md">
             <div class="flex justify-between items-start mb-2">
                 <span class="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded">${sName}</span>
                 <span class="text-xs text-gray-500">${formatDateTR(g.bitisTarihi)}</span>
             </div>
             <h4 class="font-bold text-gray-800 ${isDone ? 'line-through text-gray-500' : ''}">${g.title}</h4>
-            <p class="text-sm text-gray-600 mt-1">${g.aciklama || ''}</p>
+            <p class="text-sm text-gray-600 mt-1 line-clamp-2">${g.aciklama || ''}</p>
             <div class="mt-4 flex justify-end gap-2">
                 <button class="text-xs px-3 py-1 rounded border ${isDone ? 'border-gray-400 text-gray-600' : 'border-green-500 text-green-600 hover:bg-green-50'}" 
                         onclick="toggleGlobalGoalStatus('${g.path}', '${g.durum}')">
@@ -120,7 +138,6 @@ function renderGoals(db) {
         `;
     }).join('');
     
-    // Window fonksiyonlarını ata (app.js'de tanımlı olmayanlar için helper)
     window.toggleGlobalGoalStatus = async (path, current) => {
         await updateDoc(doc(db, path), { durum: current === 'tamamlandi' ? 'devam' : 'tamamlandi' });
     };
@@ -129,7 +146,6 @@ function renderGoals(db) {
     };
 }
 
-// Kaydetme Fonksiyonu
 export async function saveGlobalHedef(db, uid, appId) {
     let sid = document.getElementById('currentStudentIdForHedef').value;
     if (!document.getElementById('hedefStudentSelectContainer').classList.contains('hidden')) {

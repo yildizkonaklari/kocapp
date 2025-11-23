@@ -103,30 +103,163 @@ window.renderOgrenciDetaySayfasi = (id, name) => {
 window.showProfileModal = (user) => showProfileModal(user);
 
 // =================================================================
-// 5. BAŞLATMA (MAIN)
+// 2. BAŞLATMA & NAVİGASYON
 // =================================================================
+
 async function main() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUserId = user.uid;
-            console.log("Giriş yapıldı:", currentUserId);
-            
-            // Arayüzü Göster
-            if(loadingSpinner) loadingSpinner.style.display = 'none';
-            if(appContainer) {
-                appContainer.style.display = 'flex';
-                appContainer.classList.remove('hidden');
-            }
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('appContainer').classList.remove('hidden');
             
             updateUIForLoggedInUser(user);
-            navigateToPage('anasayfa'); 
+            navigateToPage('anasayfa');
+            
+            // Bildirimleri Başlat
+            loadCoachNotifications(user.uid);
             
         } else {
-            console.log("Giriş yok, login.html'e yönlendiriliyor...");
             window.location.href = 'login.html';
         }
     });
 }
+
+function updateUIForLoggedInUser(user) {
+    const displayName = user.displayName || "Koç";
+    const initials = displayName.substring(0, 2).toUpperCase();
+
+    // Header Profil
+    const headerName = document.getElementById("headerName");
+    const headerAvatar = document.getElementById("headerAvatar");
+    if(headerName) headerName.textContent = displayName;
+    if(headerAvatar) headerAvatar.textContent = initials;
+    
+    // Profil Tıklama (Header)
+    const profileHeader = document.getElementById("headerCoachProfile");
+    if(profileHeader) profileHeader.onclick = () => showProfileModal(user);
+
+    // Mobil Menüdeki Profil
+    const btnMobileProfile = document.getElementById("btnMobileProfile");
+    if(btnMobileProfile) btnMobileProfile.onclick = () => { closeMobileMenu(); showProfileModal(user); };
+
+    // Çıkış
+    const handleLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
+    document.getElementById("logoutButton").onclick = handleLogout;
+    document.getElementById("btnMobileLogout").onclick = handleLogout;
+
+    // Navigasyon
+    const handleNavClick = (e) => {
+        // Menü butonu hariç
+        if(e.currentTarget.id === 'btnToggleMobileMenu') return;
+
+        e.preventDefault();
+        const target = e.currentTarget;
+        const pageId = target.dataset.page || (target.id ? target.id.split('-')[1] : null);
+        
+        if (pageId) {
+            navigateToPage(pageId);
+            closeMobileMenu();
+        }
+    };
+
+    document.querySelectorAll('.nav-link, .bottom-nav-btn, .mobile-drawer-link').forEach(link => {
+        link.addEventListener('click', handleNavClick);
+    });
+}
+// =================================================================
+// 3. BİLDİRİM SİSTEMİ (YENİ)
+// =================================================================
+
+function loadCoachNotifications(uid) {
+    const notifList = document.getElementById('coachNotificationList');
+    const notifDot = document.getElementById('coachNotificationDot');
+    const btnNotif = document.getElementById('btnCoachNotifications');
+    const dropNotif = document.getElementById('coachNotificationDropdown');
+
+    // Dropdown Aç/Kapa
+    if(btnNotif && dropNotif) {
+        btnNotif.onclick = (e) => {
+            e.stopPropagation();
+            dropNotif.classList.toggle('hidden');
+            notifDot.classList.add('hidden'); // Okundu say
+        };
+        document.getElementById('btnCloseCoachNotifications').onclick = () => dropNotif.classList.add('hidden');
+        document.addEventListener('click', (e) => {
+            if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.add('hidden');
+        });
+    }
+
+    // Bildirimleri Topla (Randevular + Onay Bekleyenler + Mesajlar)
+    // Gerçek zamanlı tek bir "notifications" koleksiyonu olmadığı için,
+    // burada manuel olarak sorguları birleştiriyoruz (Basit Versiyon).
+    
+    // 1. Yarınki Randevular
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const qRandevu = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", "==", tomorrowStr));
+    
+    // 2. Onay Bekleyen Denemeler (CollectionGroup - İndeks Gerekir)
+    const qDeneme = query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5));
+    
+    // 3. Okunmamış Mesajlar
+    const qMesaj = query(collectionGroup(db, 'mesajlar'), where('kocId', '==', uid), where('gonderen', '==', 'ogrenci'), where('okundu', '==', false), limit(5));
+
+    // Dinleyicileri birleştirip listeyi güncelle (Basitçe mesaj ve randevuları gösterelim)
+    onSnapshot(qMesaj, (snapMsg) => {
+        let html = '';
+        
+        // Mesajlar
+        snapMsg.forEach(doc => {
+            const m = doc.data();
+            html += `
+            <div class="p-3 border-b border-gray-50 hover:bg-purple-50 transition-colors cursor-pointer" onclick="navigateToPage('mesajlar')">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <p class="text-xs font-bold text-gray-800">Yeni Mesaj</p>
+                </div>
+                <p class="text-xs text-gray-600 mt-1 line-clamp-1">${m.text}</p>
+                <p class="text-[10px] text-gray-400 mt-1">${m.tarih?.toDate().toLocaleTimeString().slice(0,5)}</p>
+            </div>`;
+        });
+
+        // Eğer veri varsa listeye ekle
+        if (html) {
+            notifList.innerHTML = html;
+            notifDot.classList.remove('hidden');
+        } else {
+            notifList.innerHTML = '<p class="text-center text-gray-400 text-xs py-8">Yeni bildirim yok.</p>';
+            notifDot.classList.add('hidden');
+        }
+    });
+    
+    // (Daha gelişmiş versiyonda Promise.all ile tüm sorgular birleştirilir)
+}
+
+// =================================================================
+// 4. MOBİL MENÜ (DRAWER)
+// =================================================================
+const drawer = document.getElementById('mobileMenuDrawer');
+const overlay = document.getElementById('mobileMenuOverlay');
+const btnOpenMenu = document.getElementById('btnToggleMobileMenu');
+const btnCloseMenu = document.getElementById('btnCloseMobileMenu');
+
+function openMobileMenu() {
+    drawer.classList.remove('translate-x-full');
+    overlay.classList.remove('hidden');
+    setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+}
+
+function closeMobileMenu() {
+    drawer.classList.add('translate-x-full');
+    overlay.classList.add('opacity-0');
+    setTimeout(() => overlay.classList.add('hidden'), 300);
+}
+
+if(btnOpenMenu) btnOpenMenu.onclick = openMobileMenu;
+if(btnCloseMenu) btnCloseMenu.onclick = closeMobileMenu;
+if(overlay) overlay.onclick = closeMobileMenu;
 
 // =================================================================
 // 6. NAVİGASYON YÖNETİMİ

@@ -564,6 +564,7 @@
     </div>
 
  <!-- 1. PROFİL AYARLARI MODALI (DÜZELTİLDİ) -->
+        <!-- PROFİL AYARLARI & YASAL BİLGİLER MODALI (DÜZELTİLDİ) -->
     <div id="profileModal" class="hidden fixed inset-0 bg-gray-900/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-in">
             
@@ -580,7 +581,7 @@
                         <i class="fa-solid fa-user-gear mr-3"></i> Hesap
                     </button>
                     <button data-tab="yasal" class="profile-tab-button flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors w-full text-left text-gray-600 hover:bg-white hover:shadow-sm">
-                        <i class="fa-solid fa-shield-halved mr-3"></i> Yasal Bilgiler
+                        <i class="fa-solid fa-scale-balanced mr-3"></i> Yasal Bilgiler
                     </button>
                 </div>
 
@@ -589,42 +590,44 @@
                     
                     <!-- HESAP TABI -->
                     <div id="tab-hesap" class="profile-tab-content space-y-6">
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase">Koç Davet Kodu</label>
-                            <div class="flex rounded-lg shadow-sm">
-                                <input type="text" id="kocDavetKodu" readonly class="flex-1 px-3 py-2.5 border border-r-0 border-gray-300 rounded-l-lg bg-gray-50 text-sm font-mono text-gray-600 select-all">
-                                <button id="btnKopyala" class="px-4 border border-gray-300 rounded-r-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors">
-                                    <i class="fa-regular fa-copy mr-1"></i> Kopyala
+                        
+                        <!-- Koç Davet Kodu (ALT ALTA) -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Koç Davet Kodu</label>
+                            <div class="relative">
+                                <input type="text" id="kocDavetKodu" readonly class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono text-gray-600 select-all mb-2">
+                                <button id="btnKopyala" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors flex items-center justify-center shadow-sm">
+                                    <i class="fa-regular fa-copy mr-2"></i> Kodu Kopyala
                                 </button>
                             </div>
-                            <p class="text-xs text-gray-400">Öğrencileriniz kayıt olurken bu kodu kullanacak.</p>
+                            <p class="text-xs text-gray-400 mt-1">Öğrencileriniz kayıt olurken bu kodu kullanacak.</p>
                         </div>
                         
-                        <div class="pt-4 border-t border-gray-100 space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ad Soyad</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="profileDisplayName" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
-                                    <button id="btnSaveName" class="px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">Kaydet</button>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Güvenlik</label>
-                                <button id="btnResetPassword" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium text-left flex justify-between items-center group">
-                                    <span>Şifre Sıfırlama E-postası Gönder</span>
-                                    <i class="fa-solid fa-paper-plane text-gray-400 group-hover:text-purple-500"></i>
-                                </button>
-                            </div>
+                        <!-- Ad Soyad (ALT ALTA) -->
+                        <div class="pt-4 border-t border-gray-100">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ad Soyad</label>
+                            <input type="text" id="profileDisplayName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all mb-2">
+                            <button id="btnSaveName" class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium shadow-sm">
+                                Kaydet
+                            </button>
+                        </div>
+                        
+                        <!-- Güvenlik (Şifre Sıfırlama) -->
+                        <div class="pt-4 border-t border-gray-100">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Güvenlik</label>
+                            <button id="btnResetPassword" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium text-center transition-colors shadow-sm">
+                                Şifre Sıfırlama E-postası Gönder
+                            </button>
+                        </div>
 
-                            <div class="pt-4 border-t border-red-50">
-                                <label class="block text-xs font-bold text-red-400 uppercase mb-1">Tehlikeli Bölge</label>
-                                <input type="password" id="deleteConfirmPassword" class="w-full px-3 py-2 border border-red-200 rounded-lg mb-2 focus:ring-2 focus:ring-red-500 outline-none placeholder-red-200" placeholder="Onay için şifrenizi girin">
-                                <button id="btnDeleteAccount" class="w-full px-4 py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-bold transition-colors border border-red-100">
-                                    Hesabımı Kalıcı Olarak Sil
-                                </button>
-                                <p id="profileError" class="text-xs text-red-500 mt-2 hidden"></p>
-                            </div>
+                        <!-- Hesap Silme -->
+                        <div class="pt-4 border-t border-red-50">
+                            <label class="block text-xs font-bold text-red-400 uppercase mb-1">Tehlikeli Bölge</label>
+                            <input type="password" id="deleteConfirmPassword" class="w-full px-3 py-2 border border-red-200 rounded-lg mb-2 focus:ring-2 focus:ring-red-500 outline-none placeholder-red-200" placeholder="Onay için şifrenizi girin">
+                            <button id="btnDeleteAccount" class="w-full px-4 py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-bold transition-colors border border-red-100">
+                                Hesabımı Kalıcı Olarak Sil
+                            </button>
+                            <p id="profileError" class="text-xs text-red-500 mt-2 hidden text-center"></p>
                         </div>
                     </div>
 
@@ -649,41 +652,6 @@
                         </section>
                     </div>
 
-                </div>
-            </div>
-        </div>
-    </div>
-
-                    <!-- YASAL TABI -->
-                    <div id="tab-yasal" class="profile-tab-content hidden space-y-4 h-[400px] overflow-y-auto pr-2 text-sm text-gray-600">
-                        <h4 class="text-lg font-bold text-gray-800">Kullanım Koşulları</h4>
-                        <p><strong>Son Güncelleme:</strong> 24 Kasım 2025</p>
-                        <p>Lütfen "Koçluk Takip Sistemi" (bundan böyle "Platform" olarak anılacaktır) hizmetini kullanmadan önce bu Kullanım Koşullarını dikkatlice okuyun.</p>
-                        
-                        <h5 class="font-bold mt-2">1. Hizmetin Tanımı</h5>
-                        <p>Bu Platform, öğrencilerin akademik süreçlerini (deneme sonuçları, soru çözümleri, ödev takibi vb.) kaydetmelerini ve koçlarının bu verileri analiz ederek rehberlik etmesini sağlayan dijital bir takip aracıdır.</p>
-                        
-                        <h5 class="font-bold mt-2">2. Kullanıcı Hesapları ve Güvenlik</h5>
-                        <ul class="list-disc pl-5">
-                            <li>Platforma kayıt olurken verdiğiniz bilgilerin (Ad, Soyad, E-posta) doğru ve güncel olması sizin sorumluluğunuzdadır.</li>
-                            <li>Şifrenizin güvenliğini sağlamakla yükümlüsünüz. Hesabınızla yapılan tüm işlemlerden siz sorumlusunuz.</li>
-                        </ul>
-
-                        <hr class="my-4">
-
-                        <h4 class="text-lg font-bold text-gray-800">Gizlilik Politikası</h4>
-                        <p><strong>Son Güncelleme:</strong> 24 Kasım 2025</p>
-                        <h5 class="font-bold mt-2">1. Toplanan Bilgiler</h5>
-                        <p>Hizmeti sağlamak için aşağıdaki bilgileri topluyoruz:</p>
-                        <ul class="list-disc pl-5">
-                            <li><strong>Kimlik Bilgileri:</strong> Ad, Soyad.</li>
-                            <li><strong>İletişim Bilgileri:</strong> E-posta adresi.</li>
-                            <li><strong>Akademik Veriler:</strong> Deneme sınavı sonuçları, çözülen soru sayıları, ödev durumları.</li>
-                        </ul>
-
-                        <h5 class="font-bold mt-2">2. Veri Güvenliği</h5>
-                        <p>Verileriniz güvenli sunucularda (Firebase) saklanmaktadır. Veri güvenliğini sağlamak için endüstri standardı güvenlik önlemleri uygulanmaktadır.</p>
-                    </div>
                 </div>
             </div>
         </div>

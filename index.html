@@ -17,119 +17,236 @@
     <!-- 4. Özel Stiller -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-50 text-gray-800 font-sans h-screen flex overflow-hidden">
 
-    <!-- 1. YÜKLENİYOR EKRANI -->
-    <div id="loadingSpinner" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100">
+    <!-- YÜKLENİYOR EKRANI -->
+    <div id="loadingSpinner" class="fixed inset-0 z-[90] flex items-center justify-center bg-gray-100">
         <div class="flex flex-col items-center">
-            <svg class="animate-spin h-12 w-12 text-purple-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p class="text-lg font-semibold text-gray-600">Sistem Yükleniyor...</p>
+            <svg class="animate-spin h-10 w-10 text-purple-600 mb-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p class="text-sm font-semibold text-gray-600">Sistem Yükleniyor...</p>
         </div>
     </div>
 
-    <!-- 2. ANA UYGULAMA PANELİ -->
-    <div id="appContainer" class="hidden h-screen w-full flex flex-col lg:flex-row">
+    <!-- MOBİL MENÜ ARKA PLANI (OVERLAY) -->
+    <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <!-- === SOL MENÜ (SIDEBAR / DRAWER) === -->
+    <nav id="sidebar" class="fixed lg:relative inset-y-0 left-0 w-64 bg-white shadow-xl border-r border-gray-200 z-40 flex flex-col transform sidebar-closed lg:translate-x-0">
+        <!-- Profil Alanı -->
+        <div id="userProfileArea" class="flex items-center p-5 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors">
+            <div id="userAvatar" class="h-10 w-10 bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center rounded-full font-bold shadow-md">K</div>
+            <div class="ml-3 overflow-hidden">
+                <p id="userName" class="text-sm font-bold text-gray-800 truncate">Koç</p>
+                <p id="userEmail" class="text-xs text-gray-500 truncate">Yükleniyor...</p>
+            </div>
+            <i class="fa-solid fa-chevron-right ml-auto text-gray-300 text-xs"></i>
+        </div>
+
+        <!-- Menü Linkleri -->
+        <div class="flex-1 py-4 px-2 space-y-1 overflow-y-auto no-scrollbar">
+            <a href="#" id="nav-anasayfa" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-house w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Ana Sayfa</span>
+            </a>
+            <a href="#" id="nav-ajandam" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-calendar-days w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Ajandam</span>
+            </a>
+            <a href="#" id="nav-ogrencilerim" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-users w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Öğrencilerim</span>
+            </a>
+            
+            <div class="my-2 border-t border-gray-100 mx-2"></div>
+            <p class="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Takip & Analiz</p>
+
+            <a href="#" id="nav-denemeler" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-chart-line w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Denemeler</span>
+            </a>
+            <a href="#" id="nav-sorutakibi" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-pen-to-square w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Soru Takibi</span>
+            </a>
+            <a href="#" id="nav-hedefler" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-bullseye w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Hedefler</span>
+            </a>
+            <a href="#" id="nav-odevler" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-list-check w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Ödevler</span>
+            </a>
+
+            <div class="my-2 border-t border-gray-100 mx-2"></div>
+            <p class="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Yönetim</p>
+
+            <a href="#" id="nav-muhasebe" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-turkish-lira-sign w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Muhasebe</span>
+            </a>
+            <a href="#" id="nav-mesajlar" class="nav-link flex items-center px-3 py-2.5 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-all group">
+                <i class="fa-solid fa-comment-dots w-6 text-center group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3 font-medium">Mesajlar</span>
+            </a>
+        </div>
+
+        <!-- Çıkış Butonu -->
+        <div class="p-4 border-t border-gray-100">
+            <button id="logoutButton" class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-bold text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-colors border border-red-100">
+                <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Çıkış Yap
+            </button>
+        </div>
+    </nav>
+
+    <!-- === ANA İÇERİK ALANI === -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden relative">
         
-        <!-- === SOL NAVİGASYON (Sidebar - Masaüstü) === -->
-        <nav class="hidden lg:flex flex-col w-64 h-full bg-white shadow-lg border-r border-gray-200 no-scrollbar overflow-y-auto z-20">
-            <!-- Profil Alanı -->
-            <div id="userProfileArea" class="flex items-center p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors group">
-                <div id="userAvatar" class="flex-shrink-0 h-12 w-12 bg-purple-100 text-purple-600 flex items-center justify-center rounded-full font-bold text-xl group-hover:bg-purple-200 transition-colors">
-                    ?
-                </div>
-                <div class="ml-4 truncate">
-                    <p id="userName" class="text-sm font-semibold text-gray-800 truncate">Yükleniyor...</p>
-                    <p id="userEmail" class="text-xs text-gray-500 truncate">...</p>
-                </div>
-                <i class="fa-solid fa-chevron-right ml-auto text-gray-300 text-xs group-hover:text-purple-500"></i>
-            </div>
-
-            <!-- Menü Linkleri -->
-            <div class="flex-1 py-4 space-y-1">
-                <a href="#" id="nav-anasayfa" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-house w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Ana Sayfa</span>
-                </a>
-                <a href="#" id="nav-ajandam" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-calendar-days w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Ajandam</span>
-                </a>
-                <a href="#" id="nav-ogrencilerim" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-users w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Öğrencilerim</span>
-                </a>
-                <a href="#" id="nav-denemeler" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-chart-line w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Denemeler</span>
-                </a>
-                <a href="#" id="nav-sorutakibi" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-pen-to-square w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Soru Takibi</span>
-                </a>
-                <a href="#" id="nav-hedefler" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-bullseye w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Hedefler</span>
-                </a>
-                <a href="#" id="nav-odevler" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-list-check w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Ödevler</span>
-                </a>
-                <a href="#" id="nav-muhasebe" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-turkish-lira-sign w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Muhasebe</span>
-                </a>
-                <a href="#" id="nav-mesajlar" class="nav-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-colors border-l-4 border-transparent">
-                    <i class="fa-solid fa-comment-dots w-6 text-center"></i>
-                    <span class="ml-3 font-medium">Mesajlar</span>
-                </a>
-            </div>
-
-            <!-- Çıkış Alanı -->
-            <div class="p-4 border-t border-gray-200">
-                <button id="logoutButton" class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
-                    <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>
-                    Çıkış Yap
+        <!-- HEADER (MOBİL UYUMLU) -->
+        <header class="bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex justify-between items-center z-30 h-16 shrink-0">
+            
+            <!-- Sol: Mobil Menü Butonu ve Başlık -->
+            <div class="flex items-center gap-3">
+                <button id="mobileMenuBtn" class="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                    <i class="fa-solid fa-bars text-xl"></i>
                 </button>
+                <h1 id="mainContentTitle" class="text-lg md:text-xl font-bold text-gray-800 truncate">Kontrol Paneli</h1>
             </div>
-        </nav>
 
-        <!-- === ANA İÇERİK ALANI === -->
-        <main class="flex-1 h-full flex flex-col no-scrollbar overflow-y-auto pb-20 lg:pb-0 bg-gray-100">
-            <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
-                <h1 id="mainContentTitle" class="text-2xl font-bold text-gray-800">Kontrol Paneli</h1>
-            </header>
-            <div id="mainContentArea" class="flex-1 p-4 lg:p-8">
-                <!-- İçerik JS ile buraya yüklenecek -->
-            </div>
-        </main>
+            <!-- Sağ: İkonlar (Mesaj, Bildirim) -->
+            <div class="flex items-center gap-2">
+                
+                <!-- Mesajlar İkonu -->
+                <button id="btnHeaderMessages" class="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-50 rounded-full transition-colors group" title="Mesajlar">
+                    <i class="fa-regular fa-envelope text-xl group-hover:scale-110 transition-transform"></i>
+                    <span id="headerUnreadMsgCount" class="hidden absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">0</span>
+                </button>
 
-        <!-- === ALT NAVİGASYON (Mobil) === -->
-        <nav id="bottomNav" class="lg:hidden fixed bottom-0 left-0 w-full h-16 bg-white border-t border-gray-200 shadow-lg flex justify-around items-center z-50">
-            <button class="bottom-nav-btn flex flex-col items-center justify-center w-full h-full text-gray-500" data-page="anasayfa">
-                <i class="fa-solid fa-house text-xl mb-1"></i>
-                <span class="text-[10px] font-medium">Anasayfa</span>
-            </button>
-            <button class="bottom-nav-btn flex flex-col items-center justify-center w-full h-full text-gray-500" data-page="ajandam">
-                <i class="fa-solid fa-calendar-days text-xl mb-1"></i>
-                <span class="text-[10px] font-medium">Ajandam</span>
-            </button>
-            <button class="bottom-nav-btn active" data-page="ogrencilerim">
-                <div class="bottom-nav-btn-center -mt-6 w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center shadow-xl border-4 border-white">
-                    <i class="fa-solid fa-users text-xl"></i>
+                <!-- Bildirimler İkonu -->
+                <div class="relative">
+                    <button id="btnHeaderNotifications" class="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-50 rounded-full transition-colors group" title="Bildirimler">
+                        <i class="fa-regular fa-bell text-xl group-hover:scale-110 transition-transform"></i>
+                        <span id="headerNotificationDot" class="hidden absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                    </button>
+                    <!-- Dropdown -->
+                    <div id="notificationDropdown" class="hidden absolute right-0 mt-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 z-50 max-h-[80vh] flex flex-col origin-top-right transition-all duration-200">
+                        <div class="p-3 border-b bg-gray-50 flex justify-between items-center rounded-t-xl">
+                            <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Bildirimler</span>
+                            <button id="btnCloseNotifications" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div id="notificationList" class="overflow-y-auto max-h-64 p-1 space-y-1">
+                            <p class="text-center text-gray-400 text-xs py-8">Bildirim yok.</p>
+                        </div>
+                    </div>
                 </div>
-            </button>
-            <button class="bottom-nav-btn flex flex-col items-center justify-center w-full h-full text-gray-500" data-page="muhasebe">
-                <i class="fa-solid fa-turkish-lira-sign text-xl mb-1"></i>
-                <span class="text-[10px] font-medium">Muhasebe</span>
-            </button>
-            <button class="bottom-nav-btn flex flex-col items-center justify-center w-full h-full text-gray-500" data-page="mesajlar">
-                <i class="fa-solid fa-comment-dots text-xl mb-1"></i>
-                <span class="text-[10px] font-medium">Mesajlar</span>
-            </button>
-        </nav>
+
+            </div>
+        </header>
+
+        <!-- İçerik Alanı -->
+        <div id="mainContentArea" class="flex-1 overflow-y-auto p-4 lg:p-8 bg-gray-50">
+            <!-- Modüller buraya yüklenecek -->
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- === MODALLAR === -->
+    <!-- ===================================================================== -->
+
+    <!-- PROFİL AYARLARI & YASAL BİLGİLER MODALI -->
+    <div id="profileModal" class="hidden fixed inset-0 bg-gray-900/50 z-[80] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-5 border-b bg-white shrink-0">
+                <h3 class="text-xl font-bold text-gray-800">Profil Ayarları</h3>
+                <button id="closeProfileModalButton" class="text-gray-400 hover:text-gray-600 text-2xl transition-colors">&times;</button>
+            </div>
+            
+            <div class="flex flex-col md:flex-row flex-1 overflow-hidden">
+                <!-- Sol Sekmeler -->
+                <div class="w-full md:w-1/3 bg-gray-50 border-r border-gray-200 p-2 md:p-4 flex md:flex-col gap-2 shrink-0 overflow-x-auto md:overflow-visible">
+                    <button data-tab="hesap" class="profile-tab-button active flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors w-full text-left bg-white text-purple-700 shadow-sm border border-purple-100">
+                        <i class="fa-solid fa-user-gear mr-3"></i> Hesap
+                    </button>
+                    <button data-tab="yasal" class="profile-tab-button flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors w-full text-left text-gray-600 hover:bg-white hover:shadow-sm">
+                        <i class="fa-solid fa-scale-balanced mr-3"></i> Yasal Bilgiler
+                    </button>
+                </div>
+
+                <!-- Sağ İçerik -->
+                <div class="w-full md:w-2/3 p-6 overflow-y-auto">
+                    <!-- HESAP TABI -->
+                    <div id="tab-hesap" class="profile-tab-content space-y-6">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Koç Davet Kodu</label>
+                            <div class="flex rounded-lg shadow-sm">
+                                <input type="text" id="kocDavetKodu" readonly class="flex-1 px-3 py-2.5 border border-r-0 border-gray-300 rounded-l-lg bg-gray-50 text-sm font-mono text-gray-600 select-all" value="...">
+                                <button id="btnKopyala" class="px-4 border border-gray-300 rounded-r-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors">
+                                    <i class="fa-regular fa-copy mr-1"></i> Kopyala
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-400">Öğrencileriniz kayıt olurken bu kodu kullanacak.</p>
+                        </div>
+                        
+                        <div class="space-y-4 pt-4 border-t border-gray-100">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ad Soyad</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="profileDisplayName" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all">
+                                    <button id="btnSaveName" class="px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">Kaydet</button>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Güvenlik</label>
+                                <button id="btnResetPassword" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium text-left flex justify-between items-center group transition-colors">
+                                    <span>Şifre Sıfırlama E-postası Gönder</span>
+                                    <i class="fa-solid fa-paper-plane text-gray-400 group-hover:text-purple-500"></i>
+                                </button>
+                            </div>
+
+                            <div class="pt-4 border-t border-red-50">
+                                <label class="block text-xs font-bold text-red-400 uppercase mb-1">Tehlikeli Bölge</label>
+                                <input type="password" id="deleteConfirmPassword" class="w-full px-3 py-2 border border-red-200 rounded-lg mb-2 focus:ring-2 focus:ring-red-500 outline-none placeholder-red-200" placeholder="Şifrenizi girin">
+                                <button id="btnDeleteAccount" class="w-full px-4 py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-bold transition-colors border border-red-100">
+                                    Hesabımı Kalıcı Olarak Sil
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- YASAL TABI -->
+                    <div id="tab-yasal" class="profile-tab-content hidden space-y-6 text-sm text-gray-600 leading-relaxed">
+                        <section>
+                            <h4 class="text-base font-bold text-gray-900 mb-2">Kullanım Koşulları</h4>
+                            <p class="mb-2">Bu platform ("Koçluk Takip Sistemi"), eğitim koçları ve öğrencileri arasındaki veri alışverişini kolaylaştırmak için tasarlanmıştır.</p>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Hesap güvenliğinizden ve şifrenizden siz sorumlusunuz.</li>
+                                <li>Platform, öğrencilerin akademik verilerini (netler, ödevler) analiz etmek için kullanılır.</li>
+                                <li>Sistem üzerindeki veriler, sadece eşleştiğiniz öğrenci/koç tarafından görülebilir.</li>
+                            </ul>
+                        </section>
+                        
+                        <div class="h-px bg-gray-100"></div>
+
+                        <section>
+                            <h4 class="text-base font-bold text-gray-900 mb-2">Gizlilik Politikası</h4>
+                            <p class="mb-2">Kişisel verilerinizin güvenliği bizim için önemlidir. Verileriniz Firebase altyapısında şifreli olarak saklanır.</p>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Toplanan veriler: Ad, Soyad, E-posta, Deneme Sonuçları, Ödev Durumları.</li>
+                                <li>Verileriniz üçüncü şahıslarla paylaşılmaz veya ticari amaçla kullanılmaz.</li>
+                                <li>Hesabınızı sildiğinizde tüm verileriniz kalıcı olarak silinir.</li>
+                            </ul>
+                        </section>
+                        
+                         <div class="h-px bg-gray-100"></div>
+                         
+                        <section>
+                            <h4 class="text-base font-bold text-gray-900 mb-1">İletişim</h4>
+                            <p>Destek ve sorularınız için uygulama yöneticisiyle iletişime geçebilirsiniz.</p>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ===================================================================== -->

@@ -4,14 +4,11 @@
 window.addEventListener('error', function(e) {
     const spinner = document.getElementById('loadingSpinner');
     if (spinner) spinner.style.display = 'none';
-    
     console.error("Global Hata:", e);
-    // İsteğe bağlı: Hata mesajını ekrana basabilirsiniz
-    // document.body.innerHTML += `<div style="position:fixed;top:0;left:0;background:red;color:white;padding:10px;z-index:9999">${e.message}</div>`;
 });
 
 // =================================================================
-// 1. FİREBASE VE IMPORTLAR
+// 1. FİREBASE KÜTÜPHANELERİ
 // =================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { 
@@ -24,7 +21,7 @@ import {
     onSnapshot, getDocs, serverTimestamp, writeBatch, limit 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
 
-// Modüller
+// --- MODÜL IMPORTLARI ---
 import { cleanUpListeners, populateStudentSelect, renderDersSecimi, renderPlaceholderSayfasi } from './modules/helpers.js';
 import { renderAnaSayfa } from './modules/anasayfa.js';
 import { renderOgrenciSayfasi, renderOgrenciDetaySayfasi, saveNewStudent, saveStudentChanges } from './modules/ogrencilerim.js';
@@ -36,6 +33,7 @@ import { renderSoruTakibiSayfasi, saveGlobalSoru } from './modules/sorutakibi.js
 import { renderHedeflerSayfasi, saveGlobalHedef } from './modules/hedefler.js';
 import { renderOdevlerSayfasi, saveGlobalOdev } from './modules/odevler.js';
 
+// --- FİREBASE CONFIG ---
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -49,10 +47,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "kocluk-sistemi";
+
 let currentUserId = null;
 
 // =================================================================
-// 2. BAŞLATMA
+// 2. BAŞLATMA (MAIN)
 // =================================================================
 async function main() {
     onAuthStateChanged(auth, (user) => {
@@ -64,6 +63,7 @@ async function main() {
             
             updateUIForLoggedInUser(user);
             navigateToPage('anasayfa');
+            
         } else {
             window.location.href = 'login.html';
         }
@@ -71,18 +71,27 @@ async function main() {
 }
 
 // =================================================================
-// 3. NAVİGASYON
+// 3. KULLANICI ARAYÜZÜ VE PROFİL
 // =================================================================
 
 function updateUIForLoggedInUser(user) {
     const displayName = user.displayName || "Koç";
-    if(document.getElementById("userName")) document.getElementById("userName").textContent = displayName;
-    if(document.getElementById("userEmail")) document.getElementById("userEmail").textContent = user.email;
-    if(document.getElementById("userAvatar")) document.getElementById("userAvatar").textContent = displayName.substring(0,2).toUpperCase();
+    const initials = displayName.substring(0, 2).toUpperCase();
+
+    // Sidebar & Header
+    const userNameEl = document.getElementById("userName");
+    const userEmailEl = document.getElementById("userEmail");
+    const userAvatarEl = document.getElementById("userAvatar");
+    const headerName = document.getElementById("headerName"); // Mobilde başlık olarak kullanılabilir
+
+    if (userNameEl) userNameEl.textContent = displayName;
+    if (userEmailEl) userEmailEl.textContent = user.email;
+    if (userAvatarEl) userAvatarEl.textContent = initials;
 
     // Profil Tıklama
-    if(document.getElementById("userProfileArea")) {
-        document.getElementById("userProfileArea").onclick = (e) => {
+    const profileArea = document.getElementById("userProfileArea");
+    if (profileArea) {
+        profileArea.onclick = (e) => {
             e.preventDefault();
             closeMobileMenu();
             showProfileModal(user);
@@ -90,51 +99,127 @@ function updateUIForLoggedInUser(user) {
     }
 
     // Çıkış
-    if(document.getElementById("logoutButton")) {
-        document.getElementById("logoutButton").onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
+    const btnLogout = document.getElementById("logoutButton");
+    if (btnLogout) {
+        btnLogout.onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
     }
 
-    // Linkler
-    document.querySelectorAll('.nav-link').forEach(link => {
+    // Navigasyon
+    document.querySelectorAll('.nav-link, .bottom-nav-btn').forEach(link => {
         link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const pageId = link.id ? link.id.split('-')[1] : null;
-            if (pageId) {
-                navigateToPage(pageId);
-                closeMobileMenu();
+            if (link.id !== 'mobileMenuBtn' && !link.classList.contains('mobile-menu-trigger')) {
+                e.preventDefault();
+                const page = link.dataset.page || (link.id ? link.id.split('-')[1] : null);
+                if (page) {
+                    navigateToPage(page);
+                    closeMobileMenu();
+                }
             }
         });
     });
 }
 
-// Mobil Menü
+// Profil Modalı
+function showProfileModal(user) {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    
+    document.getElementById('profileDisplayName').value = user.displayName || '';
+    document.getElementById('kocDavetKodu').value = user.uid;
+    document.getElementById('deleteConfirmPassword').value = '';
+    document.getElementById('profileError').classList.add('hidden');
+
+    const tabBtn = document.querySelector('.profile-tab-button[data-tab="hesap"]');
+    if(tabBtn) tabBtn.click();
+    
+    modal.classList.remove('hidden');
+}
+
+// Modal & Tab İşlemleri
+const profileModal = document.getElementById("profileModal");
+if(profileModal) {
+    document.getElementById('closeProfileModalButton').onclick = () => profileModal.classList.add('hidden');
+
+    document.querySelectorAll('.profile-tab-button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.profile-tab-button').forEach(b => {
+                b.classList.remove('active', 'bg-purple-100', 'text-purple-700');
+                b.classList.add('text-gray-500', 'hover:bg-gray-200');
+            });
+            e.currentTarget.classList.add('active', 'bg-purple-100', 'text-purple-700');
+            e.currentTarget.classList.remove('text-gray-500', 'hover:bg-gray-200');
+            
+            const tabId = e.currentTarget.dataset.tab;
+            document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        });
+    });
+}
+
+// Profil Butonları
+function addListener(id, event, handler) { const el = document.getElementById(id); if (el) el.addEventListener(event, handler); }
+
+addListener('btnSaveName', 'click', async () => {
+    const n = document.getElementById('profileDisplayName').value.trim();
+    if (!n) return;
+    await updateProfile(auth.currentUser, { displayName: n });
+    alert("Güncellendi."); window.location.reload();
+});
+addListener('btnResetPassword', 'click', async () => {
+    await sendPasswordResetEmail(auth, auth.currentUser.email);
+    alert("E-posta gönderildi.");
+});
+addListener('btnDeleteAccount', 'click', async () => {
+    const p = document.getElementById('deleteConfirmPassword').value;
+    if (!p) return alert("Şifre girin.");
+    const c = EmailAuthProvider.credential(auth.currentUser.email, p);
+    await reauthenticateWithCredential(auth.currentUser, c);
+    await deleteUser(auth.currentUser);
+    window.location.href = "login.html";
+});
+addListener('btnKopyala', 'click', () => {
+    navigator.clipboard.writeText(document.getElementById('kocDavetKodu').value);
+    alert("Kopyalandı");
+});
+
+
+// =================================================================
+// 4. NAVİGASYON VE MOBİL MENÜ
+// =================================================================
+
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('mobileOverlay');
-const mobileBtn = document.getElementById('mobileMenuBtn'); // Eğer varsa (responsive tasarımda eklenebilir)
+const btnMenu = document.getElementById('mobileMenuBtn');
 
-if(mobileBtn) {
-    mobileBtn.onclick = () => {
-        sidebar.classList.remove('sidebar-closed');
-        sidebar.classList.add('sidebar-open');
-        overlay.classList.remove('hidden');
-    };
-}
-if(overlay) {
-    overlay.onclick = closeMobileMenu;
-}
+if(btnMenu) btnMenu.onclick = () => {
+    sidebar.classList.remove('sidebar-closed');
+    sidebar.classList.add('sidebar-open');
+    overlay.classList.remove('hidden');
+};
+if(overlay) overlay.onclick = closeMobileMenu;
 
 function closeMobileMenu() {
     sidebar.classList.remove('sidebar-open');
     sidebar.classList.add('sidebar-closed');
-    if(overlay) overlay.classList.add('hidden');
+    overlay.classList.add('hidden');
 }
 
 function navigateToPage(pageId) {
-    cleanUpListeners();
+    cleanUpListeners(); 
     
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-purple-50', 'text-purple-700', 'font-semibold'));
     const activeLink = document.getElementById(`nav-${pageId}`);
     if(activeLink) activeLink.classList.add('bg-purple-50', 'text-purple-700', 'font-semibold');
+    
+    document.querySelectorAll('.bottom-nav-btn').forEach(l => {
+        l.classList.remove('active', 'text-purple-600');
+        l.classList.add('text-gray-500');
+    });
+    const bottomLink = document.querySelector(`.bottom-nav-btn[data-page="${pageId}"]`);
+    if(bottomLink) {
+        bottomLink.classList.add('active', 'text-purple-600');
+        bottomLink.classList.remove('text-gray-500');
+    }
 
     try {
         switch(pageId) {
@@ -149,23 +234,23 @@ function navigateToPage(pageId) {
             case 'odevler': renderOdevlerSayfasi(db, currentUserId, appId); break;
             default: renderPlaceholderSayfasi("Sayfa Bulunamadı"); break;
         }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error(err);
+        alert("Sayfa yükleme hatası: " + err.message);
+    }
 }
 
 // =================================================================
-// 4. MODAL KONTROLLERİ
+// 5. MODAL KONTROLLERİ
 // =================================================================
-
-function addListener(id, event, handler) {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener(event, handler);
-}
 
 // Kapatma
 document.querySelectorAll('.close-modal-btn, #closeModalButton, #closeEditModalButton, #closeDenemeModalButton, #closeSoruModalButton, #closeHedefModalButton, #closeOdevModalButton, #closeRandevuModalButton, #closeTahsilatModalButton, #closeBorcModalButton, #closeProfileModalButton, #cancelModalButton, #cancelEditModalButton, #cancelDenemeModalButton, #cancelSoruModalButton, #cancelHedefModalButton, #cancelOdevModalButton, #cancelRandevuModalButton, #cancelTahsilatModalButton, #cancelBorcModalButton').forEach(btn => {
     btn.addEventListener('click', (e) => {
         const modal = e.target.closest('.fixed');
-        if(modal) modal.style.display = 'none';
+        if(modal) modal.style.display = 'none'; // veya classList.add('hidden') - stilinize göre
+        // index.html'de "hidden" classı kullanıyorsak:
+        if(modal) modal.classList.add('hidden');
     });
 });
 
@@ -183,39 +268,8 @@ addListener('saveRandevuButton', 'click', () => saveNewRandevu(db, currentUserId
 addListener('saveTahsilatButton', 'click', () => saveNewTahsilat(db, currentUserId, appId));
 addListener('saveBorcButton', 'click', () => saveNewBorc(db, currentUserId, appId));
 
-// Global Window Fonksiyonları
+// Window Helper
 window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
-window.showProfileModal = (user) => showProfileModal(user);
 
-// Profil Modalı
-function showProfileModal(user) {
-    const m = document.getElementById("profileModal");
-    document.getElementById('profileDisplayName').value = user.displayName || '';
-    document.getElementById('kocDavetKodu').value = user.uid;
-    document.querySelector('[data-tab="hesap"]').click();
-    m.style.display = 'block';
-}
-document.querySelectorAll('.profile-tab-button').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.profile-tab-button').forEach(b => { b.classList.remove('active', 'bg-purple-100', 'text-purple-700'); b.classList.add('text-gray-500'); });
-        e.currentTarget.classList.add('active', 'bg-purple-100', 'text-purple-700');
-        const tab = e.currentTarget.dataset.tab;
-        document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.add('hidden'));
-        document.getElementById(`tab-${tab}`).classList.remove('hidden');
-    });
-});
-
-// Profil İşlemleri
-addListener('btnSaveName', 'click', async () => {
-    const n = document.getElementById('profileDisplayName').value;
-    if(n) { await updateProfile(auth.currentUser, {displayName: n}); alert('Kaydedildi'); window.location.reload(); }
-});
-addListener('btnResetPassword', 'click', async () => {
-    try { await sendPasswordResetEmail(auth, auth.currentUser.email); alert('E-posta gönderildi'); } catch(e) { alert(e.message); }
-});
-addListener('btnKopyala', 'click', () => {
-    navigator.clipboard.writeText(document.getElementById('kocDavetKodu').value);
-    alert('Kopyalandı');
-});
-
+// BAŞLAT
 main();

@@ -424,7 +424,7 @@ export async function saveGlobalDeneme(db, currentUserId, appId) {
     document.getElementById('addDenemeModal').style.display = 'none';
 }
 
-// --- YENİ: INPUT RENDER FONKSİYONU (EXPORT EDİLDİ) ---
+// --- YENİ: INPUT RENDER FONKSİYONU ---
 export function renderDenemeNetInputs(tur) {
     const container = document.getElementById('denemeNetGirisAlani');
     if(!container) return;

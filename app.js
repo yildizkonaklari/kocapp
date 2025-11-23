@@ -76,94 +76,98 @@ async function main() {
 // =================================================================
 // 3. UI & NAVİGASYON
 // =================================================================
+
 function updateUIForLoggedInUser(user) {
+    // ... (Kullanıcı bilgileri doldurma aynı) ...
     const displayName = user.displayName || "Koç";
-    const initials = displayName.substring(0, 2).toUpperCase();
-
-    // Profil Bilgilerini Doldur
-    const userNameEl = document.getElementById("userName");
-    const userEmailEl = document.getElementById("userEmail");
-    const userAvatarEl = document.getElementById("userAvatar");
-    const headerName = document.getElementById("headerName"); // Mobil header
-
-    if (userNameEl) userNameEl.textContent = displayName;
-    if (userEmailEl) userEmailEl.textContent = user.email;
-    if (userAvatarEl) userAvatarEl.textContent = initials;
-    if (headerName) headerName.textContent = displayName;
-
-    // Profil Tıklama
-    const profileArea = document.getElementById("userProfileArea");
-    if (profileArea) {
-        profileArea.onclick = (e) => {
-            e.preventDefault();
+    if(document.getElementById("userName")) document.getElementById("userName").textContent = displayName;
+    
+    // Masaüstü Profil Tıklama
+    if(document.getElementById("userProfileArea")) {
+        document.getElementById("userProfileArea").onclick = () => showProfileModal(user);
+    }
+    
+    // MOBİL MENÜDEKİ PROFİL TIKLAMA (DÜZELTME)
+    const mobileProfileBtn = document.getElementById("btnMobileProfile");
+    if(mobileProfileBtn) {
+        mobileProfileBtn.onclick = () => {
             closeMobileMenu();
             showProfileModal(user);
         };
     }
 
     // Çıkış
-    const btnLogout = document.getElementById("logoutButton");
-    if (btnLogout) {
-        btnLogout.onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
-    }
+    const handleLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
+    if(document.getElementById("logoutButton")) document.getElementById("logoutButton").onclick = handleLogout;
+    if(document.getElementById("btnMobileLogout")) document.getElementById("btnMobileLogout").onclick = handleLogout;
 
     // Navigasyon Linkleri
-    document.querySelectorAll('.nav-link, .bottom-nav-btn').forEach(link => {
+    document.querySelectorAll('.nav-link, .bottom-nav-btn, .mobile-drawer-link').forEach(link => {
         link.addEventListener('click', (e) => {
-            if (link.id !== 'mobileMenuBtn' && !link.classList.contains('mobile-menu-trigger')) {
-                e.preventDefault();
-                const page = link.dataset.page || (link.id ? link.id.split('-')[1] : null);
-                if (page) {
-                    navigateToPage(page);
-                    closeMobileMenu();
-                }
+            // Menü Açma Butonu İse İşlem Yapma (Aşağıda tanımlı)
+            if (link.id === 'btnToggleMobileMenu') return;
+
+            e.preventDefault();
+            const page = link.dataset.page || (link.id ? link.id.split('-')[1] : null);
+            if (page) {
+                navigateToPage(page);
+                closeMobileMenu(); // Mobilde menüden tıklandıysa kapat
             }
         });
     });
 }
 
-// Mobil Menü Kontrolü
-const sidebar = document.getElementById('sidebar');
+// MOBİL MENÜ (DRAWER) KONTROLLERİ
+const drawer = document.getElementById('mobileMenuDrawer');
 const overlay = document.getElementById('mobileOverlay');
-const btnMenu = document.getElementById('mobileMenuBtn');
+const btnMenuToggle = document.getElementById('btnToggleMobileMenu');
+const btnCloseDrawer = document.getElementById('btnCloseMobileMenu');
 
-if(btnMenu) {
-    btnMenu.onclick = () => {
-        sidebar.classList.remove('sidebar-closed');
-        sidebar.classList.add('sidebar-open');
-        overlay.classList.remove('hidden');
-    };
+function openMobileMenu() {
+    drawer.classList.remove('translate-x-full');
+    drawer.classList.add('translate-x-0');
+    overlay.classList.remove('hidden');
+    setTimeout(() => overlay.classList.remove('opacity-0'), 10);
 }
-if(overlay) overlay.onclick = closeMobileMenu;
 
 function closeMobileMenu() {
-    sidebar.classList.remove('sidebar-open');
-    sidebar.classList.add('sidebar-closed');
-    overlay.classList.add('hidden');
+    drawer.classList.add('translate-x-full');
+    drawer.classList.remove('translate-x-0');
+    overlay.classList.add('opacity-0');
+    setTimeout(() => overlay.classList.add('hidden'), 300);
 }
 
-// Sayfa Yönlendirme
+if(btnMenuToggle) btnMenuToggle.onclick = openMobileMenu;
+if(btnCloseDrawer) btnCloseDrawer.onclick = closeMobileMenu;
+if(overlay) overlay.onclick = closeMobileMenu;
+
+
+// SAYFA YÖNLENDİRME
 function navigateToPage(pageId) {
     cleanUpListeners(); 
     
-    // Sidebar Stil
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-purple-50', 'text-purple-700', 'font-semibold'));
-    const activeLink = document.getElementById(`nav-${pageId}`);
-    if(activeLink) activeLink.classList.add('bg-purple-50', 'text-purple-700', 'font-semibold');
-    
-    // Bottom Nav Stil
+    // Link Stilleri (Sıfırla ve Aktif Yap)
+    document.querySelectorAll('.nav-link, .mobile-drawer-link').forEach(l => l.classList.remove('bg-purple-50', 'text-purple-700', 'font-bold'));
+    const activeLinks = document.querySelectorAll(`[data-page="${pageId}"], #nav-${pageId}`);
+    activeLinks.forEach(l => l.classList.add('bg-purple-50', 'text-purple-700', 'font-bold'));
+
+    // Alt Menü Stilleri
     document.querySelectorAll('.bottom-nav-btn').forEach(l => {
         l.classList.remove('active', 'text-purple-600');
         l.classList.add('text-gray-500');
+        const icon = l.querySelector('.bottom-nav-center-btn');
+        if(icon) { icon.classList.remove('bg-purple-600', 'text-white'); icon.classList.add('bg-indigo-600', 'text-white'); }
     });
     const bottomLink = document.querySelector(`.bottom-nav-btn[data-page="${pageId}"]`);
     if(bottomLink) {
         bottomLink.classList.add('active', 'text-purple-600');
         bottomLink.classList.remove('text-gray-500');
+        // Orta butonsa rengini değiştir
+        const icon = bottomLink.querySelector('.bottom-nav-center-btn');
+        if(icon) icon.classList.replace('bg-indigo-600', 'bg-purple-600');
     }
 
     try {
-        // Modül fonksiyonlarını çağır
         switch(pageId) {
             case 'anasayfa': renderAnaSayfa(db, currentUserId, appId); break;
             case 'ogrencilerim': renderOgrenciSayfasi(db, currentUserId, appId); break;
@@ -176,10 +180,7 @@ function navigateToPage(pageId) {
             case 'odevler': renderOdevlerSayfasi(db, currentUserId, appId); break;
             default: renderPlaceholderSayfasi("Sayfa Bulunamadı"); break;
         }
-    } catch (err) {
-        console.error("Sayfa yüklenirken hata:", err);
-        alert("Sayfa yüklenirken bir hata oluştu: " + err.message);
-    }
+    } catch (err) { console.error(err); }
 }
 
 

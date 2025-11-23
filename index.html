@@ -577,53 +577,18 @@
         </div>
     </div>
 
-    <!-- 10. PROFİL AYARLARI -->
-    <div id="profileModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+    <!-- PROFİL MODALI -->
+    <div id="profileModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[80]">
         <div class="relative top-20 mx-auto p-0 border w-full max-w-2xl shadow-lg rounded-md bg-white m-4">
-            <div class="flex justify-between items-center p-5 border-b">
-                <h3 class="text-2xl font-semibold">Profil Ayarları</h3>
-                <button id="closeProfileModalButton" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            <div class="flex flex-col md:flex-row">
-                <div class="w-full md:w-1/3 bg-gray-50 border-r p-4 rounded-bl-md">
-                    <nav class="space-y-1">
-                        <button data-tab="hesap" class="profile-tab-button active w-full flex items-center px-3 py-2 text-gray-700 bg-purple-100 text-purple-700 rounded-md font-medium"><i class="fa-solid fa-user-gear mr-3"></i>Hesap</button>
-                        <button data-tab="yasal" class="profile-tab-button w-full flex items-center px-3 py-2 text-gray-500 hover:bg-gray-200 rounded-md font-medium"><i class="fa-solid fa-shield-halved mr-3"></i>Yasal</button>
-                    </nav>
-                </div>
-                <div class="w-full md:w-2/3 p-6">
-                    <!-- HESAP TABI -->
-                    <div id="tab-hesap" class="profile-tab-content space-y-6">
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Koç Davet Kodu</label>
-                            <div class="flex rounded-md shadow-sm">
-                                <input type="text" id="kocDavetKodu" readonly class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm" value="Yükleniyor...">
-                                <button id="btnKopyala" type="button" class="relative -ml-px inline-flex items-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
-                                    <i class="fa-solid fa-copy w-5 h-5 text-gray-400"></i>
-                                    <span>Kopyala</span>
-                                </button>
-                            </div>
-                            <p class="text-xs text-gray-500">Öğrencileriniz kayıt olurken bu kodu girmelidir.</p>
-                        </div>
-                        
-                        <div class="space-y-2 pt-4 border-t">
-                            <label class="block text-sm font-medium text-gray-700">Ad Soyad</label>
-                            <input type="text" id="profileDisplayName" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
-                            <button id="btnSaveName" class="mt-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700">Kaydet</button>
-                        </div>
-
-                        <div class="space-y-2 pt-4 border-t">
-                            <label class="block text-sm font-medium text-gray-700">Şifre</label>
-                            <button id="btnResetPassword" class="mt-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300">Şifre Sıfırlama E-postası Gönder</button>
-                        </div>
-                        
-                        <div class="space-y-2 pt-4 border-t border-red-100">
-                            <label class="block text-sm font-medium text-red-700">Hesabı Sil</label>
-                            <input type="password" id="deleteConfirmPassword" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" placeholder="Onay için şifrenizi girin">
-                            <button id="btnDeleteAccount" class="mt-2 w-full px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Hesabımı Kalıcı Olarak Sil</button>
-                            <p id="profileError" class="text-sm text-red-600 hidden text-center"></p>
-                        </div>
-                    </div>
+             <div class="flex justify-between items-center p-5 border-b"><h3 class="text-xl font-bold">Profil Ayarları</h3><button id="closeProfileModalButton" class="text-gray-400 text-2xl">&times;</button></div>
+             <div class="p-6 space-y-4">
+                 <!-- Profil içeriği -->
+                 <div><label class="block text-sm font-bold mb-1">Ad Soyad</label><input type="text" id="profileDisplayName" class="w-full border p-2 rounded"><button id="btnSaveName" class="mt-2 bg-purple-600 text-white px-4 py-2 rounded">Kaydet</button></div>
+                 <div><label class="block text-sm font-bold mb-1">Koç Kodu</label><div class="flex"><input id="kocDavetKodu" class="flex-1 border p-2 rounded-l" readonly><button id="btnKopyala" class="bg-gray-200 px-4 rounded-r">Kopyala</button></div></div>
+                 <div class="border-t pt-4"><label class="block text-sm font-bold text-red-600 mb-1">Hesabı Sil</label><input type="password" id="deleteConfirmPassword" class="w-full border p-2 rounded mb-2" placeholder="Şifre"><button id="btnDeleteAccount" class="px-4 py-2 bg-red-600 text-white rounded">Sil</button><p id="profileError" class="text-red-500 hidden"></p></div>
+             </div>
+        </div>
+    </div>
 
                     <!-- YASAL TABI -->
                     <div id="tab-yasal" class="profile-tab-content hidden space-y-4 h-[400px] overflow-y-auto pr-2 text-sm text-gray-600">

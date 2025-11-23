@@ -182,11 +182,84 @@ document.getElementById('closeProfileModalButton').onclick = () => document.getE
 function addListener(id, event, handler) { const el = document.getElementById(id); if (el) el.addEventListener(event, handler); }
 
 addListener('btnSaveName', 'click', async () => {
-    const n = document.getElementById('profileDisplayName').value;
-    if(n) { await updateProfile(auth.currentUser, {displayName: n}); alert('Kaydedildi'); window.location.reload(); }
+    const newName = document.getElementById('profileDisplayName').value.trim();
+    const btn = document.getElementById('btnSaveName');
+    if (!newName) return;
+    
+    btn.disabled = true; 
+    btn.textContent = "Kaydediliyor...";
+    
+    try {
+        await updateProfile(auth.currentUser, { displayName: newName });
+        alert("Profil başarıyla güncellendi.");
+        window.location.reload();
+    } catch (e) {
+        alert("Hata: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Kaydet";
+    }
 });
+
+// Şifre Sıfırlama (DÜZELTİLDİ)
+addListener('btnResetPassword', 'click', async () => {
+    const btn = document.getElementById('btnResetPassword');
+    btn.disabled = true;
+    const originalText = btn.innerHTML; // İkonlu metni sakla
+    btn.textContent = "Gönderiliyor...";
+
+    try {
+        await sendPasswordResetEmail(auth, auth.currentUser.email);
+        // Başarılı Bildirimi
+        btn.className = "w-full px-4 py-2.5 border border-green-300 bg-green-50 text-green-700 rounded-lg text-sm font-medium text-center transition-colors shadow-sm";
+        btn.textContent = "E-posta Gönderildi! Lütfen Kutunuzu Kontrol Edin.";
+        
+        // 5 saniye sonra eski haline dön
+        setTimeout(() => {
+            btn.className = "w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium text-left flex justify-between items-center group";
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }, 5000);
+
+    } catch (e) { 
+        alert("Hata: " + e.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+});
+
+// Hesap Silme
+addListener('btnDeleteAccount', 'click', async () => {
+    // ... (Önceki kod aynı) ...
+    const password = document.getElementById('deleteConfirmPassword').value;
+    if (!password) { alert("Şifrenizi girin."); return; }
+    if (!confirm("Hesabınızı kalıcı olarak silmek istediğinize emin misiniz?")) return;
+
+    try {
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        await deleteUser(auth.currentUser);
+        alert("Hesap silindi."); window.location.href = "login.html";
+    } catch (e) { 
+        const err = document.getElementById('profileError');
+        if(err) {
+            err.textContent = e.message;
+            err.classList.remove('hidden');
+        } else alert(e.message);
+    }
+});
+
+// Kopyala
 addListener('btnKopyala', 'click', () => {
-    navigator.clipboard.writeText(document.getElementById('kocDavetKodu').value).then(()=>alert('Kopyalandı'));
+    const input = document.getElementById('kocDavetKodu');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = document.getElementById('btnKopyala');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Kopyalandı';
+        setTimeout(() => btn.innerHTML = originalText, 2000);
+    });
 });
 
 // =================================================================

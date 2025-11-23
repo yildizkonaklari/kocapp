@@ -5,42 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Koçluk Takip Sistemi</title>
     
-    <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. Font Awesome (İkonlar) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- 3. Chart.js (Grafikler) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
-    <!-- 4. Özel Stiller -->
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Mobil Menü (Drawer) Geçişleri */
         #sidebar { transition: transform 0.3s ease-in-out; }
         .sidebar-closed { transform: translateX(-100%); }
         .sidebar-open { transform: translateX(0); }
-        
-        /* Masaüstünde her zaman açık */
         @media (min-width: 1024px) {
             #sidebar { transform: translateX(0) !important; }
             #mobileOverlay { display: none !important; }
             #mobileMenuBtn { display: none !important; }
-        }
-
-        /* Bildirim Animasyonları */
-        @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
-        .animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
-        
-        /* Dropdown Animasyon */
-        @keyframes scaleIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-        .animate-scale-in {
-            animation: scaleIn 0.1s ease-out forwards;
-            transform-origin: top right;
         }
     </style>
 </head>

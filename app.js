@@ -311,6 +311,5 @@ addListener('btnDeleteAccount', 'click', async () => {
     try { const c = EmailAuthProvider.credential(auth.currentUser.email, p); await reauthenticateWithCredential(auth.currentUser, c); await deleteUser(auth.currentUser); window.location.href = "login.html"; } catch (e) { alert(e.message); }
 });
 addListener('btnKopyala', 'click', () => { const i=document.getElementById('kocDavetKodu'); i.select(); navigator.clipboard.writeText(i.value).then(()=>alert("Kopyalandı")); });
-function initNotifications() { /* Bildirim mantığı (Önceki koddan kopyalanabilir) */ }
 
 main();

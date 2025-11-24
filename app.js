@@ -180,7 +180,6 @@ function navigateToPage(pageId) {
 // 4. MODALLAR VE LISTENERS
 // =================================================================
 
-function addListener(id, event, handler) { const el = document.getElementById(id); if (el) el.addEventListener(event, handler); }
 
 // MODAL KAPATMA
 document.querySelectorAll('.close-modal-btn, #closeModalButton, #closeEditModalButton, #closeDenemeModalButton, #closeSoruModalButton, #closeHedefModalButton, #closeOdevModalButton, #closeRandevuModalButton, #closeTahsilatModalButton, #closeBorcModalButton, #closeProfileModalButton, #cancelModalButton, #cancelEditModalButton, #cancelDenemeModalButton, #cancelSoruModalButton, #cancelHedefModalButton, #cancelOdevModalButton, #cancelRandevuModalButton, #cancelTahsilatModalButton, #cancelBorcModalButton').forEach(btn => {

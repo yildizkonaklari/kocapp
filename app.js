@@ -82,11 +82,14 @@ function updateUIForLoggedInUser(user) {
     // Navigasyon
     document.querySelectorAll('.nav-link, .bottom-nav-btn').forEach(link => {
         link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = link.dataset.page || (link.id ? link.id.split('-')[1] : null);
-            if (page) {
-                navigateToPage(page);
-                closeMobileMenu();
+            // Menü açma butonlarını (Header ve Alt Menü) hariç tut
+            if (link.id !== 'mobileMenuBtn' && link.id !== 'btnToggleMobileMenu') {
+                e.preventDefault();
+                const page = link.dataset.page || (link.id ? link.id.split('-')[1] : null);
+                if (page) {
+                    navigateToPage(page);
+                    closeMobileMenu();
+                }
             }
         });
     });
@@ -170,18 +173,24 @@ function renderNotifications(data, list, dot) {
     list.innerHTML = html;
     dot.classList.remove('hidden');
 }
+
 // Mobil Menü
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('mobileOverlay');
-const mobileBtn = document.getElementById('mobileMenuBtn');
+const mobileBtn = document.getElementById('mobileMenuBtn'); // Header'daki
+const bottomMenuBtn = document.getElementById('btnToggleMobileMenu'); // Alttaki
 
-if(mobileBtn) {
-    mobileBtn.onclick = () => {
-        sidebar.classList.remove('sidebar-closed');
-        sidebar.classList.add('sidebar-open');
-        overlay.classList.remove('hidden');
-    };
+// Ortak Menü Açma Fonksiyonu
+function openMenu() {
+    sidebar.classList.remove('sidebar-closed');
+    sidebar.classList.add('sidebar-open');
+    overlay.classList.remove('hidden');
 }
+
+// İki butona da aynı görevi ver
+if(mobileBtn) mobileBtn.onclick = openMenu;
+if(bottomMenuBtn) bottomMenuBtn.onclick = openMenu;
+
 if(overlay) overlay.onclick = closeMobileMenu;
 
 function closeMobileMenu() {

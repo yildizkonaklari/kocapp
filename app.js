@@ -49,22 +49,15 @@ async function main() {
         if (user) {
             currentUserId = user.uid;
             
-            // Yükleniyor ekranını kapat
-            const spinner = document.getElementById('loadingSpinner');
-            if (spinner) spinner.style.display = 'none';
-            
-            // Ana konteyneri göster (GÜVENLİ KONTROL)
-            const appContainer = document.getElementById('appContainer');
-            if (appContainer) {
-                appContainer.classList.remove('hidden');
-                appContainer.style.display = 'flex'; // Flex yapısını koru
-            } else {
-                console.error("HATA: appContainer elementi bulunamadı! index.html dosyasını kontrol edin.");
-                return; // İşlemi durdur
-            }
+            // UI Hazırla
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('appContainer').classList.remove('hidden');
             
             updateUIForLoggedInUser(user);
             navigateToPage('anasayfa');
+            
+            // Bildirimleri Başlat
+            initNotifications(user.uid);
             
         } else {
             window.location.href = 'login.html';
@@ -98,7 +91,85 @@ function updateUIForLoggedInUser(user) {
         });
     });
 }
+// =================================================================
+// 3. BİLDİRİM SİSTEMİ (YENİ)
+// =================================================================
 
+function initNotifications(uid) {
+    // 1. Mesaj İkonu
+    const btnMsg = document.getElementById('btnHeaderMessages');
+    if(btnMsg) {
+        btnMsg.onclick = () => navigateToPage('mesajlar');
+        // Okunmamış Sayısı
+        onSnapshot(query(collectionGroup(db, 'mesajlar'), where('kocId', '==', uid), where('gonderen', '==', 'ogrenci'), where('okundu', '==', false)), (snap) => {
+            const b = document.getElementById('headerUnreadMsgCount');
+            if(snap.size > 0) { b.textContent = snap.size; b.classList.remove('hidden'); } else b.classList.add('hidden');
+        });
+    }
+
+    // 2. Bildirim İkonu
+    const btnNotif = document.getElementById('btnHeaderNotifications');
+    const dropNotif = document.getElementById('coachNotificationDropdown');
+    const list = document.getElementById('coachNotificationList');
+    const dot = document.getElementById('headerNotificationDot');
+
+    if(btnNotif && dropNotif) {
+        btnNotif.onclick = (e) => {
+            e.stopPropagation();
+            dropNotif.classList.toggle('hidden');
+            dropNotif.classList.toggle('opacity-0'); // Animasyon için
+            dot.classList.add('hidden'); // Okundu say
+        };
+        document.getElementById('btnCloseCoachNotifications').onclick = () => dropNotif.classList.add('hidden');
+        document.addEventListener('click', (e) => { if(!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.add('hidden'); });
+
+        // Bildirimleri Topla (Manuel Birleştirme)
+        const notifications = [];
+        
+        // A. Yarınki Randevular
+        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+        const tStr = tomorrow.toISOString().split('T')[0];
+        
+        onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", "==", tStr)), (snap) => {
+            snap.forEach(d => notifications.push({ type: 'randevu', ...d.data(), time: d.data().baslangic }));
+            renderNotifications(notifications, list, dot);
+        });
+
+        // B. Onay Bekleyen Denemeler (Son 5)
+        onSnapshot(query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+            snap.forEach(d => notifications.push({ type: 'deneme', ...d.data(), time: d.data().tarih }));
+            renderNotifications(notifications, list, dot);
+        });
+    }
+}
+
+function renderNotifications(data, list, dot) {
+    // Basit sıralama ve render
+    // (Gerçek uygulamada tarih alanlarını standartlaştırıp sıralamak gerekir)
+    if(data.length === 0) {
+        list.innerHTML = '<p class="text-center text-gray-400 text-xs py-8">Bildirim yok.</p>';
+        return;
+    }
+    
+    let html = '';
+    data.forEach(n => {
+        let icon = '', title = '', desc = '';
+        if(n.type === 'randevu') { icon = 'fa-calendar-days text-blue-500'; title = 'Yarınki Randevu'; desc = `${n.baslangic} - ${n.ogrenciAd}`; }
+        else if(n.type === 'deneme') { icon = 'fa-chart-line text-orange-500'; title = 'Deneme Onayı'; desc = `${n.studentAd} - ${n.ad}`; }
+        
+        html += `
+        <div class="p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors flex gap-3 items-start">
+            <div class="mt-1"><i class="fa-solid ${icon}"></i></div>
+            <div>
+                <p class="text-xs font-bold text-gray-700">${title}</p>
+                <p class="text-xs text-gray-500">${desc}</p>
+            </div>
+        </div>`;
+    });
+    
+    list.innerHTML = html;
+    dot.classList.remove('hidden');
+}
 // Mobil Menü
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('mobileOverlay');

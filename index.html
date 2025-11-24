@@ -40,51 +40,62 @@
     <!-- MOBİL OVERLAY -->
     <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
 
-    <!-- === MOBİL YAN MENÜ (DRAWER - YENİLENDİ) === -->
-    <div id="mobileMenuDrawer" class="fixed top-0 right-0 h-full w-80 bg-white z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col lg:hidden">
+    <!-- === MOBİL YAN MENÜ (DRAWER - YENİ TASARIM) === -->
+    <div id="mobileMenuDrawer" class="fixed top-0 right-0 h-full w-80 bg-white z-[70] transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col lg:hidden">
         
-        <!-- 1. DRAWER HEADER: PROFİL KARTI -->
+        <!-- 1. DRAWER HEADER: PROFİL VE AYARLAR -->
         <div class="p-6 bg-gradient-to-br from-purple-600 to-indigo-700 text-white shrink-0">
+            
+            <!-- Üst Satır: Avatar, Bilgi ve Kapatma Butonu -->
             <div class="flex justify-between items-start mb-4">
-                <div id="drawerUserAvatar" class="w-14 h-14 bg-white text-purple-600 rounded-full flex items-center justify-center text-xl font-bold shadow-lg border-2 border-purple-200">K</div>
-                <button id="btnCloseMobileMenu" class="text-purple-100 hover:text-white bg-white/10 rounded-full p-1 transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+                
+                <!-- Sol: Avatar ve İsim Yan Yana -->
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div id="drawerUserAvatar" class="w-12 h-12 bg-white text-purple-600 rounded-full flex items-center justify-center text-xl font-bold shadow-md border-2 border-purple-200 shrink-0">
+                        <!-- JS ile dolacak -->
+                        K
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 id="drawerUserName" class="font-bold text-base leading-tight truncate">Koç İsmi</h3>
+                        <p id="drawerUserEmail" class="text-xs text-purple-200 truncate">koc@mail.com</p>
+                    </div>
+                </div>
+                <!-- Sağ: Kapatma Butonu -->
+                <button id="btnCloseMobileMenu" class="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition-colors shrink-0 ml-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
-            <div>
-                <h3 id="drawerUserName" class="text-lg font-bold truncate">Koç İsmi</h3>
-                <p id="drawerUserEmail" class="text-xs text-purple-200 truncate">koc@mail.com</p>
-            </div>
-            <button id="btnDrawerProfile" class="mt-4 w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+
+            <!-- Alt Satır: Profil Ayarları Butonu -->
+            <button id="btnDrawerProfileSettings" class="w-full py-2.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-white/10 shadow-sm">
                 <i class="fa-solid fa-gear"></i> Profil Ayarları
             </button>
         </div>
         
         <!-- 2. DRAWER LİSTE: DİĞER SAYFALAR -->
         <div class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50">
-            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-2 mb-1">Planlama</p>
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-2 mb-1">Analiz & Takip</p>
             
-            <a href="#" data-page="ajandam" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform">
-                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3"><i class="fa-solid fa-calendar-days"></i></div>
-                <span class="font-medium text-gray-700">Ajandam</span>
-            </a>
-            
-            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-2 mb-1 mt-4">Analiz & Takip</p>
-            
-            <a href="#" data-page="denemeler" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform">
+            <a href="#" data-page="denemeler" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform text-gray-700">
                 <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mr-3"><i class="fa-solid fa-chart-line"></i></div>
-                <span class="font-medium text-gray-700">Genel Denemeler</span>
+                <span class="font-medium">Genel Denemeler</span>
             </a>
-            <a href="#" data-page="sorutakibi" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform">
-                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3"><i class="fa-solid fa-pen-to-square"></i></div>
-                <span class="font-medium text-gray-700">Soru Takibi</span>
+            <a href="#" data-page="sorutakibi" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform text-gray-700">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3"><i class="fa-solid fa-pen-to-square"></i></div>
+                <span class="font-medium">Soru Takibi</span>
             </a>
             
             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-2 mb-1 mt-4">Yönetim</p>
             
-            <a href="#" data-page="muhasebe" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform">
+            <a href="#" data-page="ajandam" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform text-gray-700">
+                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3"><i class="fa-solid fa-calendar-days"></i></div>
+                <span class="font-medium text-gray-700">Ajandam</span>
+            </a>
+            <a href="#" data-page="muhasebe" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform text-gray-700">
                 <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3"><i class="fa-solid fa-turkish-lira-sign"></i></div>
                 <span class="font-medium text-gray-700">Muhasebe</span>
             </a>
-            <a href="#" data-page="mesajlar" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform">
+            <a href="#" data-page="mesajlar" class="mobile-drawer-link flex items-center p-3 bg-white rounded-xl border border-gray-200 shadow-sm active:scale-95 transition-transform text-gray-700">
                 <div class="w-8 h-8 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center mr-3"><i class="fa-solid fa-comment-dots"></i></div>
                 <span class="font-medium text-gray-700">Mesajlar</span>
             </a>

@@ -113,9 +113,15 @@ if(mobileBtn) {
 }
 if(overlay) overlay.onclick = closeMobileMenu;
 
+function openMobileMenu() {
+    // Menüyü ekrana getirmek için 'gizleme' sınıfını kaldırıyoruz
+    sidebar.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+}
+
 function closeMobileMenu() {
-    sidebar.classList.remove('sidebar-open');
-    sidebar.classList.add('sidebar-closed');
+    // Menüyü gizlemek için 'gizleme' sınıfını geri ekliyoruz
+    sidebar.classList.add('-translate-x-full');
     overlay.classList.add('hidden');
 }
 

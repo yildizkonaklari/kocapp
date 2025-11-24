@@ -1,7 +1,7 @@
 import { doc, addDoc, collection, query, onSnapshot, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { activeListeners } from './helpers.js';
 
-function renderMesajlarSayfasi(db, currentUserId, appId) {
+export function renderMesajlarSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Mesajlar";
     const mainContentArea = document.getElementById("mainContentArea");
     

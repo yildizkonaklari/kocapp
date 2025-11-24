@@ -218,7 +218,44 @@ function navigateToPage(pageId) {
         alert("Sayfa yüklenirken bir hata oluştu: " + err.message);
     }
 }
+// BİLDİRİMLER
+function initNotifications(uid) {
+    const list = document.getElementById('coachNotificationList');
+    const dot = document.getElementById('coachNotificationDot');
+    const dropdown = document.getElementById('coachNotificationDropdown');
+    const btn = document.getElementById('btnHeaderNotifications');
+    
+    // Dropdown Toggle
+    if(btn) btn.onclick = (e) => { 
+        e.stopPropagation(); 
+        dropdown.classList.toggle('hidden'); 
+        dropdown.classList.toggle('scale-95'); // Animasyon için
+        dropdown.classList.toggle('opacity-0');
+        dot.classList.add('hidden'); 
+    };
+    document.addEventListener('click', (e) => { if(!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.add('hidden'); });
 
+    // 1 Gün Sonrasına Randevular
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tStr = tomorrow.toISOString().split('T')[0];
+    
+    // Dinleyici
+    onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", "==", tStr)), (snap) => {
+        let html = '';
+        if(!snap.empty) {
+            snap.forEach(d => html += `<div class="p-3 border-b hover:bg-purple-50 cursor-pointer"><p class="text-xs font-bold text-purple-700">Yarınki Randevu</p><p class="text-xs text-gray-600">${d.data().baslangic} - ${d.data().ogrenciAd}</p></div>`);
+            list.innerHTML = html;
+            dot.classList.remove('hidden');
+        } else {
+            list.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Yeni bildirim yok.</p>';
+        }
+    });
+}
+
+// MESAJLAR İKONU
+if(document.getElementById('btnHeaderMessages')) {
+    document.getElementById('btnHeaderMessages').onclick = () => navigateToPage('mesajlar');
+}
 // =================================================================
 // 4. MODAL KONTROLLERİ
 // =================================================================
@@ -330,24 +367,7 @@ addListener('btnKopyala', 'click', () => {
     navigator.clipboard.writeText(input.value).then(() => alert("Kopyalandı!"));
 });
 
-// Bildirimler
-function initNotifications() {
-    // ... Bildirim mantığı (gerekirse eklenebilir) ...
-    const btnNotif = document.getElementById('btnHeaderNotifications');
-    const dropNotif = document.getElementById('coachNotificationDropdown');
-    if(btnNotif && dropNotif) {
-        btnNotif.onclick = (e) => {
-            e.stopPropagation();
-            dropNotif.classList.toggle('hidden');
-            document.getElementById('headerNotificationDot').classList.add('hidden');
-        };
-        // Kapatıcılar
-        document.getElementById('btnCloseCoachNotifications').onclick = () => dropNotif.classList.add('hidden');
-        document.addEventListener('click', (e) => {
-             if(!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.add('hidden');
-        });
-    }
-}
+
 
 // BAŞLAT
 main();

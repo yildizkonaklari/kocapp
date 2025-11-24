@@ -101,13 +101,35 @@ function updateUIForLoggedInUser(user) {
     
     // Profil Tıklama (Mobil Drawer)
     const btnDrawerProfile = document.getElementById("btnDrawerProfile"); // index.html'de bu ID olmalı veya btnMobileProfile
-    const btnMobileProfile = document.getElementById("btnMobileProfile"); // index.html'deki gerçek ID
-    if (btnMobileProfile) {
-        btnMobileProfile.onclick = (e) => {
-            e.preventDefault();
-            closeMobileMenu();
-            showProfileModal(user);
+    const openProfileHandler = (e) => {
+        e.preventDefault();
+        console.log("Profil butonuna tıklandı."); // Debug için
+        
+        // Eğer mobildeysek menüyü kapat
+        const drawer = document.getElementById('mobileMenuDrawer');
+        if (!drawer.classList.contains('translate-x-full')) {
+             closeMobileMenu();
         }
+        
+        showProfileModal(user);
+    };
+
+    // 1. Masaüstü Sidebar
+    const desktopProfile = document.getElementById("userProfileArea");
+    if (desktopProfile) desktopProfile.onclick = openProfileHandler;
+
+    // 2. Mobil Header
+    const headerProfile = document.getElementById("headerCoachProfile");
+    if (headerProfile) headerProfile.onclick = openProfileHandler;
+    
+    // 3. MOBİL MENÜDEKİ BUTON (KRİTİK)
+    // Elementin varlığını kontrol et ve olayı bağla
+    const mobileProfileBtn = document.getElementById("btnMobileProfile");
+    if (mobileProfileBtn) {
+        // Önceki eventleri temizlemek için cloneNode kullanılabilir veya direkt atama
+        mobileProfileBtn.onclick = openProfileHandler;
+    } else {
+        console.warn("Mobil profil butonu (btnMobileProfile) bulunamadı!");
     }
 
     // Çıkış

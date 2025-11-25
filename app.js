@@ -278,5 +278,11 @@ addListener('btnKopyala', 'click', () => {
     navigator.clipboard.writeText(input.value).then(() => alert("Kopyalandı!"));
 });
 
+document.querySelectorAll('.close-modal-btn, #closeModalButton').forEach(b => {
+    b.addEventListener('click', (e) => e.target.closest('.fixed').style.display = 'none');
+});
+
+
+
 // BAŞLAT
 main();

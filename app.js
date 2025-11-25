@@ -257,117 +257,82 @@ if(document.getElementById('btnHeaderMessages')) {
     document.getElementById('btnHeaderMessages').onclick = () => navigateToPage('mesajlar');
 }
 // =================================================================
-// 4. MODAL KONTROLLERİ
+// 4. MODAL KONTROLLERİ (YENİLENMİŞ KAPATMA MANTIĞI)
 // =================================================================
 
-function addListener(id, event, handler) {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener(event, handler);
-}
-
-// Kapatma Butonları
-document.querySelectorAll('.close-modal-btn, #closeModalButton, #closeEditModalButton, #closeDenemeModalButton, #closeSoruModalButton, #closeHedefModalButton, #closeOdevModalButton, #closeRandevuModalButton, #closeTahsilatModalButton, #closeBorcModalButton, #closeProfileModalButton, #cancelModalButton, #cancelEditModalButton, #cancelDenemeModalButton, #cancelSoruModalButton, #cancelHedefModalButton, #cancelOdevModalButton, #cancelRandevuModalButton, #cancelTahsilatModalButton, #cancelBorcModalButton').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const modal = e.target.closest('.fixed');
-        if(modal) modal.classList.add('hidden');
-    });
+// 1. Ortak Kapatma (Class-Based) - EN ÖNEMLİ KISIM
+document.addEventListener('click', (e) => {
+    // .js-modal-close sınıfına sahip bir elemente veya onun içine tıklandıysa
+    if (e.target.classList.contains('js-modal-close') || e.target.closest('.js-modal-close')) {
+        e.preventDefault();
+        const modal = e.target.closest('.fixed'); // Butonun içinde bulunduğu modalı bul
+        if (modal) {
+            modal.classList.add('hidden'); // Gizle
+            modal.style.display = ''; // Inline stili temizle (flex vb.)
+        }
+    }
 });
 
-// Kayıt Butonları
-addListener('saveStudentButton', 'click', () => saveNewStudent(db, currentUserId, appId));
-addListener('saveStudentChangesButton', 'click', () => saveStudentChanges(db, currentUserId, appId));
-addListener('studentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('studentDersSecimiContainer')));
-addListener('editStudentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('editStudentDersSecimiContainer')));
+// 2. Açma Fonksiyonu (Global)
+window.openModal = (id) => {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex'; // Flexbox düzenini koru
+    }
+};
 
-addListener('saveDenemeButton', 'click', () => saveGlobalDeneme(db, currentUserId, appId));
-addListener('denemeTuru', 'change', (e) => renderDenemeNetInputs(e.target.value));
+// 3. Randevu Özel Açma
+window.openRandevuModal = async () => {
+    await populateStudentSelect('randevuStudentId');
+    openModal('addRandevuModal');
+};
 
-addListener('saveSoruButton', 'click', () => saveGlobalSoru(db, currentUserId, appId));
-
-addListener('saveHedefButton', 'click', () => saveGlobalHedef(db, currentUserId, appId));
-addListener('saveOdevButton', 'click', () => saveGlobalOdev(db, currentUserId, appId));
-
-addListener('saveRandevuButton', 'click', () => saveNewRandevu(db, currentUserId, appId));
-
-addListener('saveTahsilatButton', 'click', () => saveNewTahsilat(db, currentUserId, appId));
-addListener('saveBorcButton', 'click', () => saveNewBorc(db, currentUserId, appId));
-
-// Window Helpers
-window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
-
-
-// --- PROFİL MODALI ---
+// 4. Profil Modalı
 const profileModal = document.getElementById("profileModal");
-
 function showProfileModal(user) {
     if (!profileModal) return;
     document.getElementById('profileDisplayName').value = user.displayName || '';
     document.getElementById('kocDavetKodu').value = user.uid;
-    document.getElementById('deleteConfirmPassword').value = '';
-    const err = document.getElementById('profileError');
-    if(err) err.classList.add('hidden');
-
-    // İlk tabı aç
-    const tabBtn = document.querySelector('.profile-tab-button[data-tab="hesap"]');
-    if(tabBtn) tabBtn.click();
-    
+    document.querySelector('[data-tab="hesap"]').click();
     profileModal.classList.remove('hidden');
+    profileModal.style.display = 'flex'; // Görünür yap
 }
 window.showProfileModal = showProfileModal;
 
-// Modal Dışına Tıklama (Kapatma)
-if(profileModal) {
-    profileModal.addEventListener('click', (e) => {
-        if(e.target === profileModal) profileModal.classList.add('hidden');
-    });
-}
+// Kayıt Listenerları (Helpers)
+function addListener(id, handler) { const el = document.getElementById(id); if (el) el.onclick = handler; }
+addListener('saveStudentButton', () => saveNewStudent(db, currentUserId, appId));
+addListener('saveStudentChangesButton', () => saveStudentChanges(db, currentUserId, appId));
+document.getElementById('studentClass')?.addEventListener('change', (e) => renderDersSecimi(e.target.value, document.getElementById('studentDersSecimiContainer')));
+document.getElementById('editStudentClass')?.addEventListener('change', (e) => renderDersSecimi(e.target.value, document.getElementById('editStudentDersSecimiContainer')));
+addListener('saveDenemeButton', () => saveGlobalDeneme(db, currentUserId, appId));
+document.getElementById('denemeTuru')?.addEventListener('change', (e) => renderDenemeNetInputs(e.target.value));
+addListener('saveSoruButton', () => saveGlobalSoru(db, currentUserId, appId));
+addListener('saveHedefButton', () => saveGlobalHedef(db, currentUserId, appId));
+addListener('saveOdevButton', () => saveGlobalOdev(db, currentUserId, appId));
+addListener('saveRandevuButton', () => saveNewRandevu(db, currentUserId, appId));
+addListener('saveTahsilatButton', () => saveNewTahsilat(db, currentUserId, appId));
+addListener('saveBorcButton', () => saveNewBorc(db, currentUserId, appId));
 
+// Tab Geçişleri
 document.querySelectorAll('.profile-tab-button').forEach(btn => {
     btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.profile-tab-button').forEach(b => {
-            b.classList.remove('active', 'bg-purple-100', 'text-purple-700');
-            b.classList.add('text-gray-500', 'hover:bg-gray-200');
-        });
+        document.querySelectorAll('.profile-tab-button').forEach(b => { b.classList.remove('active', 'bg-purple-100', 'text-purple-700'); b.classList.add('text-gray-500', 'hover:bg-gray-200'); });
         e.currentTarget.classList.add('active', 'bg-purple-100', 'text-purple-700');
         const tabId = e.currentTarget.dataset.tab;
         document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.add('hidden'));
         document.getElementById(`tab-${tabId}`).classList.remove('hidden');
     });
 });
-
-addListener('btnSaveName', 'click', async () => {
-    const n = document.getElementById('profileDisplayName').value.trim();
-    if (!n) return;
-    await updateProfile(auth.currentUser, { displayName: n });
-    alert("Güncellendi."); window.location.reload();
+addListener('btnSaveName', async () => { const n = document.getElementById('profileDisplayName').value.trim(); if (n) { await updateProfile(auth.currentUser, { displayName: n }); alert("Güncellendi."); window.location.reload(); } });
+addListener('btnResetPassword', async () => { try { await sendPasswordResetEmail(auth, auth.currentUser.email); alert("E-posta gönderildi."); } catch (e) { alert(e.message); } });
+addListener('btnDeleteAccount', async () => {
+    const p = document.getElementById('deleteConfirmPassword').value; if (!p) return alert("Şifre girin."); if (!confirm("Silinsin mi?")) return;
+    try { const c = EmailAuthProvider.credential(auth.currentUser.email, p); await reauthenticateWithCredential(auth.currentUser, c); await deleteUser(auth.currentUser); window.location.href = "login.html"; } catch (e) { alert(e.message); }
 });
+addListener('btnKopyala', () => { const i = document.getElementById('kocDavetKodu'); i.select(); navigator.clipboard.writeText(i.value).then(() => alert("Kopyalandı!")); });
+function initNotifications() { /* Bildirim */ }
+window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
 
-addListener('btnResetPassword', 'click', async () => {
-    try { await sendPasswordResetEmail(auth, auth.currentUser.email); alert("E-posta gönderildi."); } catch(e) { alert("Hata: " + e.message); }
-});
-
-addListener('btnDeleteAccount', 'click', async () => {
-    const p = document.getElementById('deleteConfirmPassword').value;
-    if (!p) return alert("Şifre girin.");
-    if (!confirm("Hesabınızı silmek istediğinize emin misiniz?")) return;
-    try {
-        const c = EmailAuthProvider.credential(auth.currentUser.email, p);
-        await reauthenticateWithCredential(auth.currentUser, c);
-        await deleteUser(auth.currentUser);
-        window.location.href = "login.html";
-    } catch (e) { 
-        const err = document.getElementById('profileError');
-        if(err) { err.textContent = e.message; err.classList.remove('hidden'); } else alert(e.message);
-    }
-});
-
-addListener('btnKopyala', 'click', () => {
-    const input = document.getElementById('kocDavetKodu');
-    input.select();
-    navigator.clipboard.writeText(input.value).then(() => alert("Kopyalandı!"));
-});
-
-
-
-// BAŞLAT
 main();

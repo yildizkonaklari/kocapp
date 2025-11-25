@@ -155,9 +155,7 @@ function updateUIForLoggedInUser(user) {
 }
 
 // --- MOBİL MENÜ (DRAWER) KONTROLÜ ---
-// DÜZELTME BURADA YAPILDI: 'sidebar' yerine 'mobileMenuDrawer' kullanılıyor.
-
-const mobileDrawer = document.getElementById('mobileMenuDrawer'); // Doğru element
+const mobileDrawer = document.getElementById('mobileMenuDrawer');
 const overlay = document.getElementById('mobileOverlay');
 const headerMenuBtn = document.getElementById('mobileMenuBtn'); // Sol üst buton
 const bottomMenuBtn = document.getElementById('btnToggleMobileMenu'); // Alt sağ buton
@@ -265,11 +263,29 @@ function addListener(id, event, handler) {
     if (el) el.addEventListener(event, handler);
 }
 
-// Kapatma Butonları
-document.querySelectorAll('.close-modal-btn, #closeModalButton, #closeEditModalButton, #closeDenemeModalButton, #closeSoruModalButton, #closeHedefModalButton, #closeOdevModalButton, #closeRandevuModalButton, #closeTahsilatModalButton, #closeBorcModalButton, #closeProfileModalButton, #cancelModalButton, #cancelEditModalButton, #cancelDenemeModalButton, #cancelSoruModalButton, #cancelHedefModalButton, #cancelOdevModalButton, #cancelRandevuModalButton, #cancelTahsilatModalButton, #cancelBorcModalButton').forEach(btn => {
+// Kapatma Butonları (DÜZELTİLDİ: Eksik ID'ler eklendi ve inline-style temizleme yapıldı)
+const closeButtons = [
+    '.close-modal-btn',
+    '#closeModalButton', '#cancelModalButton', // Öğrenci Ekle
+    '#closeEditModalButton', '#cancelEditModalButton', // Öğrenci Düzenle
+    '#closeDenemeModalButton', '#cancelDenemeModalButton', // Deneme Ekle
+    '#closeSoruModalButton', '#cancelSoruModalButton', // Soru Ekle
+    '#closeHedefModalButton', '#cancelHedefModalButton', // Hedef Ekle
+    '#closeOdevModalButton', '#cancelOdevModalButton', // Ödev Ekle
+    '#closeRandevuModalButton', '#cancelRandevuModalButton', // Randevu Ekle
+    '#closeEditRandevuModalButton', '#cancelEditRandevuModalButton', // Randevu DÜZENLE (YENİ EKLENDİ)
+    '#closeTahsilatModalButton', '#cancelTahsilatModalButton', // Tahsilat
+    '#closeBorcModalButton', '#cancelBorcModalButton', // Borç
+    '#closeProfileModalButton' // Profil
+];
+
+document.querySelectorAll(closeButtons.join(', ')).forEach(btn => {
     btn.addEventListener('click', (e) => {
         const modal = e.target.closest('.fixed');
-        if(modal) modal.classList.add('hidden');
+        if(modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none'; // DÜZELTME: Inline style ile açılan modalları zorla kapat
+        }
     });
 });
 
@@ -311,14 +327,19 @@ function showProfileModal(user) {
     const tabBtn = document.querySelector('.profile-tab-button[data-tab="hesap"]');
     if(tabBtn) tabBtn.click();
     
+    // Profil modalını açarken class kullanıyoruz, o yüzden display resetlemeye gerek yok ama güvenlik için:
     profileModal.classList.remove('hidden');
+    profileModal.style.display = ''; 
 }
 window.showProfileModal = showProfileModal;
 
 // Modal Dışına Tıklama (Kapatma)
 if(profileModal) {
     profileModal.addEventListener('click', (e) => {
-        if(e.target === profileModal) profileModal.classList.add('hidden');
+        if(e.target === profileModal) {
+            profileModal.classList.add('hidden');
+            profileModal.style.display = 'none';
+        }
     });
 }
 

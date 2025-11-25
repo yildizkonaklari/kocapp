@@ -57,166 +57,47 @@ async function main() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUserId = user.uid;
-            
-            const spinner = document.getElementById('loadingSpinner');
-            if (spinner) spinner.style.display = 'none';
-            
-            const container = document.getElementById('appContainer');
-            if (container) container.classList.remove('hidden');
-            
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('appContainer').classList.remove('hidden');
             updateUIForLoggedInUser(user);
             navigateToPage('anasayfa');
             initNotifications();
-        } else {
-            window.location.href = 'login.html';
-        }
+        } else { window.location.href = 'login.html'; }
     });
 }
-
-// =================================================================
-// 3. UI & NAVİGASYON
-// =================================================================
-
 function updateUIForLoggedInUser(user) {
-    const displayName = user.displayName || "Koç";
-    const initials = displayName.substring(0, 2).toUpperCase();
-
-    // Profil Bilgileri (Masaüstü ve Mobil Drawer)
-    if(document.getElementById("userName")) document.getElementById("userName").textContent = displayName;
+    const n = user.displayName || "Koç"; const i = n.substring(0, 2).toUpperCase();
+    if(document.getElementById("userName")) document.getElementById("userName").textContent = n;
     if(document.getElementById("userEmail")) document.getElementById("userEmail").textContent = user.email;
-    if(document.getElementById("userAvatar")) document.getElementById("userAvatar").textContent = initials;
-    
-    if(document.getElementById("drawerUserName")) document.getElementById("drawerUserName").textContent = displayName;
-    if(document.getElementById("drawerUserEmail")) document.getElementById("drawerUserEmail").textContent = user.email;
-    if(document.getElementById("drawerUserAvatar")) document.getElementById("drawerUserAvatar").textContent = initials;
-
-    // Profil Tıklama (Masaüstü)
-    const profileArea = document.getElementById("userProfileArea");
-    if (profileArea) {
-        profileArea.onclick = (e) => {
-            e.preventDefault();
-            showProfileModal(user);
-        };
-    }
-
-    // Profil Tıklama Olayları (Masaüstü ve Mobil)
-    const openProfileHandler = (e) => {
-        e.preventDefault();
-        // Eğer mobildeysek menüyü kapat
-        const drawer = document.getElementById('mobileMenuDrawer');
-        const overlay = document.getElementById('mobileOverlay');
-        if (drawer && !drawer.classList.contains('translate-x-full')) {
-             // Mobilde menüyü kapatma fonksiyonunu çağır veya manuel kapat
-             drawer.classList.add('translate-x-full');
-             if(overlay) overlay.classList.add('hidden');
-        }
-        
-        showProfileModal(user);
-    };
-
-    // 1. Masaüstü Sidebar
-    const desktopProfile = document.getElementById("userProfileArea");
-    if (desktopProfile) desktopProfile.onclick = openProfileHandler;
-
-    // 2. Mobil Header (Varsa)
-    const headerProfile = document.getElementById("headerCoachProfile");
-    if (headerProfile) headerProfile.onclick = openProfileHandler;
-    
-    // 3. MOBİL MENÜDEKİ YENİ BUTON (GÜNCELLENDİ)
-    const btnDrawerSettings = document.getElementById("btnDrawerProfileSettings");
-    if (btnDrawerSettings) {
-        btnDrawerSettings.onclick = openProfileHandler;
-    }
-
-    // 4. Mobil Menüdeki Eski Profil Linki (Eğer listede kaldıysa - Opsiyonel)
-    const btnMobileProfileList = document.getElementById("btnMobileProfile");
-    if (btnMobileProfileList) btnMobileProfileList.onclick = openProfileHandler;
-    
-
-    // Çıkış
-    const handleLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
-    if(document.getElementById("logoutButton")) document.getElementById("logoutButton").onclick = handleLogout;
-    if(document.getElementById("btnMobileLogout")) document.getElementById("btnMobileLogout").onclick = handleLogout;
-
-    // Navigasyon Linkleri
-    document.querySelectorAll('.nav-link, .bottom-nav-btn, .mobile-drawer-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            // Menü açma butonlarını hariç tut
-            if (link.id !== 'mobileMenuBtn' && link.id !== 'btnToggleMobileMenu') {
-                e.preventDefault();
-                const page = link.dataset.page || (link.id ? link.id.split('-')[1] : null);
-                if (page) {
-                    navigateToPage(page);
-                    closeMobileMenu();
-                }
-            }
-        });
-    });
+    if(document.getElementById("userAvatar")) document.getElementById("userAvatar").textContent = i;
+    const pa = document.getElementById("userProfileArea"); if(pa) pa.onclick = (e) => { e.preventDefault(); closeMobileMenu(); showProfileModal(user); };
+    const lo = document.getElementById("logoutButton"); if(lo) lo.onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
+    document.querySelectorAll('.nav-link, .bottom-nav-btn').forEach(l => l.addEventListener('click', (e) => {
+        if (l.id !== 'mobileMenuBtn' && !l.classList.contains('mobile-menu-trigger')) { e.preventDefault(); const p = l.dataset.page || (l.id ? l.id.split('-')[1] : null); if (p) { navigateToPage(p); closeMobileMenu(); } }
+    }));
 }
-
-// --- MOBİL MENÜ (DRAWER) KONTROLÜ ---
-// DÜZELTME BURADA YAPILDI: 'sidebar' yerine 'mobileMenuDrawer' kullanılıyor.
-
-const mobileDrawer = document.getElementById('mobileMenuDrawer'); // Doğru element
-const overlay = document.getElementById('mobileOverlay');
-const headerMenuBtn = document.getElementById('mobileMenuBtn'); // Sol üst buton
-const bottomMenuBtn = document.getElementById('btnToggleMobileMenu'); // Alt sağ buton
-const closeDrawerBtn = document.getElementById('btnCloseMobileMenu'); // Drawer içindeki X
-
-function openMobileMenu() {
-    if(mobileDrawer) mobileDrawer.classList.remove('translate-x-full');
-    if(overlay) overlay.classList.remove('hidden');
-}
-
-function closeMobileMenu() {
-    if(mobileDrawer) mobileDrawer.classList.add('translate-x-full');
-    if(overlay) overlay.classList.add('hidden');
-}
-
-// Olay Dinleyicileri
-if(headerMenuBtn) headerMenuBtn.onclick = openMobileMenu;
-if(bottomMenuBtn) bottomMenuBtn.onclick = openMobileMenu;
-if(closeDrawerBtn) closeDrawerBtn.onclick = closeMobileMenu;
+const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('mobileOverlay'); const mobileBtn = document.getElementById('mobileMenuBtn');
+if(mobileBtn) mobileBtn.onclick = () => { sidebar.classList.remove('sidebar-closed'); sidebar.classList.add('sidebar-open'); overlay.classList.remove('hidden'); };
 if(overlay) overlay.onclick = closeMobileMenu;
-
-
-// Sayfa Yönlendirme
+function closeMobileMenu() { sidebar.classList.remove('sidebar-open'); sidebar.classList.add('sidebar-closed'); overlay.classList.add('hidden'); }
 function navigateToPage(pageId) {
-    cleanUpListeners(); 
-    
-    // Sidebar Stilleri
+    cleanUpListeners();
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-purple-50', 'text-purple-700', 'font-semibold'));
-    const activeLink = document.getElementById(`nav-${pageId}`);
-    if(activeLink) activeLink.classList.add('bg-purple-50', 'text-purple-700', 'font-semibold');
-    
-    // Bottom Nav Stilleri
-    document.querySelectorAll('.bottom-nav-btn').forEach(l => {
-        l.classList.remove('active', 'text-purple-600');
-        l.classList.add('text-gray-500');
-    });
-    const bottomLink = document.querySelector(`.bottom-nav-btn[data-page="${pageId}"]`);
-    if(bottomLink) {
-        bottomLink.classList.add('active', 'text-purple-600');
-        bottomLink.classList.remove('text-gray-500');
-    }
-
+    const al = document.getElementById(`nav-${pageId}`); if(al) al.classList.add('bg-purple-50', 'text-purple-700', 'font-semibold');
+    document.querySelectorAll('.bottom-nav-btn').forEach(l => { l.classList.remove('active', 'text-purple-600'); l.classList.add('text-gray-500'); });
+    const bl = document.querySelector(`.bottom-nav-btn[data-page="${pageId}"]`); if(bl) { bl.classList.add('active', 'text-purple-600'); bl.classList.remove('text-gray-500'); }
     try {
-        switch(pageId) {
-            case 'anasayfa': renderAnaSayfa(db, currentUserId, appId); break;
-            case 'ogrencilerim': renderOgrenciSayfasi(db, currentUserId, appId); break;
-            case 'ajandam': renderAjandaSayfasi(db, currentUserId, appId); break;
-            case 'muhasebe': renderMuhasebeSayfasi(db, currentUserId, appId); break;
-            case 'mesajlar': renderMesajlarSayfasi(db, currentUserId, appId); break;
-            case 'denemeler': renderDenemelerSayfasi(db, currentUserId, appId); break;
-            case 'sorutakibi': renderSoruTakibiSayfasi(db, currentUserId, appId); break;
-            case 'hedefler': renderHedeflerSayfasi(db, currentUserId, appId); break;
-            case 'odevler': renderOdevlerSayfasi(db, currentUserId, appId); break;
-            default: renderPlaceholderSayfasi("Sayfa Bulunamadı"); break;
-        }
-    } catch (err) {
-        console.error("Sayfa yüklenirken hata:", err);
-        alert("Sayfa yüklenirken bir hata oluştu: " + err.message);
-    }
+        if(pageId === 'anasayfa') renderAnaSayfa(db, currentUserId, appId);
+        else if(pageId === 'ogrencilerim') renderOgrenciSayfasi(db, currentUserId, appId);
+        else if(pageId === 'ajandam') renderAjandaSayfasi(db, currentUserId, appId);
+        else if(pageId === 'muhasebe') renderMuhasebeSayfasi(db, currentUserId, appId);
+        else if(pageId === 'mesajlar') renderMesajlarSayfasi(db, currentUserId, appId);
+        else if(pageId === 'denemeler') renderDenemelerSayfasi(db, currentUserId, appId);
+        else if(pageId === 'sorutakibi') renderSoruTakibiSayfasi(db, currentUserId, appId);
+        else if(pageId === 'hedefler') renderHedeflerSayfasi(db, currentUserId, appId);
+        else if(pageId === 'odevler') renderOdevlerSayfasi(db, currentUserId, appId);
+        else renderPlaceholderSayfasi(pageId);
+    } catch (e) { console.error(e); }
 }
 // BİLDİRİMLER
 function initNotifications(uid) {

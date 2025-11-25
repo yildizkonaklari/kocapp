@@ -12,8 +12,8 @@ import {
     orderBy,
     writeBatch,
     getDocs,
-    addDoc, // Eklendi
-    serverTimestamp // Eklendi
+    addDoc, 
+    serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
@@ -30,7 +30,6 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
     mainContentTitle.textContent = "Genel Soru Takibi";
     
     mainContentArea.innerHTML = `
-        <!-- Filtreleme ve Ekleme Alanı -->
         <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="w-full md:w-1/3">
                 <label for="filterStudentSelect" class="block text-sm font-medium text-gray-700 mb-1">Öğrenci Filtrele</label>
@@ -49,7 +48,6 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
             </div>
         </div>
 
-        <!-- KPI Kartları (Aynı Kalacak) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <p class="text-sm text-gray-500 font-medium">Bu Hafta Çözülen</p>
@@ -68,7 +66,6 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
             </div>
         </div>
 
-        <!-- Liste -->
         <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-100">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50"><h3 class="font-semibold text-gray-800" id="listTitle">Tüm Girişler</h3></div>
             <div id="globalSoruListContainer">
@@ -94,7 +91,8 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
         document.getElementById('soruDers').value = '';
         document.getElementById('soruKonu').value = '';
         document.getElementById('soruAdet').value = '';
-        document.getElementById('soruTarihi').value = new Date().toISOString().split('T')[0];
+        // DÜZELTME 1: ID 'soruTarihi' değil 'soruTarih' olmalı
+        document.getElementById('soruTarih').value = new Date().toISOString().split('T')[0];
 
         if (selectedStudentId === 'all') {
             selectContainer.classList.remove('hidden');
@@ -120,7 +118,8 @@ export async function saveGlobalSoru(db, currentUserId, appId) {
     if (!studentId) { alert("Lütfen bir öğrenci seçin."); return; }
 
     const data = {
-        tarih: document.getElementById('soruTarihi').value,
+        // DÜZELTME 2: ID 'soruTarihi' değil 'soruTarih' olmalı
+        tarih: document.getElementById('soruTarih').value,
         ders: document.getElementById('soruDers').value,
         konu: document.getElementById('soruKonu').value,
         adet: parseInt(document.getElementById('soruAdet').value) || 0,
@@ -132,11 +131,6 @@ export async function saveGlobalSoru(db, currentUserId, appId) {
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "soruTakibi"), data);
     document.getElementById('addSoruModal').style.display = 'none';
 }
-
-// ... (loadStudentsAndMap, startSoruListener, applyFilterAndRender, renderGlobalSoruList vb. fonksiyonlar öncekiyle aynı kalacak) ...
-// (Kod tekrarını önlemek için sadece değişen kısımları verdim, önceki sorutakibi.js'nin altına bu saveGlobalSoru'yu eklemeniz yeterli, render fonksiyonunu da yukarıdakiyle değiştirin.)
-
-// --- AŞAĞIDAKİLERİ DE DOSYANIN DEVAMINA EKLEYİN (Eksiksiz olması için) ---
 
 async function loadStudentsAndMap(db, uid, appId) {
     const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad"));
@@ -242,7 +236,6 @@ function renderGlobalSoruList(entries, db) {
 }
 
 function calculateStats(entries) {
-    // (Basit istatistik hesaplama - önceki kodla aynı mantıkta)
     let total = 0, pending = 0;
     entries.forEach(e => {
         if(e.onayDurumu==='bekliyor') pending++;
@@ -250,7 +243,6 @@ function calculateStats(entries) {
     });
     document.getElementById('kpiThisWeek').textContent = total;
     document.getElementById('kpiPendingApprovals').textContent = pending;
-    // Karşılaştırma için tarih filtresi eklenebilir
     document.getElementById('kpiComparison').textContent = "-"; 
 }
 

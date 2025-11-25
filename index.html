@@ -200,10 +200,39 @@
     <!-- ===================================================================== -->
 
     <!-- 1. YENİ ÖĞRENCİ EKLE -->
-    <div id="addStudentModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-lg rounded-xl shadow-lg p-6 m-4 animate-slide-up"><div class="flex justify-between items-center pb-4 border-b"><h3 class="text-xl font-bold">Yeni Öğrenci</h3><button id="closeModalButton" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button></div><div class="mt-4 space-y-4"><input id="studentName" class="w-full p-2 border rounded" placeholder="Ad"><input id="studentSurname" class="w-full p-2 border rounded" placeholder="Soyad"><select id="studentClass" class="w-full p-2 border rounded bg-white"><option>12. Sınıf</option><option>Mezun</option></select><div id="studentDersSecimiContainer"></div></div><div class="mt-4 flex justify-end gap-2"><button id="cancelModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveStudentButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div>
+    <div id="addStudentModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-lg p-6 m-4 animate-slide-up">
+            <div class="flex justify-between items-center pb-4 border-b">
+                <h3 class="text-xl font-bold">Yeni Öğrenci</h3><button id="closeModalButton" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button></div>
+            <div class="mt-4 space-y-4">
+                <input id="studentName" class="w-full p-2 border rounded" placeholder="Ad">
+                <input id="studentSurname" class="w-full p-2 border rounded" placeholder="Soyad">
+                <select id="studentClass" class="w-full p-2 border rounded bg-white">
+    <option>5. Sınıf</option>
+    <option>6. Sınıf</option>
+    <option>7. Sınıf</option>
+    <option>8. Sınıf</option>
+    <option>9. Sınıf</option>
+    <option>10. Sınıf</option>
+    <option>11. Sınıf</option>
+    <option selected>12. Sınıf</option> <option>Mezun</option>
+</select>
+                <div id="studentDersSecimiContainer"></div></div><div class="mt-4 flex justify-end gap-2"><button id="cancelModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveStudentButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div>
     
     <!-- 2. ÖĞRENCİ DÜZENLE -->
-    <div id="editStudentModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-lg rounded-lg shadow-lg p-6 m-4"><div class="flex justify-between items-center pb-4 border-b"><h3 class="text-xl font-bold">Düzenle</h3><button id="closeEditModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="mt-4 space-y-4"><input type="hidden" id="editStudentId"><input type="text" id="editStudentName" class="w-full p-2 border rounded"><input type="text" id="editStudentSurname" class="w-full p-2 border rounded"><select id="editStudentClass" class="w-full p-2 border rounded bg-white"><option>12. Sınıf</option><option>Mezun</option></select><div id="editStudentDersSecimiContainer" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto"></div></div><div class="flex justify-end pt-4 gap-2"><button id="cancelEditModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveStudentChangesButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div>
+    <div id="editStudentModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-lg rounded-lg shadow-lg p-6 m-4"><div class="flex justify-between items-center pb-4 border-b"><h3 class="text-xl font-bold">Düzenle</h3><button id="closeEditModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="mt-4 space-y-4"><input type="hidden" id="editStudentId"><input type="text" id="editStudentName" class="w-full p-2 border rounded"><input type="text" id="editStudentSurname" class="w-full p-2 border rounded">
+        <select id="editStudentClass" class="w-full p-2 border rounded bg-white">
+    <option>5. Sınıf</option>
+    <option>6. Sınıf</option>
+    <option>7. Sınıf</option>
+    <option>8. Sınıf</option>
+    <option>9. Sınıf</option>
+    <option>10. Sınıf</option>
+    <option>11. Sınıf</option>
+    <option>12. Sınıf</option>
+    <option>Mezun</option>
+</select>
+        <div id="editStudentDersSecimiContainer" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto"></div></div><div class="flex justify-end pt-4 gap-2"><button id="cancelEditModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveStudentChangesButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div>
 
     <!-- 3. DENEME EKLE -->
     <div id="addDenemeModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-3xl rounded-lg shadow-lg p-6 m-4 max-h-[90vh] overflow-y-auto"><div class="flex justify-between items-center pb-4 border-b"><h3 class="text-xl font-bold">Deneme Ekle</h3><button id="closeDenemeModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="mt-4 space-y-4"><input type="hidden" id="currentStudentIdForDeneme"><div id="denemeStudentSelectContainer" class="hidden p-3 bg-purple-50 rounded border border-purple-200"><label class="block text-sm font-bold text-purple-700 mb-1">Öğrenci</label><select id="denemeStudentSelect" class="w-full p-2 border rounded bg-white"></select></div><div class="grid grid-cols-2 gap-4"><select id="denemeTuru" class="w-full p-2 border rounded bg-white"><option value="TYT">TYT</option><option value="AYT">AYT</option><option value="LGS">LGS</option><option value="YDS">YDS</option><option value="Diger">Diğer</option></select><input type="text" id="denemeAdi" placeholder="Yayın Adı" class="w-full p-2 border rounded"><input type="date" id="denemeTarih" class="w-full p-2 border rounded"></div><div id="denemeNetGirisAlani" class="bg-gray-50 p-4 rounded border border-gray-200"></div></div><div class="flex justify-end pt-4 gap-2"><button id="cancelDenemeModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveDenemeButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div>

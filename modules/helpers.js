@@ -108,8 +108,7 @@ export function formatDateTR(dateStr) {
     return `${day}.${month}.${year}`;
 }
 
-// --- SELECT DOLDURMA (GÜNCELLENMİŞ VERSİYON) ---
-// appId parametresi eklendi ve veritabanı yolu 'artifacts' olarak güncellendi.
+// --- SELECT DOLDURMA ---
 export async function populateStudentSelect(db, currentUserId, appId, selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
@@ -140,7 +139,7 @@ export async function populateStudentSelect(db, currentUserId, appId, selectId) 
     } catch (error) {
         console.error("Öğrenci listesi hatası:", error);
         select.innerHTML = '<option value="">Listeleme Hatası</option>';
-        throw error; // Hatayı yukarı fırlat ki çağıran fonksiyon haberdar olsun
+        throw error;
     }
 }
 

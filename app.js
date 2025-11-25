@@ -259,7 +259,19 @@ if(document.getElementById('btnHeaderMessages')) {
 // =================================================================
 // 4. MODAL KONTROLLERİ
 // =================================================================
+// Ortak Kapatma (Class-based)
+document.querySelectorAll('.js-modal-close').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const modal = e.target.closest('.fixed');
+        if(modal) modal.classList.add('hidden');
+    });
+});
 
+window.openModal = (id) => { document.getElementById(id).classList.remove('hidden'); };
+window.openRandevuModal = async () => {
+    await populateStudentSelect('randevuStudentId');
+    openModal('addRandevuModal');
+};
 function addListener(id, event, handler) {
     const el = document.getElementById(id);
     if (el) el.addEventListener(event, handler);

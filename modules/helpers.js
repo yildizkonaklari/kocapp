@@ -1,13 +1,8 @@
 // === YARDIMCI (HELPER) FONKSİYONLAR MODÜLÜ ===
-// Bu modül, tüm diğer modüller tarafından paylaşılan
-// ortak fonksiyonları ve sabitleri içerir.
 
-// 1. GEREKLİ IMPORTLAR
 import { getDocs, collection, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// 2. SABİTLER (CONSTANTS)
-
-// Sınav türlerine göre dersleri ve kuralları tanımlar
+// --- SABİTLER ---
 export const SINAV_DERSLERI = {
     'TYT': {
         netKural: 4,
@@ -63,7 +58,6 @@ export const SINAV_DERSLERI = {
     }
 };
 
-// Sınıf seviyelerine göre ders havuzlarını tanımlar
 export const DERS_HAVUZU = {
     'ORTAOKUL': [
         "Türkçe", "Matematik", "Fen Bilimleri", 
@@ -76,9 +70,7 @@ export const DERS_HAVUZU = {
     ]
 };
 
-// ... (Mevcut kod) ...
-
-// 3. PAYLAŞILAN DİNLEYİCİ DEĞİŞKENLERİ
+// --- DİNLEYİCİ YÖNETİMİ ---
 export let activeListeners = {
     studentUnsubscribe: null,
     soruTakibiUnsubscribe: null,
@@ -89,75 +81,52 @@ export let activeListeners = {
     muhasebeUnsubscribe: null,
     chatUnsubscribe: null,
     islemGecmisiUnsubscribe: null,
-    
-    // YENİ EKLENDİ (Dashboard için)
+    upcomingAjandaUnsubscribe: null,
     pendingOdevUnsubscribe: null,
     pendingSoruUnsubscribe: null,
     pendingDenemeUnsubscribe: null,
     unreadMessagesUnsubscribe: null
 };
 
-// ... (Kalan kodlar) ...
-// 4. PAYLAŞILAN FONKSİYONLAR
-
-/**
- * Aktif olan tüm Firestore dinleyicilerini (onSnapshot) kapatır.
- * Sayfa geçişlerinde hafıza sızıntısını ve hatalı veri yüklemesini önler.
- */
 export function cleanUpListeners() {
     for (const key in activeListeners) {
         if (activeListeners[key]) {
-            activeListeners[key](); // Firestore unsubscribe fonksiyonunu çağır
+            activeListeners[key]();
             activeListeners[key] = null;
         }
     }
-    console.log("Tüm aktif dinleyiciler temizlendi.");
 }
 
-/**
- * Para birimini formatlar (Örn: 1200.5 -> 1.200,50 ₺)
- * @param {number} amount - Formatlanacak sayı
- * @returns {string} - Formatlanmış para birimi
- */
+// --- FORMATLAMA ---
 export function formatCurrency(amount) {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount || 0);
 }
 
-/**
- * Tarihi formatlar (YYYY-MM-DD -> DD.MM.YYYY)
- * @param {string} dateStr - YYYY-MM-DD formatında tarih
- * @returns {string} - DD.MM.YYYY formatında tarih
- */
 export function formatDateTR(dateStr) {
     if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-');
     return `${day}.${month}.${year}`;
 }
 
-/**
- * ID'si verilen bir select (dropdown) elementini öğrenci listesiyle doldurur.
- * @param {object} db - Firestore veritabanı referansı
- * @param {string} currentUserId - Giriş yapmış koçun UID'si
- * @param {string} appId - Uygulama ID'si (GÜNCELLENDİ)
- * @param {string} selectId - Doldurulacak <select> elementinin ID'si
- */
+// --- SELECT DOLDURMA (GÜNCELLENMİŞ VERSİYON) ---
+// appId parametresi eklendi ve veritabanı yolu 'artifacts' olarak güncellendi.
 export async function populateStudentSelect(db, currentUserId, appId, selectId) {
     const select = document.getElementById(selectId);
-    if (!select) {
-        console.error(`populateStudentSelect: '${selectId}' ID'li element bulunamadı.`);
-        return;
-    }
+    if (!select) return;
     
-    select.innerHTML = '<option value="">Öğrenciler yükleniyor...</option>';
+    select.innerHTML = '<option value="">Yükleniyor...</option>';
     
     try {
-        // DÜZELTME: Veritabanı yolu 'koclar' yerine 'artifacts' olarak güncellendi.
         const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
         const snapshot = await getDocs(q);
         
         select.innerHTML = '<option value="" disabled selected>Öğrenci seçin</option>';
+        
         if (snapshot.empty) {
-            select.innerHTML = '<option value="">Öğrenci Bulunamadı</option>';
+            const opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "Öğrenci Bulunamadı";
+            select.appendChild(opt);
             return;
         }
         
@@ -169,22 +138,15 @@ export async function populateStudentSelect(db, currentUserId, appId, selectId) 
             select.appendChild(option);
         });
     } catch (error) {
-        console.error("Öğrenci listesi (select) doldurulurken hata:", error);
-        select.innerHTML = '<option value="">Hata oluştu</option>';
+        console.error("Öğrenci listesi hatası:", error);
+        select.innerHTML = '<option value="">Listeleme Hatası</option>';
+        throw error; // Hatayı yukarı fırlat ki çağıran fonksiyon haberdar olsun
     }
 }
 
-/**
- * Sınıf seçimine göre ders listesi checkbox'larını oluşturur.
- * @param {string} sinif - Seçilen sınıf (örn: "8. Sınıf", "12. Sınıf")
- * @param {HTMLElement} container - Checkbox'ların ekleneceği div
- * @param {string[]} [selectedDersler=[]] - (Düzenleme modu için) Önceden seçilmiş dersler
- */
+// --- DERS SEÇİMİ ---
 export function renderDersSecimi(sinif, container, selectedDersler = []) {
-    if (!container) {
-        console.error("renderDersSecimi: Ders konteyneri bulunamadı.");
-        return;
-    }
+    if (!container) return;
     container.innerHTML = '';
     let dersler = [];
     
@@ -198,8 +160,7 @@ export function renderDersSecimi(sinif, container, selectedDersler = []) {
         const wrapper = document.createElement('div');
         wrapper.className = 'flex items-center';
         
-        // ID'leri daha benzersiz hale getirelim (add ve edit modalları için)
-        const uniqueId = `ders-${ders.replace(/[^a-zA-Z0-9]/g, '-')}-${container.id}`;
+        const uniqueId = `ders-${ders.replace(/[^a-zA-Z0-9]/g, '-')}-${container.id}-${Math.random().toString(36).substr(2, 5)}`;
         
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -210,7 +171,7 @@ export function renderDersSecimi(sinif, container, selectedDersler = []) {
         if (selectedDersler.length > 0) {
             if (selectedDersler.includes(ders)) checkbox.checked = true;
         } else {
-            checkbox.checked = true; // Varsayılan olarak hepsi seçili
+            checkbox.checked = true;
         }
 
         const label = document.createElement('label');
@@ -224,10 +185,6 @@ export function renderDersSecimi(sinif, container, selectedDersler = []) {
     });
 }
 
-/**
- * Henüz oluşturulmamış sayfalar için bir yer tutucu içerik çizer.
- * @param {string} sayfaAdi - Menüde tıklanan sayfanın adı
- */
 export function renderPlaceholderSayfasi(sayfaAdi) {
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");

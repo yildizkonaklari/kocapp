@@ -5,34 +5,26 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Mesajlar";
     const mainContentArea = document.getElementById("mainContentArea");
     
+    // YENİ TASARIM: Mobilde tam ekran, Masaüstünde kart yapısı
     mainContentArea.innerHTML = `
-        <div class="flex flex-col lg:flex-row h-[calc(100vh-160px)] lg:h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="flex flex-col lg:flex-row h-[calc(100vh-8rem)] lg:h-[calc(100vh-140px)] bg-white lg:rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
             
-            <!-- SOL PANEL: Liste (Akordiyonlu) -->
-            <div id="chatSidebar" class="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col bg-white transition-all duration-300 shrink-0">
+            <div id="chatSidebar" class="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col bg-white transition-all duration-300 shrink-0 h-full">
                 
-                <!-- Arama ve Toggle Header -->
-                <div class="p-3 border-b border-gray-100 bg-gray-50 flex gap-2 items-center justify-between shrink-0">
+                <div class="p-3 border-b border-gray-100 bg-gray-50 flex gap-2 items-center justify-between shrink-0 sticky top-0 z-10">
                     <div class="relative flex-1">
                         <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i>
                         <input type="text" id="chatSearchInput" placeholder="Öğrenci Ara..." class="w-full pl-8 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-purple-500 outline-none transition-shadow">
                     </div>
-                    
-                    <!-- Mobil Liste Aç/Kapa Butonu -->
-                    <button id="btnToggleChatList" class="lg:hidden w-9 h-9 flex items-center justify-center bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-purple-600 hover:border-purple-300 transition-all shadow-sm">
-                        <i class="fa-solid fa-chevron-down transition-transform duration-300" id="iconChatListToggle"></i>
-                    </button>
                 </div>
 
-                <!-- Öğrenci Listesi (Mobilde Gizlenebilir) -->
-                <div id="chatStudentList" class="hidden lg:block flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1 bg-white min-h-0 max-h-[40vh] lg:max-h-full border-b lg:border-b-0 border-gray-100 shadow-inner lg:shadow-none">
+                <div id="chatStudentList" class="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1 bg-white scroll-smooth pb-20 lg:pb-0">
                     <p class="text-gray-400 text-center text-sm py-4">Yükleniyor...</p>
                 </div>
             </div>
 
-            <!-- SAĞ PANEL: Sohbet -->
-            <div class="w-full lg:w-2/3 flex-1 flex flex-col bg-gray-50 relative min-h-0" id="chatArea">
-                <div class="flex-1 flex flex-col items-center justify-center text-gray-400 p-4 text-center">
+            <div class="w-full lg:w-2/3 flex-1 flex flex-col bg-gray-50 relative min-h-0 hidden lg:flex z-20" id="chatArea">
+                <div class="flex-1 flex flex-col items-center justify-center text-gray-400 p-4 text-center h-full">
                     <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 text-gray-300">
                         <i class="fa-regular fa-comments text-3xl"></i>
                     </div>
@@ -43,34 +35,10 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
     `;
 
     loadChatStudentList(db, currentUserId, appId);
-    
-    // Toggle Butonu İşlevi
-    const btnToggle = document.getElementById('btnToggleChatList');
-    const listDiv = document.getElementById('chatStudentList');
-    const icon = document.getElementById('iconChatListToggle');
-    
-    if (btnToggle) {
-        btnToggle.onclick = () => {
-            listDiv.classList.toggle('hidden');
-            // İkonu döndür
-            if (listDiv.classList.contains('hidden')) {
-                icon.classList.remove('rotate-180');
-                btnToggle.classList.remove('bg-purple-50', 'border-purple-300', 'text-purple-600');
-            } else {
-                icon.classList.add('rotate-180');
-                btnToggle.classList.add('bg-purple-50', 'border-purple-300', 'text-purple-600');
-            }
-        };
-    }
 
     // Arama İşlevi
     document.getElementById('chatSearchInput').addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
-        // Arama yapınca listeyi otomatik aç (mobilde)
-        if(term.length > 0 && listDiv.classList.contains('hidden')) {
-            if(btnToggle) btnToggle.click();
-        }
-        
         document.querySelectorAll('.chat-student-item').forEach(item => {
             item.style.display = item.dataset.name.toLowerCase().includes(term) ? 'flex' : 'none';
         });
@@ -103,20 +71,24 @@ async function loadChatStudentList(db, currentUserId, appId) {
                     <div class="w-10 h-10 bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm border border-white">
                         ${s.ad[0]}${s.soyad[0]}
                     </div>
-                    <!-- Online durumunu simüle edebiliriz -->
-                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                 </div>
                 <div class="ml-3 overflow-hidden flex-1">
                     <div class="flex justify-between items-center">
                         <p class="text-sm font-bold text-gray-800 truncate">${s.ad} ${s.soyad}</p>
                         <span class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">${s.sinif}</span>
                     </div>
-                    <p class="text-xs text-gray-500 truncate mt-0.5">Sohbeti görüntülemek için tıklayın</p>
+                    <p class="text-xs text-gray-500 truncate mt-0.5 text-indigo-500">Mesajlaşmak için dokun</p>
                 </div>
                 <i class="fa-solid fa-chevron-right text-gray-300 text-xs ml-2"></i>
             `;
             
             div.onclick = () => {
+                // Mobilde Listeyi Gizle, Sohbeti Aç
+                if (window.innerWidth < 1024) {
+                    document.getElementById('chatSidebar').classList.add('hidden');
+                    document.getElementById('chatArea').classList.remove('hidden');
+                }
+
                 // Aktif sınıfı ekle
                 document.querySelectorAll('.chat-student-item').forEach(el => {
                     el.classList.remove('bg-purple-100', 'border-purple-200');
@@ -127,17 +99,6 @@ async function loadChatStudentList(db, currentUserId, appId) {
 
                 // Sohbeti yükle
                 loadChatMessages(db, currentUserId, appId, doc.id, `${s.ad} ${s.soyad}`);
-                
-                // Mobilde listeyi kapat (Akordiyon mantığı)
-                const listDiv = document.getElementById('chatStudentList');
-                const btnToggle = document.getElementById('btnToggleChatList');
-                const icon = document.getElementById('iconChatListToggle');
-                
-                if (window.innerWidth < 1024 && !listDiv.classList.contains('hidden')) {
-                    listDiv.classList.add('hidden');
-                    if(icon) icon.classList.remove('rotate-180');
-                    if(btnToggle) btnToggle.classList.remove('bg-purple-50', 'border-purple-300', 'text-purple-600');
-                }
             };
             
             listContainer.appendChild(div);
@@ -152,9 +113,12 @@ function loadChatMessages(db, currentUserId, appId, studentId, studentName) {
     const chatArea = document.getElementById('chatArea');
     if(!chatArea) return;
 
+    // YENİ HTML YAPISI: Header, Mesajlar, Input
     chatArea.innerHTML = `
-        <!-- Sohbet Header -->
-        <div class="px-4 py-3 bg-white border-b border-gray-200 flex items-center shadow-sm z-10 shrink-0">
+        <div class="px-4 py-3 bg-white border-b border-gray-200 flex items-center shadow-sm z-30 shrink-0 sticky top-0">
+            <button id="btnBackToChatList" class="lg:hidden mr-3 text-gray-500 hover:text-purple-600">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
             <div class="w-9 h-9 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xs mr-3 shadow-md shadow-indigo-200">
                 ${studentName.split(' ').map(n=>n[0]).join('')}
             </div>
@@ -164,23 +128,30 @@ function loadChatMessages(db, currentUserId, appId, studentId, studentName) {
             </div>
         </div>
 
-        <!-- Mesajlar Alanı -->
-        <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 scroll-smooth">
+        <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 scroll-smooth pb-28 lg:pb-4">
             <div class="flex justify-center"><span class="text-[10px] text-gray-400 bg-gray-200 px-2 py-1 rounded-full">Sohbet Başladı</span></div>
         </div>
 
-        <!-- Yazma Alanı -->
-        <div class="p-3 bg-white border-t border-gray-200 shrink-0">
+        <div class="p-3 bg-white border-t border-gray-200 shrink-0 fixed bottom-16 left-0 w-full z-40 lg:static lg:w-full lg:bottom-auto lg:border-t lg:border-gray-200">
             <form id="chatForm" class="flex gap-2 items-end">
                 <div class="flex-1 bg-gray-100 rounded-2xl flex items-center px-4 py-2 border border-transparent focus-within:border-indigo-500 focus-within:bg-white transition-all">
                     <input type="text" id="messageInput" placeholder="Mesajınızı yazın..." class="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-800 placeholder-gray-400" autocomplete="off">
                 </div>
-                <button type="submit" id="btnSendMsg" class="bg-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" id="btnSendMsg" class="bg-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all">
                     <i class="fa-solid fa-paper-plane text-sm"></i>
                 </button>
             </form>
         </div>
     `;
+
+    // Geri Butonu İşlevi (Mobil için)
+    const backBtn = document.getElementById('btnBackToChatList');
+    if (backBtn) {
+        backBtn.onclick = () => {
+            document.getElementById('chatArea').classList.add('hidden');
+            document.getElementById('chatSidebar').classList.remove('hidden');
+        };
+    }
 
     const container = document.getElementById('messagesContainer');
     const form = document.getElementById('chatForm');
@@ -203,7 +174,6 @@ function loadChatMessages(db, currentUserId, appId, studentId, studentName) {
                 okundu: false,
                 kocId: currentUserId
             });
-            // Scroll otomatik aşağı kayacak (listener sayesinde)
         } catch (err) {
             console.error("Mesaj gönderme hatası:", err);
             alert("Mesaj gönderilemedi.");
@@ -220,8 +190,6 @@ function loadChatMessages(db, currentUserId, appId, studentId, studentName) {
     );
     
     activeListeners.chatUnsubscribe = onSnapshot(q, (snap) => {
-        // Sadece yeni eklenenleri veya tümünü tekrar çizebiliriz. 
-        // Performans için innerHTML temizleyip tekrar çiziyoruz (basit yöntem).
         container.innerHTML = '<div class="flex justify-center mb-4"><span class="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Sohbet Geçmişi</span></div>';
         
         snap.forEach(doc => {

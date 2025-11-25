@@ -67,7 +67,7 @@ async function main() {
             updateUIForLoggedInUser(user);
             navigateToPage('anasayfa');
             
-            // DÜZELTME: initNotifications fonksiyonuna uid parametresi gönderildi.
+            // Bildirimleri başlat
             initNotifications(user.uid); 
         } else {
             window.location.href = 'login.html';
@@ -197,7 +197,7 @@ function navigateToPage(pageId) {
 }
 
 // =================================================================
-// BİLDİRİMLER (GELİŞTİRİLDİ)
+// BİLDİRİMLER
 // =================================================================
 function initNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
@@ -207,53 +207,33 @@ function initNotifications(uid) {
     
     if(!btn || !dropdown) return;
 
-    // Dropdown Toggle Mantığı
     btn.onclick = (e) => { 
         e.stopPropagation(); 
         dropdown.classList.toggle('hidden'); 
-        
-        // Animasyon sınıfları
         if (!dropdown.classList.contains('hidden')) {
             dropdown.classList.remove('scale-95', 'opacity-0');
         } else {
             dropdown.classList.add('scale-95', 'opacity-0');
         }
-        
-        // Açılınca noktayı gizle
         dot.classList.add('hidden'); 
     };
 
-    // Dışarı tıklayınca kapat
     document.addEventListener('click', (e) => { 
         if(!dropdown.contains(e.target) && !btn.contains(e.target)) {
             dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
         }
     });
 
-    // Kapatma butonu
     const closeBtn = document.getElementById('btnCloseCoachNotifications');
     if(closeBtn) closeBtn.onclick = (e) => {
         e.stopPropagation();
         dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
     };
 
-    // --- VERİ TOPLAMA ---
-    // Bildirimleri tek bir yerde toplamak için state nesnesi
-    let notifications = {
-        appointments: [],
-        pendingQuestions: [],
-        pendingExams: []
-    };
+    let notifications = { appointments: [], pendingQuestions: [], pendingExams: [] };
 
     const renderNotifications = () => {
-        const all = [
-            ...notifications.appointments,
-            ...notifications.pendingQuestions,
-            ...notifications.pendingExams
-        ];
-
-        // Tarih sırasına göre veya önem sırasına göre dizebilirsiniz (Burada basit birleştirme)
-        
+        const all = [...notifications.appointments, ...notifications.pendingQuestions, ...notifications.pendingExams];
         if (all.length > 0) {
             dot.classList.remove('hidden');
             let html = '';
@@ -261,10 +241,7 @@ function initNotifications(uid) {
                 html += `
                 <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors" onclick="${item.action || ''}">
                     <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-bold text-gray-800">${item.title}</p>
-                            <p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p>
-                        </div>
+                        <div><p class="text-xs font-bold text-gray-800">${item.title}</p><p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p></div>
                         <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${item.badgeClass}">${item.badgeText}</span>
                     </div>
                 </div>`;
@@ -272,62 +249,38 @@ function initNotifications(uid) {
             list.innerHTML = html;
         } else {
             dot.classList.add('hidden');
-            list.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-8 text-gray-400">
-                    <i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i>
-                    <p class="text-xs">Yeni bildirim yok.</p>
-                </div>`;
+            list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Yeni bildirim yok.</p></div>`;
         }
     };
 
-    // 1. KAYNAK: YARINKİ RANDEVULAR
+    // 1. Yarınki Randevular
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const tStr = tomorrow.toISOString().split('T')[0];
-    
     onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", "==", tStr)), (snap) => {
         notifications.appointments = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.appointments.push({
-                title: 'Yarınki Randevu',
-                desc: `${data.baslangic} - ${data.ogrenciAd}`,
-                badgeText: 'Ajanda',
-                badgeClass: 'bg-blue-100 text-blue-700',
-                action: "document.getElementById('nav-ajandam').click()"
-            });
+            notifications.appointments.push({ title: 'Yarınki Randevu', desc: `${data.baslangic} - ${data.ogrenciAd}`, badgeText: 'Ajanda', badgeClass: 'bg-blue-100 text-blue-700', action: "document.getElementById('nav-ajandam').click()" });
         });
         renderNotifications();
     });
 
-    // 2. KAYNAK: ONAY BEKLEYEN SORULAR (Son 5)
-    // Not: CollectionGroup sorgusu için Firestore'da index oluşturmanız gerekebilir.
+    // 2. Onay Bekleyen Sorular
     onSnapshot(query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
         notifications.pendingQuestions = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.pendingQuestions.push({
-                title: 'Soru Onayı Bekliyor',
-                desc: `${formatDateTR(data.tarih)} - ${data.ders} (${data.adet} Soru)`,
-                badgeText: 'Onay',
-                badgeClass: 'bg-yellow-100 text-yellow-700',
-                action: "document.getElementById('nav-sorutakibi').click()"
-            });
+            notifications.pendingQuestions.push({ title: 'Soru Onayı Bekliyor', desc: `${formatDateTR(data.tarih)} - ${data.ders}`, badgeText: 'Onay', badgeClass: 'bg-yellow-100 text-yellow-700', action: "document.getElementById('nav-sorutakibi').click()" });
         });
         renderNotifications();
     });
 
-    // 3. KAYNAK: ONAY BEKLEYEN DENEMELER (Son 5)
+    // 3. Onay Bekleyen Denemeler
     onSnapshot(query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
         notifications.pendingExams = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.pendingExams.push({
-                title: 'Deneme Onayı Bekliyor',
-                desc: `${data.studentAd || 'Öğrenci'} - ${data.tur} Denemesi`,
-                badgeText: 'Onay',
-                badgeClass: 'bg-purple-100 text-purple-700',
-                action: "document.getElementById('nav-denemeler').click()"
-            });
+            notifications.pendingExams.push({ title: 'Deneme Onayı Bekliyor', desc: `${data.studentAd || 'Öğrenci'} - ${data.tur} Denemesi`, badgeText: 'Onay', badgeClass: 'bg-purple-100 text-purple-700', action: "document.getElementById('nav-denemeler').click()" });
         });
         renderNotifications();
     });
@@ -347,7 +300,6 @@ function addListener(id, event, handler) {
     if (el) el.addEventListener(event, handler);
 }
 
-// Kapatma Butonları (Inline style'ı temizleyerek kapatma)
 const closeButtons = [
     '.close-modal-btn',
     '#closeModalButton', '#cancelModalButton', 
@@ -368,108 +320,3 @@ document.querySelectorAll(closeButtons.join(', ')).forEach(btn => {
         const modal = e.target.closest('.fixed');
         if(modal) {
             modal.classList.add('hidden');
-            modal.style.display = 'none'; 
-        }
-    });
-});
-
-// Kayıt Butonları
-addListener('saveStudentButton', 'click', () => saveNewStudent(db, currentUserId, appId));
-addListener('saveStudentChangesButton', 'click', () => saveStudentChanges(db, currentUserId, appId));
-addListener('studentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('studentDersSecimiContainer')));
-addListener('editStudentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('editStudentDersSecimiContainer')));
-
-addListener('saveDenemeButton', 'click', () => saveGlobalDeneme(db, currentUserId, appId));
-addListener('denemeTuru', 'change', (e) => renderDenemeNetInputs(e.target.value));
-
-addListener('saveSoruButton', 'click', () => saveGlobalSoru(db, currentUserId, appId));
-
-addListener('saveHedefButton', 'click', () => saveGlobalHedef(db, currentUserId, appId));
-addListener('saveOdevButton', 'click', () => saveGlobalOdev(db, currentUserId, appId));
-
-addListener('saveRandevuButton', 'click', () => saveNewRandevu(db, currentUserId, appId));
-
-addListener('saveTahsilatButton', 'click', () => saveNewTahsilat(db, currentUserId, appId));
-addListener('saveBorcButton', 'click', () => saveNewBorc(db, currentUserId, appId));
-
-// Window Helpers
-window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
-
-
-// --- PROFİL MODALI ---
-const profileModal = document.getElementById("profileModal");
-
-function showProfileModal(user) {
-    if (!profileModal) return;
-    document.getElementById('profileDisplayName').value = user.displayName || '';
-    document.getElementById('kocDavetKodu').value = user.uid;
-    document.getElementById('deleteConfirmPassword').value = '';
-    const err = document.getElementById('profileError');
-    if(err) err.classList.add('hidden');
-
-    // İlk tabı aç
-    const tabBtn = document.querySelector('.profile-tab-button[data-tab="hesap"]');
-    if(tabBtn) tabBtn.click();
-    
-    profileModal.classList.remove('hidden');
-    profileModal.style.display = ''; 
-}
-window.showProfileModal = showProfileModal;
-
-// Modal Dışına Tıklama (Kapatma)
-if(profileModal) {
-    profileModal.addEventListener('click', (e) => {
-        if(e.target === profileModal) {
-            profileModal.classList.add('hidden');
-            profileModal.style.display = 'none';
-        }
-    });
-}
-
-document.querySelectorAll('.profile-tab-button').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.profile-tab-button').forEach(b => {
-            b.classList.remove('active', 'bg-purple-100', 'text-purple-700');
-            b.classList.add('text-gray-500', 'hover:bg-gray-200');
-        });
-        e.currentTarget.classList.add('active', 'bg-purple-100', 'text-purple-700');
-        const tabId = e.currentTarget.dataset.tab;
-        document.querySelectorAll('.profile-tab-content').forEach(c => c.classList.add('hidden'));
-        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-    });
-});
-
-addListener('btnSaveName', 'click', async () => {
-    const n = document.getElementById('profileDisplayName').value.trim();
-    if (!n) return;
-    await updateProfile(auth.currentUser, { displayName: n });
-    alert("Güncellendi."); window.location.reload();
-});
-
-addListener('btnResetPassword', 'click', async () => {
-    try { await sendPasswordResetEmail(auth, auth.currentUser.email); alert("E-posta gönderildi."); } catch(e) { alert("Hata: " + e.message); }
-});
-
-addListener('btnDeleteAccount', 'click', async () => {
-    const p = document.getElementById('deleteConfirmPassword').value;
-    if (!p) return alert("Şifre girin.");
-    if (!confirm("Hesabınızı silmek istediğinize emin misiniz?")) return;
-    try {
-        const c = EmailAuthProvider.credential(auth.currentUser.email, p);
-        await reauthenticateWithCredential(auth.currentUser, c);
-        await deleteUser(auth.currentUser);
-        window.location.href = "login.html";
-    } catch (e) { 
-        const err = document.getElementById('profileError');
-        if(err) { err.textContent = e.message; err.classList.remove('hidden'); } else alert(e.message);
-    }
-});
-
-addListener('btnKopyala', 'click', () => {
-    const input = document.getElementById('kocDavetKodu');
-    input.select();
-    navigator.clipboard.writeText(input.value).then(() => alert("Kopyalandı!"));
-});
-
-// BAŞLAT
-main();

@@ -22,7 +22,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
 
 // Modül Importları
-import { cleanUpListeners, populateStudentSelect, renderDersSecimi, renderPlaceholderSayfasi } from './modules/helpers.js';
+import { cleanUpListeners, populateStudentSelect, renderDersSecimi, renderPlaceholderSayfasi, formatDateTR } from './modules/helpers.js';
 import { renderAnaSayfa } from './modules/anasayfa.js';
 import { renderOgrenciSayfasi, renderOgrenciDetaySayfasi, saveNewStudent, saveStudentChanges } from './modules/ogrencilerim.js';
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
@@ -66,7 +66,9 @@ async function main() {
             
             updateUIForLoggedInUser(user);
             navigateToPage('anasayfa');
-            initNotifications();
+            
+            // DÜZELTME: initNotifications fonksiyonuna uid parametresi gönderildi.
+            initNotifications(user.uid); 
         } else {
             window.location.href = 'login.html';
         }
@@ -81,7 +83,7 @@ function updateUIForLoggedInUser(user) {
     const displayName = user.displayName || "Koç";
     const initials = displayName.substring(0, 2).toUpperCase();
 
-    // Profil Bilgileri (Masaüstü ve Mobil Drawer)
+    // Profil Bilgileri
     if(document.getElementById("userName")) document.getElementById("userName").textContent = displayName;
     if(document.getElementById("userEmail")) document.getElementById("userEmail").textContent = user.email;
     if(document.getElementById("userAvatar")) document.getElementById("userAvatar").textContent = initials;
@@ -90,58 +92,38 @@ function updateUIForLoggedInUser(user) {
     if(document.getElementById("drawerUserEmail")) document.getElementById("drawerUserEmail").textContent = user.email;
     if(document.getElementById("drawerUserAvatar")) document.getElementById("drawerUserAvatar").textContent = initials;
 
-    // Profil Tıklama (Masaüstü)
-    const profileArea = document.getElementById("userProfileArea");
-    if (profileArea) {
-        profileArea.onclick = (e) => {
-            e.preventDefault();
-            showProfileModal(user);
-        };
-    }
-
-    // Profil Tıklama Olayları (Masaüstü ve Mobil)
+    // Profil Tıklama
     const openProfileHandler = (e) => {
         e.preventDefault();
-        // Eğer mobildeysek menüyü kapat
         const drawer = document.getElementById('mobileMenuDrawer');
         const overlay = document.getElementById('mobileOverlay');
         if (drawer && !drawer.classList.contains('translate-x-full')) {
-             // Mobilde menüyü kapatma fonksiyonunu çağır veya manuel kapat
              drawer.classList.add('translate-x-full');
              if(overlay) overlay.classList.add('hidden');
         }
-        
         showProfileModal(user);
     };
 
-    // 1. Masaüstü Sidebar
     const desktopProfile = document.getElementById("userProfileArea");
     if (desktopProfile) desktopProfile.onclick = openProfileHandler;
 
-    // 2. Mobil Header (Varsa)
     const headerProfile = document.getElementById("headerCoachProfile");
     if (headerProfile) headerProfile.onclick = openProfileHandler;
     
-    // 3. MOBİL MENÜDEKİ YENİ BUTON (GÜNCELLENDİ)
     const btnDrawerSettings = document.getElementById("btnDrawerProfileSettings");
-    if (btnDrawerSettings) {
-        btnDrawerSettings.onclick = openProfileHandler;
-    }
+    if (btnDrawerSettings) btnDrawerSettings.onclick = openProfileHandler;
 
-    // 4. Mobil Menüdeki Eski Profil Linki (Eğer listede kaldıysa - Opsiyonel)
     const btnMobileProfileList = document.getElementById("btnMobileProfile");
     if (btnMobileProfileList) btnMobileProfileList.onclick = openProfileHandler;
     
-
     // Çıkış
     const handleLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
     if(document.getElementById("logoutButton")) document.getElementById("logoutButton").onclick = handleLogout;
     if(document.getElementById("btnMobileLogout")) document.getElementById("btnMobileLogout").onclick = handleLogout;
 
-    // Navigasyon Linkleri
+    // Navigasyon
     document.querySelectorAll('.nav-link, .bottom-nav-btn, .mobile-drawer-link').forEach(link => {
         link.addEventListener('click', (e) => {
-            // Menü açma butonlarını hariç tut
             if (link.id !== 'mobileMenuBtn' && link.id !== 'btnToggleMobileMenu') {
                 e.preventDefault();
                 const page = link.dataset.page || (link.id ? link.id.split('-')[1] : null);
@@ -154,12 +136,12 @@ function updateUIForLoggedInUser(user) {
     });
 }
 
-// --- MOBİL MENÜ (DRAWER) KONTROLÜ ---
+// --- MOBİL MENÜ KONTROLÜ ---
 const mobileDrawer = document.getElementById('mobileMenuDrawer');
 const overlay = document.getElementById('mobileOverlay');
-const headerMenuBtn = document.getElementById('mobileMenuBtn'); // Sol üst buton
-const bottomMenuBtn = document.getElementById('btnToggleMobileMenu'); // Alt sağ buton
-const closeDrawerBtn = document.getElementById('btnCloseMobileMenu'); // Drawer içindeki X
+const headerMenuBtn = document.getElementById('mobileMenuBtn'); 
+const bottomMenuBtn = document.getElementById('btnToggleMobileMenu'); 
+const closeDrawerBtn = document.getElementById('btnCloseMobileMenu'); 
 
 function openMobileMenu() {
     if(mobileDrawer) mobileDrawer.classList.remove('translate-x-full');
@@ -171,7 +153,6 @@ function closeMobileMenu() {
     if(overlay) overlay.classList.add('hidden');
 }
 
-// Olay Dinleyicileri
 if(headerMenuBtn) headerMenuBtn.onclick = openMobileMenu;
 if(bottomMenuBtn) bottomMenuBtn.onclick = openMobileMenu;
 if(closeDrawerBtn) closeDrawerBtn.onclick = closeMobileMenu;
@@ -182,12 +163,10 @@ if(overlay) overlay.onclick = closeMobileMenu;
 function navigateToPage(pageId) {
     cleanUpListeners(); 
     
-    // Sidebar Stilleri
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-purple-50', 'text-purple-700', 'font-semibold'));
     const activeLink = document.getElementById(`nav-${pageId}`);
     if(activeLink) activeLink.classList.add('bg-purple-50', 'text-purple-700', 'font-semibold');
     
-    // Bottom Nav Stilleri
     document.querySelectorAll('.bottom-nav-btn').forEach(l => {
         l.classList.remove('active', 'text-purple-600');
         l.classList.add('text-gray-500');
@@ -216,37 +195,141 @@ function navigateToPage(pageId) {
         alert("Sayfa yüklenirken bir hata oluştu: " + err.message);
     }
 }
-// BİLDİRİMLER
+
+// =================================================================
+// BİLDİRİMLER (GELİŞTİRİLDİ)
+// =================================================================
 function initNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
     const dot = document.getElementById('coachNotificationDot');
     const dropdown = document.getElementById('coachNotificationDropdown');
     const btn = document.getElementById('btnHeaderNotifications');
     
-    // Dropdown Toggle
-    if(btn) btn.onclick = (e) => { 
+    if(!btn || !dropdown) return;
+
+    // Dropdown Toggle Mantığı
+    btn.onclick = (e) => { 
         e.stopPropagation(); 
         dropdown.classList.toggle('hidden'); 
-        dropdown.classList.toggle('scale-95'); // Animasyon için
-        dropdown.classList.toggle('opacity-0');
+        
+        // Animasyon sınıfları
+        if (!dropdown.classList.contains('hidden')) {
+            dropdown.classList.remove('scale-95', 'opacity-0');
+        } else {
+            dropdown.classList.add('scale-95', 'opacity-0');
+        }
+        
+        // Açılınca noktayı gizle
         dot.classList.add('hidden'); 
     };
-    document.addEventListener('click', (e) => { if(!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.add('hidden'); });
 
-    // 1 Gün Sonrasına Randevular
+    // Dışarı tıklayınca kapat
+    document.addEventListener('click', (e) => { 
+        if(!dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
+        }
+    });
+
+    // Kapatma butonu
+    const closeBtn = document.getElementById('btnCloseCoachNotifications');
+    if(closeBtn) closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
+    };
+
+    // --- VERİ TOPLAMA ---
+    // Bildirimleri tek bir yerde toplamak için state nesnesi
+    let notifications = {
+        appointments: [],
+        pendingQuestions: [],
+        pendingExams: []
+    };
+
+    const renderNotifications = () => {
+        const all = [
+            ...notifications.appointments,
+            ...notifications.pendingQuestions,
+            ...notifications.pendingExams
+        ];
+
+        // Tarih sırasına göre veya önem sırasına göre dizebilirsiniz (Burada basit birleştirme)
+        
+        if (all.length > 0) {
+            dot.classList.remove('hidden');
+            let html = '';
+            all.forEach(item => {
+                html += `
+                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors" onclick="${item.action || ''}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-bold text-gray-800">${item.title}</p>
+                            <p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p>
+                        </div>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${item.badgeClass}">${item.badgeText}</span>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        } else {
+            dot.classList.add('hidden');
+            list.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-8 text-gray-400">
+                    <i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i>
+                    <p class="text-xs">Yeni bildirim yok.</p>
+                </div>`;
+        }
+    };
+
+    // 1. KAYNAK: YARINKİ RANDEVULAR
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const tStr = tomorrow.toISOString().split('T')[0];
     
-    // Dinleyici
     onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", "==", tStr)), (snap) => {
-        let html = '';
-        if(!snap.empty) {
-            snap.forEach(d => html += `<div class="p-3 border-b hover:bg-purple-50 cursor-pointer"><p class="text-xs font-bold text-purple-700">Yarınki Randevu</p><p class="text-xs text-gray-600">${d.data().baslangic} - ${d.data().ogrenciAd}</p></div>`);
-            list.innerHTML = html;
-            dot.classList.remove('hidden');
-        } else {
-            list.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Yeni bildirim yok.</p>';
-        }
+        notifications.appointments = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.appointments.push({
+                title: 'Yarınki Randevu',
+                desc: `${data.baslangic} - ${data.ogrenciAd}`,
+                badgeText: 'Ajanda',
+                badgeClass: 'bg-blue-100 text-blue-700',
+                action: "document.getElementById('nav-ajandam').click()"
+            });
+        });
+        renderNotifications();
+    });
+
+    // 2. KAYNAK: ONAY BEKLEYEN SORULAR (Son 5)
+    // Not: CollectionGroup sorgusu için Firestore'da index oluşturmanız gerekebilir.
+    onSnapshot(query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+        notifications.pendingQuestions = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.pendingQuestions.push({
+                title: 'Soru Onayı Bekliyor',
+                desc: `${formatDateTR(data.tarih)} - ${data.ders} (${data.adet} Soru)`,
+                badgeText: 'Onay',
+                badgeClass: 'bg-yellow-100 text-yellow-700',
+                action: "document.getElementById('nav-sorutakibi').click()"
+            });
+        });
+        renderNotifications();
+    });
+
+    // 3. KAYNAK: ONAY BEKLEYEN DENEMELER (Son 5)
+    onSnapshot(query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+        notifications.pendingExams = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.pendingExams.push({
+                title: 'Deneme Onayı Bekliyor',
+                desc: `${data.studentAd || 'Öğrenci'} - ${data.tur} Denemesi`,
+                badgeText: 'Onay',
+                badgeClass: 'bg-purple-100 text-purple-700',
+                action: "document.getElementById('nav-denemeler').click()"
+            });
+        });
+        renderNotifications();
     });
 }
 
@@ -254,6 +337,7 @@ function initNotifications(uid) {
 if(document.getElementById('btnHeaderMessages')) {
     document.getElementById('btnHeaderMessages').onclick = () => navigateToPage('mesajlar');
 }
+
 // =================================================================
 // 4. MODAL KONTROLLERİ
 // =================================================================
@@ -263,20 +347,20 @@ function addListener(id, event, handler) {
     if (el) el.addEventListener(event, handler);
 }
 
-// Kapatma Butonları (DÜZELTİLDİ: Eksik ID'ler eklendi ve inline-style temizleme yapıldı)
+// Kapatma Butonları (Inline style'ı temizleyerek kapatma)
 const closeButtons = [
     '.close-modal-btn',
-    '#closeModalButton', '#cancelModalButton', // Öğrenci Ekle
-    '#closeEditModalButton', '#cancelEditModalButton', // Öğrenci Düzenle
-    '#closeDenemeModalButton', '#cancelDenemeModalButton', // Deneme Ekle
-    '#closeSoruModalButton', '#cancelSoruModalButton', // Soru Ekle
-    '#closeHedefModalButton', '#cancelHedefModalButton', // Hedef Ekle
-    '#closeOdevModalButton', '#cancelOdevModalButton', // Ödev Ekle
-    '#closeRandevuModalButton', '#cancelRandevuModalButton', // Randevu Ekle
-    '#closeEditRandevuModalButton', '#cancelEditRandevuModalButton', // Randevu DÜZENLE (YENİ EKLENDİ)
-    '#closeTahsilatModalButton', '#cancelTahsilatModalButton', // Tahsilat
-    '#closeBorcModalButton', '#cancelBorcModalButton', // Borç
-    '#closeProfileModalButton' // Profil
+    '#closeModalButton', '#cancelModalButton', 
+    '#closeEditModalButton', '#cancelEditModalButton', 
+    '#closeDenemeModalButton', '#cancelDenemeModalButton', 
+    '#closeSoruModalButton', '#cancelSoruModalButton', 
+    '#closeHedefModalButton', '#cancelHedefModalButton', 
+    '#closeOdevModalButton', '#cancelOdevModalButton', 
+    '#closeRandevuModalButton', '#cancelRandevuModalButton', 
+    '#closeEditRandevuModalButton', '#cancelEditRandevuModalButton', 
+    '#closeTahsilatModalButton', '#cancelTahsilatModalButton', 
+    '#closeBorcModalButton', '#cancelBorcModalButton', 
+    '#closeProfileModalButton'
 ];
 
 document.querySelectorAll(closeButtons.join(', ')).forEach(btn => {
@@ -284,7 +368,7 @@ document.querySelectorAll(closeButtons.join(', ')).forEach(btn => {
         const modal = e.target.closest('.fixed');
         if(modal) {
             modal.classList.add('hidden');
-            modal.style.display = 'none'; // DÜZELTME: Inline style ile açılan modalları zorla kapat
+            modal.style.display = 'none'; 
         }
     });
 });
@@ -327,7 +411,6 @@ function showProfileModal(user) {
     const tabBtn = document.querySelector('.profile-tab-button[data-tab="hesap"]');
     if(tabBtn) tabBtn.click();
     
-    // Profil modalını açarken class kullanıyoruz, o yüzden display resetlemeye gerek yok ama güvenlik için:
     profileModal.classList.remove('hidden');
     profileModal.style.display = ''; 
 }
@@ -387,8 +470,6 @@ addListener('btnKopyala', 'click', () => {
     input.select();
     navigator.clipboard.writeText(input.value).then(() => alert("Kopyalandı!"));
 });
-
-
 
 // BAŞLAT
 main();

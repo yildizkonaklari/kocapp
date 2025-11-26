@@ -49,7 +49,6 @@ const AVATAR_LIBRARY = [
     "🦊", "🐱", "🐶", "🐼", "🐯", "⚽", "🏀", "🎮"
 ];
 
-// Rutinler ve Ders Havuzları
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
 const DERS_HAVUZU = { 
     'ORTAOKUL': [
@@ -82,47 +81,119 @@ let odevWeekOffset = 0;
 let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null };
 
 // =================================================================
-// 3. KİMLİK DOĞRULAMA
+// 3. KİMLİK DOĞRULAMA VE BAŞLATMA
 // =================================================================
 onAuthStateChanged(auth, async (user) => {
-    if (user) { currentUser = user; await initializeStudentApp(user.uid); } 
-    else { window.location.href = "student-login.html"; }
+    if (user) { 
+        currentUser = user; 
+        // Varsa Loading spinner'ı gizle
+        const spinner = document.getElementById('loadingSpinner');
+        if(spinner) spinner.style.display = 'none';
+        
+        await initializeStudentApp(user.uid); 
+    } 
+    else { 
+        window.location.href = "student-login.html"; 
+    }
 });
 
 async function initializeStudentApp(uid) {
     try {
         const profileRef = doc(db, "artifacts", appId, "users", uid, "settings", "profile");
         const profileSnap = await getDoc(profileRef);
+        
         if (profileSnap.exists()) {
             const pd = profileSnap.data();
             coachId = pd.kocId;
             studentDocId = pd.linkedDocId;
+            
             if (coachId && studentDocId) {
+                // Eşleşme tamamsa paneli yükle
                 loadDashboardData(); 
                 enableHeaderIcons();
             } else {
-                document.getElementById('modalMatchProfile').classList.remove('hidden');
-                document.getElementById('modalMatchProfile').style.display = 'flex';
+                // Eşleşme yoksa modalı göster
+                const modal = document.getElementById('modalMatchProfile');
+                if(modal) {
+                    modal.classList.remove('hidden');
+                    modal.style.display = 'flex';
+                }
             }
-        } else signOut(auth);
-    } catch (e) { console.error(e); }
+        } else {
+            // Profil yoksa çıkış yap (Hata durumu)
+            console.error("Profil bulunamadı.");
+            signOut(auth);
+        }
+    } catch (e) { console.error("Başlatma hatası:", e); }
 }
 
+// --- PROFİL EŞLEŞTİRME BUTONU VE MANTIĞI ---
 const btnMatch = document.getElementById('btnMatchProfile');
 if (btnMatch) {
     btnMatch.onclick = async () => {
-        const n = document.getElementById('matchName').value.trim(), s = document.getElementById('matchSurname').value.trim();
-        if(!n||!s) return alert("Bilgileri girin.");
-        const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"), where("ad", "==", n), where("soyad", "==", s));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-            studentDocId = snap.docs[0].id;
-            await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), { linkedDocId: studentDocId });
-            document.getElementById('modalMatchProfile').classList.add('hidden');
-            alert("Eşleşme başarılı!");
-            loadDashboardData();
-            enableHeaderIcons();
-        } else document.getElementById('matchError').classList.remove('hidden');
+        const nameInput = document.getElementById('matchName');
+        const surnameInput = document.getElementById('matchSurname');
+        const errorMsg = document.getElementById('matchError');
+        
+        const n = nameInput.value.trim();
+        const s = surnameInput.value.trim();
+
+        if(!n || !s) {
+            errorMsg.textContent = "Lütfen Ad ve Soyad girin.";
+            errorMsg.classList.remove('hidden');
+            return;
+        }
+
+        if(!coachId) {
+            errorMsg.textContent = "Koç bağlantısı bulunamadı. Sayfayı yenileyin.";
+            errorMsg.classList.remove('hidden');
+            return;
+        }
+
+        // Buton Durumu: Yükleniyor
+        const originalText = btnMatch.textContent;
+        btnMatch.disabled = true;
+        btnMatch.textContent = "Aranıyor...";
+        errorMsg.classList.add('hidden');
+
+        try {
+            // Koçun öğrenci listesinde ara (Büyük/Küçük harf duyarlı!)
+            const q = query(
+                collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"), 
+                where("ad", "==", n), 
+                where("soyad", "==", s)
+            );
+            
+            const snap = await getDocs(q);
+            
+            if (!snap.empty) {
+                // Eşleşme Başarılı
+                studentDocId = snap.docs[0].id;
+                
+                // Öğrenci profilini güncelle (linkedDocId ekle)
+                await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), { 
+                    linkedDocId: studentDocId 
+                });
+                
+                document.getElementById('modalMatchProfile').classList.add('hidden');
+                alert("Profil başarıyla eşleştirildi! Hoş geldin.");
+                
+                loadDashboardData();
+                enableHeaderIcons();
+            } else {
+                // Eşleşme Başarısız
+                errorMsg.textContent = "Profil bulunamadı. Adınızı ve Soyadınızı koçunuzun kaydettiği şekilde (büyük/küçük harf uyumlu) tam olarak girdiğinizden emin olun.";
+                errorMsg.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error("Eşleştirme hatası:", error);
+            errorMsg.textContent = "Bir hata oluştu: " + error.message;
+            errorMsg.classList.remove('hidden');
+        } finally {
+            // Butonu eski haline getir
+            btnMatch.disabled = false;
+            btnMatch.textContent = originalText;
+        }
     };
 }
 
@@ -158,7 +229,6 @@ function enableHeaderIcons() {
         loadNotifications();
     }
 
-    // Avatar Değiştirme
     const btnChangeAvatar = document.getElementById('btnChangeAvatar');
     const modalAvatar = document.getElementById('modalAvatarSelect');
     if (btnChangeAvatar && modalAvatar) {
@@ -175,11 +245,10 @@ function enableHeaderIcons() {
 window.selectAvatar = async (icon) => {
     try {
         await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon });
-        // Profili güncelle
         const avatarEl = document.getElementById('profileAvatar');
         if (avatarEl) {
             avatarEl.textContent = icon;
-            avatarEl.style.backgroundColor = '#fff'; // Arkaplanı temizle
+            avatarEl.style.backgroundColor = '#fff';
             avatarEl.style.fontSize = '3rem';
         }
         document.getElementById('modalAvatarSelect').classList.add('hidden');
@@ -220,13 +289,11 @@ async function loadDashboardData() {
     if (snap.exists()) {
         const d = snap.data();
         
-        // Header & Profil Bilgileri
         if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
         if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
         if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = d.sinif;
-        if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email; // Giriş yapan kullanıcının emaili
+        if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email;
         
-        // Avatar İşlemi
         const avatarEl = document.getElementById('profileAvatar');
         if (d.avatarIcon) {
             avatarEl.textContent = d.avatarIcon;
@@ -234,11 +301,9 @@ async function loadDashboardData() {
             avatarEl.style.fontSize = '3rem';
         } else {
             avatarEl.textContent = d.ad[0].toUpperCase();
-            avatarEl.style.fontSize = ''; // Varsayılana dön
-            // Gradient arka planı CSS'den geliyor, dokunmaya gerek yok
+            avatarEl.style.fontSize = '';
         }
         
-        // Dersleri Belirle
         if (d.takipDersleri && Array.isArray(d.takipDersleri) && d.takipDersleri.length > 0) {
             studentDersler = d.takipDersleri;
         } else {
@@ -246,7 +311,6 @@ async function loadDashboardData() {
             studentDersler = isOrtaokul ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE'];
         }
 
-        // Profil sayfasına ders listesini ekle
         renderProfileLessons(studentDersler);
     }
     updateHomeworkMetrics();

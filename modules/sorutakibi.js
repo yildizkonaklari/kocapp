@@ -1,4 +1,4 @@
-// === GLOBAL SORU TAKİBİ MODÜLÜ ===
+// === MODULES/SORUTAKIBI.JS ===
 
 import { 
     doc, 
@@ -18,7 +18,6 @@ import {
 
 import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
 
-// Modül Seviyesi Değişkenler
 let allSoruData = [];
 let studentMap = {}; 
 let pendingDocsPaths = [];
@@ -77,21 +76,17 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
     await loadStudentsAndMap(db, currentUserId, appId);
     startSoruListener(db, currentUserId, appId);
     
-    // Event Listeners
     document.getElementById('filterStudentSelect').addEventListener('change', () => applyFilterAndRender(db));
     document.getElementById('btnApproveAll').addEventListener('click', () => approveFilteredPending(db));
     
-    // YENİ: Soru Ekle Butonu
     document.getElementById('btnAddNewSoru').addEventListener('click', async () => {
         const selectedStudentId = document.getElementById('filterStudentSelect').value;
         const modal = document.getElementById('addSoruModal');
         const selectContainer = document.getElementById('soruStudentSelectContainer');
         
-        // Formu Temizle
         document.getElementById('soruDers').value = '';
         document.getElementById('soruKonu').value = '';
         document.getElementById('soruAdet').value = '';
-        // DÜZELTME 1: ID 'soruTarihi' değil 'soruTarih' olmalı
         document.getElementById('soruTarih').value = new Date().toISOString().split('T')[0];
 
         if (selectedStudentId === 'all') {
@@ -106,7 +101,6 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
     });
 }
 
-// --- KAYDETME FONKSİYONU (Globalden Çağrılacak) ---
 export async function saveGlobalSoru(db, currentUserId, appId) {
     let studentId = document.getElementById('currentStudentIdForSoruTakibi').value;
     const selectContainer = document.getElementById('soruStudentSelectContainer');
@@ -118,12 +112,11 @@ export async function saveGlobalSoru(db, currentUserId, appId) {
     if (!studentId) { alert("Lütfen bir öğrenci seçin."); return; }
 
     const data = {
-        // DÜZELTME 2: ID 'soruTarihi' değil 'soruTarih' olmalı
         tarih: document.getElementById('soruTarih').value,
         ders: document.getElementById('soruDers').value,
         konu: document.getElementById('soruKonu').value,
         adet: parseInt(document.getElementById('soruAdet').value) || 0,
-        onayDurumu: 'onaylandi', // Koç girdiği için onaylı
+        onayDurumu: 'onaylandi', 
         kocId: currentUserId,
         eklenmeTarihi: serverTimestamp()
     };
@@ -207,12 +200,12 @@ function renderGlobalSoruList(entries, db) {
     if(entries.length===0) { container.innerHTML='<p class="text-gray-400 text-center p-8">Kayıt yok.</p>'; return; }
     
     container.innerHTML = `<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>
-        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
-        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Öğrenci</th>
-        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ders</th>
-        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Konu</th>
-        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adet</th>
-        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tarih</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Öğrenci</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Ders</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Konu</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Adet</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Durum</th>
         <th class="px-6 py-3"></th>
     </tr></thead><tbody class="bg-white divide-y divide-gray-200">${entries.map(e => {
         const isPending = e.onayDurumu === 'bekliyor';

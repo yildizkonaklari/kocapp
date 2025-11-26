@@ -1,6 +1,6 @@
 import { 
-    doc, getDoc, addDoc, updateDoc, deleteDoc, 
-    collection, query, orderBy, onSnapshot, serverTimestamp 
+    doc, getDoc, addDoc, updateDoc, deleteDoc, getDocs,
+    collection, query, orderBy, onSnapshot, serverTimestamp, where 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { activeListeners, formatDateTR, formatCurrency, renderDersSecimi } from './helpers.js';
@@ -31,9 +31,8 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
             </div>
         </div>
 
-        <!-- SEKME MENÜSÜ (SADELEŞTİRİLDİ) -->
         <div class="flex border-b border-gray-200 mb-6 overflow-x-auto no-scrollbar">
-            <button data-tab="ozet" class="tab-button active py-3 px-5 text-purple-600 border-b-2 border-purple-600 font-semibold">Özet</button>
+            <button data-tab="ozet" class="tab-button active py-3 px-5 text-purple-600 border-b-2 border-purple-600 font-semibold">Özet & Analiz</button>
             <button data-tab="notlar" class="tab-button py-3 px-5 text-gray-500 hover:text-purple-600">Koçluk Notları</button>
         </div>
         
@@ -42,7 +41,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
 
     // Event Listeners
     document.getElementById('btnEditStudent').addEventListener('click', () => showEditStudentModal(db, currentUserId, appId, studentId));
-    document.getElementById('btnMsgStudent').addEventListener('click', () => document.getElementById('nav-mesajlar').click()); // Mesajlara yönlendir
+    document.getElementById('btnMsgStudent').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
 
     // Tab Geçişleri
     const tabBtns = document.querySelectorAll('.tab-button');
@@ -65,40 +64,239 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
     renderOzetTab(db, currentUserId, appId, studentId);
 }
 
-// --- ÖZET TAB ---
+// --- ÖZET & ANALİZ TAB (YENİLENMİŞ) ---
 async function renderOzetTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
-    const snap = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId));
     
-    if (snap.exists()) {
-        const d = snap.data();
-        if(document.getElementById('studentDetailClass')) document.getElementById('studentDetailClass').textContent = d.sinif;
-        
-        const bakiye = (d.toplamBorc || 0) - (d.toplamOdenen || 0);
-        
-        area.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                    <p class="text-sm font-medium text-gray-500">Sınıf</p>
-                    <p class="text-lg font-semibold">${d.sinif}</p>
+    // Temel Öğrenci Bilgisi (Class, Tarih, Bakiye)
+    const studentSnap = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId));
+    const studentData = studentSnap.exists() ? studentSnap.data() : {};
+    if(document.getElementById('studentDetailClass')) document.getElementById('studentDetailClass').textContent = studentData.sinif || '';
+
+    area.innerHTML = `
+        <div class="flex justify-end mb-4">
+            <select id="summaryTimeFilter" class="p-2 border rounded-lg text-sm bg-white shadow-sm focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer">
+                <option value="all">Tüm Zamanlar</option>
+                <option value="month" selected>Bu Ay</option>
+                <option value="week">Bu Hafta</option>
+            </select>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            ${renderKpiCard('Tamamlanan Hedef', '0', 'bg-green-100 text-green-700', 'fa-bullseye', 'kpi-goal')}
+            ${renderKpiCard('Tamamlanan Ödev', '0', 'bg-blue-100 text-blue-700', 'fa-list-check', 'kpi-homework')}
+            ${renderKpiCard('Deneme Sayısı', '0', 'bg-purple-100 text-purple-700', 'fa-file-lines', 'kpi-exam-count')}
+            ${renderKpiCard('Çözülen Soru', '0', 'bg-orange-100 text-orange-700', 'fa-pen', 'kpi-question')}
+            ${renderKpiCard('Tamamlanan Seans', '0', 'bg-pink-100 text-pink-700', 'fa-calendar-check', 'kpi-session')}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-all hover:shadow-md">
+                <p class="text-xs text-gray-500 uppercase font-bold mb-1">Ortalama Net</p>
+                <h3 id="stat-avg-net" class="text-2xl font-bold text-indigo-600">-</h3>
+                <p class="text-[10px] text-gray-400 mt-1">Tüm denemeler</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-all hover:shadow-md">
+                <p class="text-xs text-gray-500 uppercase font-bold mb-1">Okuma (Sayfa)</p>
+                <h3 id="stat-reading" class="text-2xl font-bold text-teal-600">-</h3>
+                <p class="text-[10px] text-gray-400 mt-1">Rutin takibi</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-all hover:shadow-md">
+                <p class="text-xs text-gray-500 uppercase font-bold mb-1">En Başarılı Ders</p>
+                <h3 id="stat-best-lesson" class="text-lg font-bold text-green-600">-</h3>
+                <div class="w-full bg-green-100 h-1 mt-2 rounded-full"><div class="bg-green-500 h-1 rounded-full" style="width: 80%"></div></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-all hover:shadow-md">
+                <p class="text-xs text-gray-500 uppercase font-bold mb-1">Geliştirilecek Ders</p>
+                <h3 id="stat-worst-lesson" class="text-lg font-bold text-red-500">-</h3>
+                <div class="w-full bg-red-100 h-1 mt-2 rounded-full"><div class="bg-red-500 h-1 rounded-full" style="width: 40%"></div></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="space-y-4">
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <h4 class="font-bold text-gray-700 mb-3 flex items-center"><i class="fa-solid fa-address-card mr-2 text-gray-400"></i> Öğrenci Künyesi</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between border-b border-gray-200 pb-1"><span>Sınıf:</span> <span class="font-semibold text-gray-800">${studentData.sinif || '-'}</span></div>
+                        <div class="flex justify-between border-b border-gray-200 pb-1"><span>Kayıt:</span> <span class="font-semibold text-gray-800">${formatDateTR(studentData.olusturmaTarihi?.toDate().toISOString().split('T')[0])}</span></div>
+                        <div class="flex justify-between pt-1"><span>Bakiye:</span> <span class="font-semibold ${((studentData.toplamBorc||0)-(studentData.toplamOdenen||0)) > 0 ? 'text-red-600':'text-green-600'}">${formatCurrency((studentData.toplamBorc||0)-(studentData.toplamOdenen||0))}</span></div>
+                    </div>
                 </div>
-                <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                    <p class="text-sm font-medium text-gray-500">Kayıt Tarihi</p>
-                    <p class="text-lg font-semibold">${formatDateTR(d.olusturmaTarihi?.toDate().toISOString().split('T')[0])}</p>
-                </div>
-                <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                    <p class="text-sm font-medium text-gray-500">Bakiye</p>
-                    <p class="text-lg font-semibold ${bakiye > 0 ? 'text-red-600' : 'text-green-600'}">${formatCurrency(bakiye)}</p>
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2 text-sm">Takip Edilen Dersler</h4>
+                    <div class="flex flex-wrap gap-2">
+                        ${(studentData.takipDersleri || []).map(d => `<span class="px-2 py-1 bg-white text-blue-600 rounded text-xs shadow-sm border border-blue-100">${d}</span>`).join('')}
+                    </div>
                 </div>
             </div>
-            
-            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <h4 class="font-bold text-blue-800 mb-2">Takip Edilen Dersler</h4>
-                <div class="flex flex-wrap gap-2">
-                    ${(d.takipDersleri || []).map(ders => `<span class="px-3 py-1 bg-white text-blue-600 rounded-full text-sm shadow-sm border border-blue-100">${ders}</span>`).join('')}
+
+            <div class="lg:col-span-2 bg-white rounded-xl border border-red-100 shadow-sm overflow-hidden flex flex-col">
+                <div class="bg-red-50 px-4 py-3 border-b border-red-100 flex justify-between items-center">
+                    <h4 class="font-bold text-red-800 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> Gecikmiş Ödevler</h4>
+                    <span id="overdue-count" class="bg-red-200 text-red-800 text-xs px-2 py-1 rounded-full font-bold">0</span>
+                </div>
+                <div id="overdue-list" class="p-2 flex-1 overflow-y-auto max-h-64">
+                    <p class="text-center text-gray-400 text-sm py-8">Yükleniyor...</p>
                 </div>
             </div>
-        `;
+        </div>
+    `;
+
+    // Filtre Listener
+    const filterSelect = document.getElementById('summaryTimeFilter');
+    filterSelect.addEventListener('change', () => loadStats(db, currentUserId, appId, studentId, filterSelect.value));
+
+    // Verileri Yükle
+    loadStats(db, currentUserId, appId, studentId, 'month'); // Varsayılan: Bu Ay
+    loadOverdueHomeworks(db, currentUserId, appId, studentId); // Gecikmiş ödevler zamandan bağımsız
+}
+
+// --- YARDIMCI: KPI KARTI ---
+function renderKpiCard(title, valueId, colorClass, icon, id) {
+    return `
+    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center h-28 hover:shadow-md transition-shadow">
+        <div class="w-10 h-10 rounded-full ${colorClass} flex items-center justify-center mb-2 text-lg"><i class="fa-solid ${icon}"></i></div>
+        <h4 class="text-2xl font-bold text-gray-800 leading-none" id="${id}">0</h4>
+        <p class="text-[10px] text-gray-500 font-bold uppercase leading-tight mt-1.5 tracking-wide">${title}</p>
+    </div>`;
+}
+
+// --- VERİ YÜKLEME & HESAPLAMA ---
+async function loadStats(db, uid, appId, sid, period) {
+    // 1. Tarih Aralığını Belirle
+    const now = new Date();
+    let startDate = null;
+    
+    if (period === 'week') {
+        const day = now.getDay() || 7; 
+        if(day !== 1) now.setHours(-24 * (day - 1)); 
+        startDate = now.toISOString().split('T')[0];
+    } else if (period === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    } else {
+        startDate = '2000-01-01'; // Tüm zamanlar
+    }
+
+    // 2. Veritabanı Sorguları
+    const qGoals = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), 
+        where("durum", "==", "tamamlandi"),
+        where("bitisTarihi", ">=", startDate)
+    );
+    const qHomework = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), 
+        where("durum", "==", "tamamlandi"),
+        where("bitisTarihi", ">=", startDate)
+    );
+    const qExams = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"),
+        where("tarih", ">=", startDate)
+    );
+    const qQuestions = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"),
+        where("tarih", ">=", startDate)
+    );
+    // Randevular: Ajanda kök dizinde olduğu için studentId ile filtreliyoruz
+    const qSessions = query(collection(db, "artifacts", appId, "users", uid, "ajandam"),
+        where("studentId", "==", sid),
+        where("tarih", ">=", startDate),
+        where("durum", "==", "tamamlandi")
+    );
+
+    // 3. Paralel Veri Çekme
+    const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
+        getDocs(qGoals),
+        getDocs(qHomework),
+        getDocs(qExams),
+        getDocs(qQuestions),
+        getDocs(qSessions)
+    ]);
+
+    // 4. KPI Güncelleme
+    document.getElementById('kpi-goal').textContent = snapGoals.size;
+    document.getElementById('kpi-homework').textContent = snapHomework.size;
+    document.getElementById('kpi-exam-count').textContent = snapExams.size;
+    document.getElementById('kpi-session').textContent = snapSessions.size;
+
+    // 5. Soru ve Okuma Hesaplama
+    let totalQuestions = 0;
+    let totalReading = 0;
+    snapQuestions.forEach(doc => {
+        const d = doc.data();
+        const adet = parseInt(d.adet) || 0;
+        // Kitap okumayı ayır (Ders adı veya Konu içinde geçiyorsa)
+        if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) {
+             totalReading += adet;
+        } else {
+             totalQuestions += adet;
+        }
+    });
+    document.getElementById('kpi-question').textContent = totalQuestions;
+    document.getElementById('stat-reading').textContent = totalReading;
+
+    // 6. Deneme Analizi (Ortalama, En iyi/kötü ders)
+    let totalNet = 0;
+    let subjectStats = {}; // { 'Matematik': {total: 150, count: 3}, ... }
+
+    snapExams.forEach(doc => {
+        const d = doc.data();
+        totalNet += (parseFloat(d.toplamNet) || 0);
+        
+        if (d.netler) {
+            for (const [ders, stats] of Object.entries(d.netler)) {
+                if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 };
+                subjectStats[ders].total += (parseFloat(stats.net) || 0);
+                subjectStats[ders].count += 1;
+            }
+        }
+    });
+
+    const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-';
+    document.getElementById('stat-avg-net').textContent = avgNet;
+
+    // En iyi / En kötü dersi bul
+    let bestLesson = { name: '-', avg: -Infinity };
+    let worstLesson = { name: '-', avg: Infinity };
+
+    for (const [name, stat] of Object.entries(subjectStats)) {
+        const avg = stat.total / stat.count;
+        if (avg > bestLesson.avg) bestLesson = { name, avg };
+        if (avg < worstLesson.avg) worstLesson = { name, avg };
+    }
+
+    if (bestLesson.name !== '-') {
+        document.getElementById('stat-best-lesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`;
+        document.getElementById('stat-worst-lesson').textContent = `${worstLesson.name} (${worstLesson.avg.toFixed(1)})`;
+    } else {
+        document.getElementById('stat-best-lesson').textContent = '-';
+        document.getElementById('stat-worst-lesson').textContent = '-';
+    }
+}
+
+// --- GECİKMİŞ ÖDEVLER ---
+async function loadOverdueHomeworks(db, uid, appId, sid) {
+    const today = new Date().toISOString().split('T')[0];
+    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"),
+        where("durum", "!=", "tamamlandi"),
+        where("bitisTarihi", "<", today),
+        orderBy("bitisTarihi", "asc")
+    );
+
+    const snap = await getDocs(q);
+    document.getElementById('overdue-count').textContent = snap.size;
+    const container = document.getElementById('overdue-list');
+    
+    if (snap.empty) {
+        container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 py-6"><i class="fa-regular fa-circle-check text-3xl mb-2 text-green-200"></i><p class="text-sm">Harika! Gecikmiş ödev yok.</p></div>';
+    } else {
+        container.innerHTML = snap.docs.map(doc => {
+            const d = doc.data();
+            return `
+            <div class="bg-white p-3 rounded-lg border-l-4 border-red-400 shadow-sm mb-2 hover:bg-red-50 transition-colors">
+                <h5 class="font-bold text-gray-800 text-sm line-clamp-1">${d.title}</h5>
+                <div class="flex justify-between items-center mt-1.5">
+                    <span class="text-[10px] text-red-700 font-mono bg-red-100 px-1.5 py-0.5 rounded flex items-center"><i class="fa-regular fa-clock mr-1"></i> ${formatDateTR(d.bitisTarihi)}</span>
+                    <button class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800" onclick="document.getElementById('nav-odevler').click()">İncele <i class="fa-solid fa-arrow-right ml-0.5"></i></button>
+                </div>
+            </div>`;
+        }).join('');
     }
 }
 
@@ -118,7 +316,6 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
         </div>
     `;
 
-    // Kaydet Butonu
     document.getElementById('btnSaveNote').onclick = async () => {
         const txt = document.getElementById('newNoteInput').value.trim();
         if(!txt) return;
@@ -128,7 +325,6 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
         document.getElementById('newNoteInput').value = '';
     };
 
-    // Listeleme
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "koclukNotlari"), orderBy("tarih", "desc"));
     activeListeners.notlarUnsubscribe = onSnapshot(q, (snap) => {
         const container = document.getElementById('noteList');
@@ -137,9 +333,9 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
         container.innerHTML = snap.docs.map(doc => {
             const d = doc.data();
             return `
-                <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-lg relative group">
-                    <p class="text-gray-800 whitespace-pre-wrap">${d.icerik}</p>
-                    <p class="text-xs text-gray-400 mt-2">${d.tarih?.toDate().toLocaleString()}</p>
+                <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-lg relative group hover:shadow-sm transition-shadow">
+                    <p class="text-gray-800 whitespace-pre-wrap text-sm">${d.icerik}</p>
+                    <p class="text-[10px] text-gray-400 mt-2 flex items-center gap-1"><i class="fa-regular fa-clock"></i> ${d.tarih?.toDate().toLocaleString()}</p>
                     <button class="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" 
                             onclick="if(confirm('Silinsin mi?')) deleteDoc(doc(db, 'artifacts', '${appId}', 'users', '${currentUserId}', 'ogrencilerim', '${studentId}', 'koclukNotlari', '${doc.id}'))">
                         <i class="fa-solid fa-trash"></i>
@@ -167,7 +363,6 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
         </div>
     `;
     
-    // Modal Açma
     document.getElementById('showAddStudentModalButton').addEventListener('click', () => {
         document.getElementById('studentName').value = '';
         document.getElementById('studentSurname').value = '';
@@ -176,7 +371,6 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
         document.getElementById('addStudentModal').style.display = 'block';
     });
 
-    // Arama
     document.getElementById('searchStudentInput').addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
         document.querySelectorAll('#studentListContainer tbody tr').forEach(row => {
@@ -184,7 +378,6 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
         });
     });
 
-    // Listeyi Yükle
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
     activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
         const container = document.getElementById('studentListContainer');
@@ -210,7 +403,6 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
     });
 }
 
-// --- YARDIMCI: DÜZENLEME MODALI AÇ ---
 function showEditStudentModal(db, currentUserId, appId, studentId) {
     const modal = document.getElementById('editStudentModal');
     const dersContainer = document.getElementById('editStudentDersSecimiContainer');
@@ -228,7 +420,6 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
     });
 }
 
-// --- KAYIT FONKSİYONLARI (app.js kullanır) ---
 export async function saveNewStudent(db, currentUserId, appId) {
     const ad = document.getElementById('studentName').value.trim();
     const soyad = document.getElementById('studentSurname').value.trim();
@@ -254,5 +445,4 @@ export async function saveStudentChanges(db, currentUserId, appId) {
         ad, soyad, sinif, takipDersleri: dersler
     });
     document.getElementById('editStudentModal').style.display = 'none';
-    // Sayfayı yenilemeye gerek yok, listener güncelleyecek
 }

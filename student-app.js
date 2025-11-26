@@ -20,7 +20,6 @@ import {
     serverTimestamp, orderBy, limit, deleteDoc, writeBatch, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// helpers.js'den import
 import { formatDateTR } from './modules/helpers.js';
 
 const firebaseConfig = {
@@ -38,23 +37,44 @@ const db = getFirestore(app);
 const appId = "kocluk-sistemi";
 
 // =================================================================
-// 2. GLOBAL DEĞİŞKENLER
+// 2. GLOBAL DEĞİŞKENLER VE SABİTLER
 // =================================================================
 let currentUser = null;
 let coachId = null;     
 let studentDocId = null; 
 let studentDersler = []; 
+
+// Rutinler ve Ders Havuzları (Genişletildi)
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
-const motivasyonSozleri = ["Başarı bir yolculuktur.", "Bugün dünden daha iyi ol.", "Küçük adımlar büyük sonuçlar doğurur."];
+const DERS_HAVUZU = { 
+    'ORTAOKUL': [
+        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
+        "T.C. İnkılap", "Din Kültürü", "İngilizce"
+    ], 
+    'LISE': [
+        "Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji",
+        "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"
+    ] 
+};
+const SINAV_DERSLERI = { 
+    'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 
+    'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu'], 
+    'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'] 
+};
+
+const motivasyonSozleri = [
+    "Başarı bir yolculuktur, varış noktası değil.", 
+    "Bugün dünden daha iyi ol.", 
+    "Küçük adımlar büyük sonuçlar doğurur.",
+    "Disiplin, hedeflerle başarı arasındaki köprüdür."
+];
+
 let denemeChartInstance = null;
 let currentCalDate = new Date();
-let currentWeekOffset = 0; // Soru takibi için
-let odevWeekOffset = 0;    // Ödev takvimi için
+let currentWeekOffset = 0;
+let odevWeekOffset = 0;
 
-// Dinleyiciler
 let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null };
-const DERS_HAVUZU = { 'ORTAOKUL': ["Türkçe", "Matematik"], 'LISE': ["Türk Dili ve Edebiyatı", "Matematik"] };
-const SINAV_DERSLERI = { 'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji'], 'LGS': ['Türkçe', 'Matematik', 'Fen'] };
 
 // =================================================================
 // 3. KİMLİK DOĞRULAMA
@@ -157,7 +177,7 @@ function listenUnreadMessages() {
 }
 
 // =================================================================
-// 5. DASHBOARD
+// 5. DASHBOARD & VERİ YÜKLEME
 // =================================================================
 async function loadDashboardData() {
     if (!coachId || !studentDocId) return;
@@ -174,7 +194,15 @@ async function loadDashboardData() {
         if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = d.sinif;
         if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email;
         if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = d.ad[0].toUpperCase();
-        studentDersler = d.takipDersleri || DERS_HAVUZU['LISE'];
+        
+        // Dersleri Belirle: Eğer kayıtlı ders varsa onları, yoksa sınıfına göre varsayılanları al
+        if (d.takipDersleri && d.takipDersleri.length > 0) {
+            studentDersler = d.takipDersleri;
+        } else {
+            // Sınıfa göre otomatik belirle
+            const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(d.sinif);
+            studentDersler = isOrtaokul ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE'];
+        }
     }
     updateHomeworkMetrics();
     loadActiveGoalsForDashboard();
@@ -250,7 +278,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 // 7. MODÜLLER
 // =================================================================
 
-// --- SORU TAKİBİ (YENİ TASARIM) ---
+// --- SORU TAKİBİ (DÜZELTİLMİŞ) ---
 async function renderSoruTakibiGrid() {
     const container = document.getElementById('weeklyAccordion'); if(!container) return;
     if(!coachId) { container.innerHTML='<p class="text-center text-red-500">Hata.</p>'; return; }
@@ -271,14 +299,12 @@ async function renderSoruTakibiGrid() {
     container.innerHTML = dates.map(day => {
         const isToday = day.isToday;
         
-        // Kart Oluşturucu (Routine ve Dersler için ortak)
         const createCard = (label, isRoutine = false) => {
             const r = data.find(d => d.tarih === day.dateStr && d.ders === label);
             const val = r ? r.adet : '';
             const isApproved = r && r.onayDurumu === 'onaylandi';
             const isPending = r && r.onayDurumu === 'bekliyor';
             
-            // Stil Ayarları
             let borderClass = 'border-gray-200';
             let bgClass = 'bg-white';
             let textClass = 'text-gray-800';
@@ -320,21 +346,18 @@ async function renderSoruTakibiGrid() {
                 <i class="fa-solid fa-chevron-down transition-transform"></i>
             </button>
             <div class="accordion-content ${isToday?'':'hidden'} px-1 pb-4">
-                
                 <div class="mb-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
                     <h4 class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2 pl-1 flex items-center"><i class="fa-solid fa-star mr-1"></i> Rutinler</h4>
                     <div class="grid grid-cols-3 gap-2">
                         ${studentRutinler.map(r => createCard(r, true)).join('')}
                     </div>
                 </div>
-
                 <div>
                     <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 pl-1 flex items-center"><i class="fa-solid fa-book mr-1"></i> Dersler</h4>
                     <div class="grid grid-cols-3 gap-2">
                         ${studentDersler.map(d => createCard(d)).join('')}
                     </div>
                 </div>
-
             </div>
         </div>`;
     }).join('');
@@ -588,7 +611,6 @@ window.saveInput = async (input) => {
     if(val===old) return;
     const ref = collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi");
     
-    // Bekliyor durumuna çek
     if(input.dataset.docId) {
         if(val>0) await updateDoc(doc(ref, input.dataset.docId), {adet:val, onayDurumu:'bekliyor'});
         else { await deleteDoc(doc(ref, input.dataset.docId)); input.dataset.docId=""; }
@@ -596,9 +618,8 @@ window.saveInput = async (input) => {
         const d = await addDoc(ref, {tarih:input.dataset.tarih, ders:input.dataset.ders, adet:val, konu:'Genel', onayDurumu:'bekliyor', eklenmeTarihi:serverTimestamp(), kocId:coachId});
         input.dataset.docId = d.id;
     }
-    // Görsel Geri Bildirim (Turuncu Sınır)
     input.parentElement.classList.add('border-orange-300', 'bg-orange-50');
-    setTimeout(() => renderSoruTakibiGrid(), 500); // Grid'i yeniden çizip ikonları güncelle
+    setTimeout(() => renderSoruTakibiGrid(), 500); 
 };
 function getWeekDates(offset) {
     const d=['Paz','Sal','Çar','Per','Cum','Cmt','Paz'], w=[], t=new Date();

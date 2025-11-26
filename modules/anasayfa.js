@@ -7,7 +7,7 @@ import {
     orderBy, 
     onSnapshot, 
     getDocs,
-    getDoc, // EKLENDİ: Eksik olan import buraya eklendi
+    getDoc,
     collectionGroup,
     limit,
     doc,
@@ -156,7 +156,6 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     loadDashboardStats(db, currentUserId, appId);
     loadTodayAgenda(db, currentUserId, appId);
     loadPendingOdevler(db, currentUserId, appId); // Sadece KPI sayısı için
-    
     loadUnreadMessages(db, currentUserId, appId);
 
     // --- YENİ AKORDİYON SİSTEMLERİ ---
@@ -165,13 +164,100 @@ export function renderAnaSayfa(db, currentUserId, appId) {
 }
 
 // ===========================================================
-// 1. TAMAMLANAN ÖDEVLER AKORDİYONU
+// 1. ÖĞRENCİ İSTATİSTİKLERİ VE ÖDEV BARLARI
+// ===========================================================
+function loadDashboardStats(db, currentUserId, appId) {
+    const studentTableBody = document.getElementById('dashStudentTableBody');
+    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
+    
+    activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
+        let totalStudents = 0, tableHtml = '';
+        snapshot.forEach(doc => {
+            const s = doc.data();
+            totalStudents++;
+            
+            // Sadece ilk 5 öğrenci
+            if (totalStudents <= 5) {
+                tableHtml += `
+                    <tr class="hover:bg-gray-50 transition-colors group cursor-pointer dash-student-link" data-id="${doc.id}" data-name="${s.ad} ${s.soyad}">
+                        <td class="px-6 py-3 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-bold mr-3 group-hover:bg-purple-100 group-hover:text-purple-600">${s.ad[0]}${s.soyad[0]}</div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">${s.ad} ${s.soyad}</div>
+                                    <div class="mt-1 w-24">
+                                        <div class="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                                            <span>Ödev</span>
+                                            <span id="prog-txt-${doc.id}">%0</span>
+                                        </div>
+                                        <div class="w-full bg-gray-100 rounded-full h-1.5">
+                                            <div id="prog-bar-${doc.id}" class="bg-green-500 h-1.5 rounded-full" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-3 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">${s.sinif}</span></td>
+                        <td class="px-6 py-3 whitespace-nowrap text-center text-sm text-gray-500"><i class="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-purple-500"></i></td>
+                    </tr>
+                `;
+                // Öğrenci için ödev istatistiğini çek
+                fetchStudentProgress(db, currentUserId, appId, doc.id);
+            }
+        });
+
+        document.getElementById('dashTotalStudent').textContent = totalStudents;
+        studentTableBody.innerHTML = tableHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-400">Henüz öğrenci yok.</td></tr>';
+        
+        studentTableBody.querySelectorAll('.dash-student-link').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const studentId = e.currentTarget.dataset.id;
+                const studentName = e.currentTarget.dataset.name;
+                window.renderOgrenciDetaySayfasi(studentId, studentName);
+            });
+        });
+    });
+}
+
+// Helper: Tekil öğrenci için ödev yüzdesi hesapla
+function fetchStudentProgress(db, coachId, appId, studentId) {
+    // Bu fonksiyon her satır için ayrı çalışır, snapshot kullanmıyoruz performans için (Sadece getDocs)
+    // Ancak anlık değişimleri görmek istiyorsak onSnapshot kullanabiliriz. 
+    // Dashboard'da çok veri olduğu için onSnapshot maliyetli olabilir ama barın canlı olması için onSnapshot ekliyorum.
+    
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentId, "odevler"));
+    
+    // Dinleyiciyi global listede saklayabiliriz ama satır sayısı az olduğu için (max 5) direkt çalıştırıyoruz.
+    // (Not: Sayfa değişince bu dinleyiciler otomatik temizlenmez, idealde activeListeners'a pushlanmalı ama şimdilik basit tutuyoruz)
+    onSnapshot(q, (snap) => {
+        let total = 0;
+        let completed = 0;
+        snap.forEach(d => {
+            total++;
+            if (d.data().durum === 'tamamlandi') completed++;
+        });
+
+        const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+        
+        const bar = document.getElementById(`prog-bar-${studentId}`);
+        const txt = document.getElementById(`prog-txt-${studentId}`);
+        
+        if (bar && txt) {
+            bar.style.width = `${percent}%`;
+            // Renk değişimi (Düşükse kırmızı, yüksekse yeşil)
+            bar.className = `h-1.5 rounded-full ${percent < 50 ? 'bg-red-400' : (percent < 80 ? 'bg-yellow-400' : 'bg-green-500')}`;
+            txt.textContent = `%${percent}`;
+        }
+    });
+}
+
+// ===========================================================
+// 2. TAMAMLANAN ÖDEVLER AKORDİYONU
 // ===========================================================
 function loadCompletedHomeworks(db, currentUserId, appId) {
     const container = document.getElementById('accordionCompletedHomeworks');
     const countBadge = document.getElementById('totalCompletedOdevCount');
 
-    // Son 20 tamamlanan ödev
     const q = query(
         collectionGroup(db, 'odevler'),
         where('kocId', '==', currentUserId),
@@ -188,16 +274,9 @@ function loadCompletedHomeworks(db, currentUserId, appId) {
             const studentId = docSnap.ref.parent.parent.id; 
             
             if (!groupedData[studentId]) {
-                groupedData[studentId] = {
-                    name: "Yükleniyor...", 
-                    items: []
-                };
+                groupedData[studentId] = { name: "Yükleniyor...", items: [] };
             }
-            
-            groupedData[studentId].items.push({
-                id: docSnap.id,
-                ...data
-            });
+            groupedData[studentId].items.push({ id: docSnap.id, ...data });
             totalCount++;
         }
 
@@ -208,12 +287,9 @@ function loadCompletedHomeworks(db, currentUserId, appId) {
             return;
         }
 
-        // HTML Oluştur
         container.innerHTML = '';
         
         for (const [sId, group] of Object.entries(groupedData)) {
-            // Önce HTML'i ID ile bas
-            const groupId = `acc-comp-${sId}`;
             const contentId = `content-comp-${sId}`;
             const count = group.items.length;
 
@@ -241,45 +317,38 @@ function loadCompletedHomeworks(db, currentUserId, appId) {
             `;
             container.appendChild(div);
             
-            // İsimleri Asenkron Getir
             try {
                 const userDoc = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sId));
                 if(userDoc.exists()) {
                     const nameSpan = div.querySelector('.student-name-placeholder');
                     if(nameSpan) nameSpan.textContent = `${userDoc.data().ad} ${userDoc.data().soyad}`;
                 }
-            } catch (error) {
-                console.error("Öğrenci ismi alınamadı:", error);
-            }
+            } catch (error) { console.error("İsim alınamadı", error); }
         }
     });
 }
 
 // ===========================================================
-// 2. ONAY BEKLEYENLER AKORDİYONU (SORU + DENEME)
+// 3. ONAY BEKLEYENLER AKORDİYONU
 // ===========================================================
 function loadPendingApprovals(db, currentUserId, appId) {
     const container = document.getElementById('accordionPendingApprovals');
     const countBadge = document.getElementById('totalPendingCount');
+    // DÜZELTME: KPI kartındaki sayıyı güncellemek için element
+    const kpiBadge = document.getElementById('dashPendingOnay'); 
 
-    // Verileri toplamak için geçici depo
-    let pendingData = {
-        questions: [],
-        exams: []
-    };
+    let pendingData = { questions: [], exams: [] };
 
     const renderAccordion = async () => {
         let groupedData = {};
         let totalCount = 0;
 
-        // Soruları Grupla
         pendingData.questions.forEach(q => {
             if (!groupedData[q.studentId]) groupedData[q.studentId] = { name: "Yükleniyor...", items: [] };
             groupedData[q.studentId].items.push({ ...q, type: 'SORU TAKİBİ', color: 'text-green-600', bg: 'bg-green-50' });
             totalCount++;
         });
 
-        // Denemeleri Grupla
         pendingData.exams.forEach(e => {
             if (!groupedData[e.studentId]) groupedData[e.studentId] = { name: "Yükleniyor...", items: [] };
             groupedData[e.studentId].items.push({ ...e, type: 'DENEME', color: 'text-purple-600', bg: 'bg-purple-50', desc: `${e.ad} (${e.tur}) - ${e.toplamNet} Net` });
@@ -287,6 +356,8 @@ function loadPendingApprovals(db, currentUserId, appId) {
         });
 
         countBadge.textContent = `${totalCount} adet`;
+        // DÜZELTME: KPI Kartını Güncelle
+        if(kpiBadge) kpiBadge.textContent = totalCount; 
 
         if (totalCount === 0) {
             container.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Onay bekleyen işlem yok.</p>';
@@ -320,7 +391,6 @@ function loadPendingApprovals(db, currentUserId, appId) {
             group.items.forEach(item => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'bg-white p-3 rounded border border-gray-200 shadow-sm relative';
-                
                 let detailText = item.desc || `${item.ders} - ${item.konu || 'Genel'} : ${item.adet} soru`;
                 
                 itemDiv.innerHTML = `
@@ -337,16 +407,11 @@ function loadPendingApprovals(db, currentUserId, appId) {
                     </div>
                 `;
 
-                // Buton İşlevleri
                 itemDiv.querySelector('.btn-approve').onclick = async () => {
-                    if(confirm('Onaylıyor musun?')) {
-                        await updateDoc(doc(db, item.path), { onayDurumu: 'onaylandi' });
-                    }
+                    if(confirm('Onaylıyor musun?')) await updateDoc(doc(db, item.path), { onayDurumu: 'onaylandi' });
                 };
                 itemDiv.querySelector('.btn-reject').onclick = async () => {
-                    if(confirm('Bu kaydı silmek/reddetmek istiyor musun?')) {
-                        await deleteDoc(doc(db, item.path));
-                    }
+                    if(confirm('Bu kaydı silmek/reddetmek istiyor musun?')) await deleteDoc(doc(db, item.path));
                 };
 
                 innerContainer.appendChild(itemDiv);
@@ -354,20 +419,16 @@ function loadPendingApprovals(db, currentUserId, appId) {
 
             container.appendChild(div);
 
-            // İsim Getir
             try {
                 const userDoc = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sId));
                 if(userDoc.exists()) {
                     const nameSpan = div.querySelector('.student-name-placeholder');
                     if(nameSpan) nameSpan.textContent = `${userDoc.data().ad} ${userDoc.data().soyad}`;
                 }
-            } catch (error) {
-                console.error("Öğrenci ismi alınamadı:", error);
-            }
+            } catch (error) { console.error("İsim alınamadı", error); }
         }
     };
 
-    // 1. Soruları Dinle
     const qSoru = query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', currentUserId), where('onayDurumu', '==', 'bekliyor'));
     activeListeners.pendingSoruListUnsubscribe = onSnapshot(qSoru, (snap) => {
         pendingData.questions = [];
@@ -378,7 +439,6 @@ function loadPendingApprovals(db, currentUserId, appId) {
         renderAccordion();
     });
 
-    // 2. Denemeleri Dinle
     const qDeneme = query(collectionGroup(db, 'denemeler'), where('kocId', '==', currentUserId), where('onayDurumu', '==', 'bekliyor'));
     activeListeners.pendingDenemeListUnsubscribe = onSnapshot(qDeneme, (snap) => {
         pendingData.exams = [];
@@ -390,38 +450,7 @@ function loadPendingApprovals(db, currentUserId, appId) {
     });
 }
 
-// --- DİĞER YARDIMCI FONKSİYONLAR (MEVCUT KODLAR) ---
-
-function loadDashboardStats(db, currentUserId, appId) {
-    const studentTableBody = document.getElementById('dashStudentTableBody');
-    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
-    
-    activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
-        let totalStudents = 0, tableHtml = '';
-        snapshot.forEach(doc => {
-            const s = doc.data();
-            totalStudents++;
-            if (totalStudents <= 5) {
-                tableHtml += `
-                    <tr class="hover:bg-gray-50 transition-colors group cursor-pointer dash-student-link" data-id="${doc.id}" data-name="${s.ad} ${s.soyad}">
-                        <td class="px-6 py-3 whitespace-nowrap"><div class="flex items-center"><div class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-bold mr-3 group-hover:bg-purple-100 group-hover:text-purple-600">${s.ad[0]}${s.soyad[0]}</div><div><div class="text-sm font-medium text-gray-900">${s.ad} ${s.soyad}</div></div></div></td>
-                        <td class="px-6 py-3 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">${s.sinif}</span></td>
-                        <td class="px-6 py-3 whitespace-nowrap text-center text-sm text-gray-500"><i class="fa-solid fa-chevron-right text-xs text-gray-300 group-hover:text-purple-500"></i></td>
-                    </tr>
-                `;
-            }
-        });
-        document.getElementById('dashTotalStudent').textContent = totalStudents;
-        studentTableBody.innerHTML = tableHtml || '<tr><td colspan="3" class="text-center py-4 text-gray-400">Henüz öğrenci yok.</td></tr>';
-        studentTableBody.querySelectorAll('.dash-student-link').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const studentId = e.currentTarget.dataset.id;
-                const studentName = e.currentTarget.dataset.name;
-                window.renderOgrenciDetaySayfasi(studentId, studentName);
-            });
-        });
-    });
-}
+// --- DİĞER YARDIMCI FONKSİYONLAR ---
 
 function loadTodayAgenda(db, currentUserId, appId) {
     const listContainer = document.getElementById('dashAgendaList');

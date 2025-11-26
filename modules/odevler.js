@@ -1,6 +1,6 @@
 import { 
     collection, collectionGroup, query, onSnapshot, updateDoc, deleteDoc, 
-    where, orderBy, getDocs, doc, addDoc, serverTimestamp 
+    where, orderBy, getDocs, doc, addDoc, serverTimestamp, writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
 
@@ -28,6 +28,9 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
         </div>
     `;
 
+    // Modal İçeriğini Güncelle (Sadece Günlük ve Haftalık)
+    updateModalContent();
+
     await loadStudentMap(db, currentUserId, appId);
     startOdevListener(db, currentUserId, appId);
 
@@ -35,7 +38,13 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     
     document.getElementById('btnAddNewOdev').addEventListener('click', async () => {
         const sid = document.getElementById('filterOdevStudent').value;
+        
+        // Formu Temizle
         document.getElementById('odevTitle').value = '';
+        document.getElementById('odevAciklama').value = '';
+        document.getElementById('odevLink').value = '';
+        document.getElementById('odevBaslangicTarihi').value = new Date().toISOString().split('T')[0];
+        document.getElementById('odevBitisTarihi').value = new Date().toISOString().split('T')[0];
         
         if (sid === 'all') {
             document.getElementById('odevStudentSelectContainer').classList.remove('hidden');
@@ -46,6 +55,41 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
         }
         document.getElementById('addOdevModal').style.display = 'block';
     });
+}
+
+// Modal HTML yapısını JS ile güncelle (Serbest seçeneğini kaldır)
+function updateModalContent() {
+    const modalBody = document.querySelector('#addOdevModal .mt-4');
+    if (!modalBody) return;
+
+    // Mevcut radyo butonları alanını bul ve değiştir
+    const radioContainer = modalBody.querySelector('div:nth-child(3)'); // Tahmini sıra
+    if (radioContainer && radioContainer.innerHTML.includes('radio')) {
+        radioContainer.innerHTML = `
+            <label class="block text-sm font-medium mb-1">Ödev Türü</label>
+            <div class="grid grid-cols-2 gap-2">
+                <label class="border p-2 rounded flex items-center justify-center cursor-pointer hover:bg-gray-50 has-[:checked]">
+                    <input type="radio" name="odevTuru" value="gunluk" checked class="mr-2 text-purple-600 focus:ring-purple-500">
+                    <span class="font-medium">Günlük (Tekrar)</span>
+                </label>
+                <label class="border p-2 rounded flex items-center justify-center cursor-pointer hover:bg-gray-50 has-[:checked]">
+                    <input type="radio" name="odevTuru" value="haftalik" class="mr-2 text-purple-600 focus:ring-purple-500">
+                    <span class="font-medium">Haftalık</span>
+                </label>
+            </div>
+            <p class="text-xs text-gray-500 mt-1 ml-1" id="odevTuruInfo">Seçilen tarih aralığındaki her gün için ayrı ödev oluşturur.</p>
+        `;
+
+        // Bilgilendirme yazısını değiştirme
+        const radios = radioContainer.querySelectorAll('input[name="odevTuru"]');
+        radios.forEach(r => {
+            r.addEventListener('change', (e) => {
+                const info = document.getElementById('odevTuruInfo');
+                if(e.target.value === 'gunluk') info.textContent = "Seçilen tarih aralığındaki her gün için ayrı ödev oluşturur.";
+                else info.textContent = "Seçilen tarih aralığını haftalık periyotlara böler.";
+            });
+        });
+    }
 }
 
 async function loadStudentMap(db, uid, appId) {
@@ -67,11 +111,10 @@ async function loadStudentMap(db, uid, appId) {
 function startOdevListener(db, uid, appId) {
     const container = document.getElementById('odevListContainer');
 
-    // İndeks Gerektiren Sorgu: odevler (Collection Group) -> kocId ASC, bitisTarihi ASC
     const q = query(
         collectionGroup(db, 'odevler'), 
         where('kocId', '==', uid), 
-        orderBy('bitisTarihi', 'asc')
+        orderBy('bitisTarihi', 'desc') // En yakın tarih üstte olsun diye desc daha mantıklı olabilir, veya asc
     );
     
     if (activeListeners.odevlerUnsubscribe) activeListeners.odevlerUnsubscribe();
@@ -85,16 +128,7 @@ function startOdevListener(db, uid, appId) {
         renderOdevs(db);
     }, (error) => {
         console.error("Ödevler yüklenirken hata:", error);
-        if (error.code === 'failed-precondition') {
-             container.innerHTML = `
-                <div class="bg-red-50 border-l-4 border-red-500 p-4 text-red-700 text-center">
-                    <p class="font-bold">Veritabanı İndeksi Eksik</p>
-                    <p class="text-sm">Ödevleri listelemek için bir indeks gerekiyor. Lütfen aşağıdaki linke tıklayın:</p>
-                    <a href="${error.message.match(/https:\/\/[^\s]+/)?.[0]}" target="_blank" class="text-blue-600 underline text-xs break-all mt-2 block">İndeks Oluşturmak İçin Tıklayın</a>
-                </div>`;
-        } else {
-            container.innerHTML = `<p class="text-center text-red-500 p-8">Hata: ${error.message}</p>`;
-        }
+        container.innerHTML = `<p class="text-center text-red-500 p-8">Hata: ${error.message}</p>`;
     });
 }
 
@@ -102,8 +136,11 @@ function renderOdevs(db) {
     const container = document.getElementById('odevListContainer');
     const filter = document.getElementById('filterOdevStudent').value;
     
-    const filtered = filter === 'all' ? allOdevs : allOdevs.filter(o => o.studentId === filter);
+    let filtered = filter === 'all' ? allOdevs : allOdevs.filter(o => o.studentId === filter);
     
+    // Tarihe göre sırala (Yeniden Eskiye veya Eskiden Yeniye)
+    filtered.sort((a, b) => b.bitisTarihi.localeCompare(a.bitisTarihi));
+
     if (filtered.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-400 p-8">Kayıtlı ödev bulunamadı.</p>';
         return;
@@ -115,12 +152,18 @@ function renderOdevs(db) {
         const today = new Date().toISOString().split('T')[0];
         const isLate = !isDone && o.bitisTarihi < today;
         
+        // Tür rozeti rengi
+        const typeBadge = o.turu === 'gunluk' 
+            ? '<span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded ml-2">Günlük</span>'
+            : '<span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded ml-2">Haftalık</span>';
+
         return `
         <div class="flex items-center justify-between bg-white p-4 rounded-xl border ${isLate ? 'border-red-200 bg-red-50' : 'border-gray-200'} shadow-sm transition-shadow hover:shadow-md">
             <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">${sName}</span>
-                    <span class="text-xs text-gray-500"><i class="fa-regular fa-calendar mr-1"></i>${formatDateTR(o.bitisTarihi)}</span>
+                    <span class="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">${sName}</span>
+                    <span class="text-xs text-gray-500 flex items-center"><i class="fa-regular fa-calendar mr-1"></i>${formatDateTR(o.bitisTarihi)}</span>
+                    ${typeBadge}
                     ${isLate ? '<span class="text-xs text-red-600 font-bold bg-red-100 px-1 rounded">Gecikti</span>' : ''}
                 </div>
                 <h4 class="font-medium text-gray-800 ${isDone ? 'line-through text-gray-400' : ''}">${o.title}</h4>
@@ -140,6 +183,7 @@ function renderOdevs(db) {
     }).join('');
 }
 
+// --- YENİ KAYDETME FONKSİYONU ---
 export async function saveGlobalOdev(db, uid, appId) {
     let sid = document.getElementById('currentStudentIdForOdev').value;
     if (!document.getElementById('odevStudentSelectContainer').classList.contains('hidden')) {
@@ -147,18 +191,75 @@ export async function saveGlobalOdev(db, uid, appId) {
     }
     if (!sid) { alert('Öğrenci seçin'); return; }
 
-    const data = {
-        title: document.getElementById('odevTitle').value,
-        aciklama: document.getElementById('odevAciklama').value,
-        baslangicTarihi: document.getElementById('odevBaslangicTarihi').value,
-        bitisTarihi: document.getElementById('odevBitisTarihi').value,
-        link: document.getElementById('odevLink').value,
-        turu: document.querySelector('input[name="odevTuru"]:checked').value,
-        durum: 'devam',
-        kocId: uid,
-        eklenmeTarihi: serverTimestamp()
-    };
+    const title = document.getElementById('odevTitle').value.trim();
+    const aciklama = document.getElementById('odevAciklama').value.trim();
+    const link = document.getElementById('odevLink').value.trim();
+    const startStr = document.getElementById('odevBaslangicTarihi').value;
+    const endStr = document.getElementById('odevBitisTarihi').value;
+    
+    // Radyo butonundan değeri al
+    const turRadio = document.querySelector('input[name="odevTuru"]:checked');
+    const turu = turRadio ? turRadio.value : 'gunluk';
 
-    await addDoc(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), data);
+    if(!title || !startStr || !endStr) { alert('Lütfen başlık ve tarihleri girin.'); return; }
+
+    const startDate = new Date(startStr);
+    const endDate = new Date(endStr);
+    
+    if (endDate < startDate) { alert('Bitiş tarihi başlangıçtan önce olamaz.'); return; }
+
+    const collectionRef = collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler");
+    const batch = writeBatch(db);
+    
+    let count = 0;
+
+    if (turu === 'gunluk') {
+        // GÜNLÜK: Her gün için bir kayıt
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const newDocRef = doc(collectionRef);
+            batch.set(newDocRef, {
+                title, aciklama, link,
+                baslangicTarihi: dateStr,
+                bitisTarihi: dateStr, // Günlük ödev o gün biter
+                turu: 'gunluk',
+                durum: 'devam',
+                kocId: uid,
+                eklenmeTarihi: serverTimestamp()
+            });
+            count++;
+        }
+    } else {
+        // HAFTALIK: 7 günlük periyotlar
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 7)) {
+            const weekStart = new Date(d);
+            const weekEnd = new Date(d);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            
+            // Eğer hafta bitişi, seçilen bitiş tarihini geçerse kırp
+            const actualEnd = weekEnd > endDate ? endDate : weekEnd;
+            
+            const sStr = weekStart.toISOString().split('T')[0];
+            const eStr = actualEnd.toISOString().split('T')[0];
+
+            const newDocRef = doc(collectionRef);
+            batch.set(newDocRef, {
+                title, aciklama, link,
+                baslangicTarihi: sStr,
+                bitisTarihi: eStr,
+                turu: 'haftalik',
+                durum: 'devam',
+                kocId: uid,
+                eklenmeTarihi: serverTimestamp()
+            });
+            count++;
+        }
+    }
+
+    // Batch limiti (500) kontrolü basitçe yapılabilir ama bu senaryoda nadiren aşılır.
+    if (count > 400) { alert("Çok fazla tarih aralığı seçtiniz. Lütfen aralığı daraltın."); return; }
+
+    await batch.commit();
     document.getElementById('addOdevModal').style.display = 'none';
+    // alert(`${count} adet ödev oluşturuldu.`); // İsteğe bağlı bildirim
 }

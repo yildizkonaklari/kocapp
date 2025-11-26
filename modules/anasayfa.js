@@ -7,6 +7,7 @@ import {
     orderBy, 
     onSnapshot, 
     getDocs,
+    getDoc, // EKLENDİ: Eksik olan import buraya eklendi
     collectionGroup,
     limit,
     doc,
@@ -182,27 +183,13 @@ function loadCompletedHomeworks(db, currentUserId, appId) {
         let groupedData = {};
         let totalCount = 0;
 
-        // Öğrencilere göre grupla
-        // Not: doc.ref.parent.parent.id bize studentId'yi verir.
         for (const docSnap of snapshot.docs) {
             const data = docSnap.data();
             const studentId = docSnap.ref.parent.parent.id; 
             
             if (!groupedData[studentId]) {
-                // Öğrenci adını almak için önbellek veya map kullanılabilir.
-                // Burada basitlik adına data içinde studentName saklanmadığını varsayarak
-                // UI'da "Öğrenci ID" yerine daha önce helpers'da cache varsa kullanabiliriz
-                // veya daha güvenli yol olarak parent doc'u fetch edebiliriz.
-                // Ancak performans için burada direkt parent fetch yapmak yerine
-                // studentMap global değişkenini kullanmak isterdik ama bu modül dışı.
-                // Bu yüzden veri yapısında 'studentName' yoksa, asenkron isim çekmek gerekebilir
-                // veya basitçe 'Öğrenci' yazıp geçebiliriz.
-                // İYİLEŞTİRME: odevler koleksiyonuna kaydederken 'studentName' eklemek en iyisidir.
-                // Eğer yoksa, mecburen bir sorgu daha atacağız veya ID göstereceğiz.
-                
-                // Şimdilik geçici bir çözüm:
                 groupedData[studentId] = {
-                    name: "Yükleniyor...", // Sonra güncellenecek
+                    name: "Yükleniyor...", 
                     items: []
                 };
             }
@@ -255,12 +242,14 @@ function loadCompletedHomeworks(db, currentUserId, appId) {
             container.appendChild(div);
             
             // İsimleri Asenkron Getir
-            // Not: Bu işlemi her render'da yapmak maliyetli olabilir ama 
-            // anasayfa olduğu için kabul edilebilir.
-            const userDoc = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sId));
-            if(userDoc.exists()) {
-                const nameSpan = div.querySelector('.student-name-placeholder');
-                if(nameSpan) nameSpan.textContent = `${userDoc.data().ad} ${userDoc.data().soyad}`;
+            try {
+                const userDoc = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sId));
+                if(userDoc.exists()) {
+                    const nameSpan = div.querySelector('.student-name-placeholder');
+                    if(nameSpan) nameSpan.textContent = `${userDoc.data().ad} ${userDoc.data().soyad}`;
+                }
+            } catch (error) {
+                console.error("Öğrenci ismi alınamadı:", error);
             }
         }
     });
@@ -366,10 +355,14 @@ function loadPendingApprovals(db, currentUserId, appId) {
             container.appendChild(div);
 
             // İsim Getir
-            const userDoc = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sId));
-            if(userDoc.exists()) {
-                const nameSpan = div.querySelector('.student-name-placeholder');
-                if(nameSpan) nameSpan.textContent = `${userDoc.data().ad} ${userDoc.data().soyad}`;
+            try {
+                const userDoc = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sId));
+                if(userDoc.exists()) {
+                    const nameSpan = div.querySelector('.student-name-placeholder');
+                    if(nameSpan) nameSpan.textContent = `${userDoc.data().ad} ${userDoc.data().soyad}`;
+                }
+            } catch (error) {
+                console.error("Öğrenci ismi alınamadı:", error);
             }
         }
     };
@@ -467,13 +460,9 @@ function loadPendingOdevler(db, currentUserId, appId) {
 
 function loadUnreadMessages(db, currentUserId, appId) {
     const countEl = document.getElementById('dashUnreadCount');
-    // 'onayDurumu' KPI'sını artık akordiyon fonksiyonu yönetiyor, o yüzden buradan sildik veya sadece toplamı gösterebiliriz.
-    // Burası sadece Mesajlar için:
     const q = query(collectionGroup(db, 'mesajlar'), where('kocId', '==', currentUserId), where('gonderen', '==', 'ogrenci'), where('okundu', '==', false));
     activeListeners.unreadMessagesUnsubscribe = onSnapshot(q, (snapshot) => {
         const count = snapshot.size;
         if (count > 0) { countEl.textContent = count > 9 ? '9+' : count; countEl.classList.remove('hidden'); } else { countEl.classList.add('hidden'); }
     });
-    
-    // Pending Onay KPI'sını yukarıdaki akordiyon fonksiyonları güncellediği için burada ayrıca sorguya gerek yok.
 }

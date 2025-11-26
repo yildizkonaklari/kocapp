@@ -44,7 +44,7 @@ let coachId = null;
 let studentDocId = null; 
 let studentDersler = []; 
 
-// Rutinler ve Ders Havuzları (Genişletildi)
+// Rutinler ve Ders Havuzları (Yedek olarak tutuluyor)
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
 const DERS_HAVUZU = { 
     'ORTAOKUL': [
@@ -195,17 +195,52 @@ async function loadDashboardData() {
         if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email;
         if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = d.ad[0].toUpperCase();
         
-        // Dersleri Belirle: Eğer kayıtlı ders varsa onları, yoksa sınıfına göre varsayılanları al
+        // --- ÖNEMLİ: Dersleri Belirle ---
+        // Koçun belirlediği 'takipDersleri' varsa onu kullan, yoksa sınıfına uygun varsayılanları al.
         if (d.takipDersleri && d.takipDersleri.length > 0) {
             studentDersler = d.takipDersleri;
         } else {
-            // Sınıfa göre otomatik belirle
             const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(d.sinif);
             studentDersler = isOrtaokul ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE'];
         }
+
+        // Profil Sekmesine Dersleri Ekle (Yeni Özellik)
+        renderProfileLessons(studentDersler);
     }
     updateHomeworkMetrics();
     loadActiveGoalsForDashboard();
+}
+
+// YENİ: Profil sekmesine ders listesini ekleyen fonksiyon
+function renderProfileLessons(dersler) {
+    const profileTab = document.getElementById('tab-profile');
+    if(!profileTab) return;
+
+    // Daha önce eklenmişse kaldır (tekrarlamayı önle)
+    const existingSection = document.getElementById('profileLessonsSection');
+    if(existingSection) existingSection.remove();
+
+    // "Hesap Bilgileri" bölümünü bul
+    const accountInfoTitle = Array.from(profileTab.querySelectorAll('h3')).find(h => h.textContent.includes('Hesap Bilgileri'));
+    
+    if (accountInfoTitle) {
+        const accountInfoContainer = accountInfoTitle.parentElement;
+        
+        const lessonsDiv = document.createElement('div');
+        lessonsDiv.id = 'profileLessonsSection';
+        lessonsDiv.className = 'mt-4 mb-4';
+        lessonsDiv.innerHTML = `
+            <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Takip Edilen Dersler</h3>
+            <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <div class="flex flex-wrap gap-2">
+                    ${dersler.map(d => `<span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100 shadow-sm">${d}</span>`).join('')}
+                </div>
+            </div>
+        `;
+        
+        // Hesap bilgilerinin sonrasına ekle
+        accountInfoContainer.insertAdjacentElement('afterend', lessonsDiv);
+    }
 }
 
 async function updateHomeworkMetrics() {
@@ -325,7 +360,7 @@ async function renderSoruTakibiGrid() {
             return `
             <div class="subject-card relative p-2 rounded-lg border ${borderClass} ${bgClass} shadow-sm flex flex-col items-center justify-center transition-all">
                 ${statusIcon}
-                <label class="text-[10px] font-bold text-center w-full truncate text-gray-500 mb-1">${label}</label>
+                <label class="text-[10px] font-bold text-center w-full truncate text-gray-500 mb-1" title="${label}">${label}</label>
                 <input type="number" 
                     class="text-2xl font-bold text-center w-full outline-none bg-transparent placeholder-gray-300 ${textClass}" 
                     placeholder="0" 
@@ -339,6 +374,7 @@ async function renderSoruTakibiGrid() {
             </div>`;
         };
 
+        // studentDersler artık dolu geldiği için burada sorunsuz çalışacak
         return `
         <div class="accordion-item border-b last:border-0">
             <button class="accordion-header w-full flex justify-between p-4 rounded-xl border mb-2 ${isToday?'bg-purple-50 border-purple-500 text-purple-700':'bg-white border-gray-200'}" onclick="toggleAccordion(this)" aria-expanded="${isToday}">
@@ -355,7 +391,9 @@ async function renderSoruTakibiGrid() {
                 <div>
                     <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 pl-1 flex items-center"><i class="fa-solid fa-book mr-1"></i> Dersler</h4>
                     <div class="grid grid-cols-3 gap-2">
-                        ${studentDersler.map(d => createCard(d)).join('')}
+                        ${studentDersler.length > 0 
+                            ? studentDersler.map(d => createCard(d)).join('') 
+                            : '<p class="col-span-3 text-center text-xs text-gray-400 py-2">Takip edilen ders bulunamadı.</p>'}
                     </div>
                 </div>
             </div>
@@ -610,7 +648,6 @@ window.saveInput = async (input) => {
     const val = parseInt(input.value)||0, old = parseInt(input.defaultValue)||0;
     if(val===old) return;
     const ref = collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi");
-    
     if(input.dataset.docId) {
         if(val>0) await updateDoc(doc(ref, input.dataset.docId), {adet:val, onayDurumu:'bekliyor'});
         else { await deleteDoc(doc(ref, input.dataset.docId)); input.dataset.docId=""; }
@@ -618,8 +655,7 @@ window.saveInput = async (input) => {
         const d = await addDoc(ref, {tarih:input.dataset.tarih, ders:input.dataset.ders, adet:val, konu:'Genel', onayDurumu:'bekliyor', eklenmeTarihi:serverTimestamp(), kocId:coachId});
         input.dataset.docId = d.id;
     }
-    input.parentElement.classList.add('border-orange-300', 'bg-orange-50');
-    setTimeout(() => renderSoruTakibiGrid(), 500); 
+    input.parentElement.classList.add('border-green-500'); setTimeout(()=>input.parentElement.classList.remove('border-green-500'),1000);
 };
 function getWeekDates(offset) {
     const d=['Paz','Sal','Çar','Per','Cum','Cmt','Paz'], w=[], t=new Date();

@@ -280,11 +280,21 @@ document.querySelectorAll(closeButtons.join(', ')).forEach(btn => {
         }
     });
 });
-
 addListener('saveStudentButton', 'click', () => saveNewStudent(db, currentUserId, appId));
 addListener('saveStudentChangesButton', 'click', () => saveStudentChanges(db, currentUserId, appId));
-addListener('studentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('studentDersSecimiContainer')));
-addListener('editStudentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('editStudentDersSecimiContainer')));
+
+// Sınıf Değişikliği (Yeni Öğrenci)
+addListener('studentClass', 'change', (e) => {
+    // renderStudentOptions(SınıfDeğeri, OpsiyonContainerID, DersContainerID)
+    renderStudentOptions(e.target.value, 'studentOptionsContainer', 'studentDersSecimiContainer');
+});
+
+// Sınıf Değişikliği (Düzenle)
+addListener('editStudentClass', 'change', (e) => {
+    // Düzenleme modunda, mevcut seçili dersleri korumak zor olduğu için sıfırlanır veya tekrar seçilmesi beklenir.
+    // İleri seviye: Mevcut dersleri alıp 4. parametre olarak geçebilirsiniz.
+    renderStudentOptions(e.target.value, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer');
+});
 
 addListener('saveDenemeButton', 'click', () => saveGlobalDeneme(db, currentUserId, appId));
 addListener('denemeTuru', 'change', (e) => renderDenemeNetInputs(e.target.value));

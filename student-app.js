@@ -66,13 +66,6 @@ const SINAV_DERSLERI = {
     'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'] 
 };
 
-const motivasyonSozleri = [
-    "Başarı bir yolculuktur, varış noktası değil.", 
-    "Bugün dünden daha iyi ol.", 
-    "Küçük adımlar büyük sonuçlar doğurur.",
-    "Disiplin, hedeflerle başarı arasındaki köprüdür."
-];
-
 let denemeChartInstance = null;
 let currentCalDate = new Date();
 let currentWeekOffset = 0;
@@ -81,124 +74,52 @@ let odevWeekOffset = 0;
 let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null };
 
 // =================================================================
-// 3. KİMLİK DOĞRULAMA VE BAŞLATMA
+// 3. KİMLİK DOĞRULAMA
 // =================================================================
 onAuthStateChanged(auth, async (user) => {
-    if (user) { 
-        currentUser = user; 
-        // Varsa Loading spinner'ı gizle
-        const spinner = document.getElementById('loadingSpinner');
-        if(spinner) spinner.style.display = 'none';
-        
-        await initializeStudentApp(user.uid); 
-    } 
-    else { 
-        window.location.href = "student-login.html"; 
-    }
+    if (user) { currentUser = user; await initializeStudentApp(user.uid); } 
+    else { window.location.href = "student-login.html"; }
 });
 
 async function initializeStudentApp(uid) {
     try {
         const profileRef = doc(db, "artifacts", appId, "users", uid, "settings", "profile");
         const profileSnap = await getDoc(profileRef);
-        
         if (profileSnap.exists()) {
             const pd = profileSnap.data();
             coachId = pd.kocId;
             studentDocId = pd.linkedDocId;
-            
             if (coachId && studentDocId) {
-                // Eşleşme tamamsa paneli yükle
                 loadDashboardData(); 
                 enableHeaderIcons();
             } else {
-                // Eşleşme yoksa modalı göster
-                const modal = document.getElementById('modalMatchProfile');
-                if(modal) {
-                    modal.classList.remove('hidden');
-                    modal.style.display = 'flex';
-                }
+                document.getElementById('modalMatchProfile').classList.remove('hidden');
+                document.getElementById('modalMatchProfile').style.display = 'flex';
             }
-        } else {
-            // Profil yoksa çıkış yap (Hata durumu)
-            console.error("Profil bulunamadı.");
-            signOut(auth);
-        }
-    } catch (e) { console.error("Başlatma hatası:", e); }
+        } else signOut(auth);
+    } catch (e) { console.error(e); }
 }
 
-// --- PROFİL EŞLEŞTİRME BUTONU VE MANTIĞI ---
 const btnMatch = document.getElementById('btnMatchProfile');
 if (btnMatch) {
     btnMatch.onclick = async () => {
-        const nameInput = document.getElementById('matchName');
-        const surnameInput = document.getElementById('matchSurname');
-        const errorMsg = document.getElementById('matchError');
-        
-        const n = nameInput.value.trim();
-        const s = surnameInput.value.trim();
-
-        if(!n || !s) {
-            errorMsg.textContent = "Lütfen Ad ve Soyad girin.";
-            errorMsg.classList.remove('hidden');
-            return;
-        }
-
-        if(!coachId) {
-            errorMsg.textContent = "Koç bağlantısı bulunamadı. Sayfayı yenileyin.";
-            errorMsg.classList.remove('hidden');
-            return;
-        }
-
-        // Buton Durumu: Yükleniyor
-        const originalText = btnMatch.textContent;
-        btnMatch.disabled = true;
-        btnMatch.textContent = "Aranıyor...";
-        errorMsg.classList.add('hidden');
-
-        try {
-            // Koçun öğrenci listesinde ara (Büyük/Küçük harf duyarlı!)
-            const q = query(
-                collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"), 
-                where("ad", "==", n), 
-                where("soyad", "==", s)
-            );
-            
-            const snap = await getDocs(q);
-            
-            if (!snap.empty) {
-                // Eşleşme Başarılı
-                studentDocId = snap.docs[0].id;
-                
-                // Öğrenci profilini güncelle (linkedDocId ekle)
-                await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), { 
-                    linkedDocId: studentDocId 
-                });
-                
-                document.getElementById('modalMatchProfile').classList.add('hidden');
-                alert("Profil başarıyla eşleştirildi! Hoş geldin.");
-                
-                loadDashboardData();
-                enableHeaderIcons();
-            } else {
-                // Eşleşme Başarısız
-                errorMsg.textContent = "Profil bulunamadı. Adınızı ve Soyadınızı koçunuzun kaydettiği şekilde (büyük/küçük harf uyumlu) tam olarak girdiğinizden emin olun.";
-                errorMsg.classList.remove('hidden');
-            }
-        } catch (error) {
-            console.error("Eşleştirme hatası:", error);
-            errorMsg.textContent = "Bir hata oluştu: " + error.message;
-            errorMsg.classList.remove('hidden');
-        } finally {
-            // Butonu eski haline getir
-            btnMatch.disabled = false;
-            btnMatch.textContent = originalText;
-        }
+        const n = document.getElementById('matchName').value.trim(), s = document.getElementById('matchSurname').value.trim();
+        if(!n||!s) return alert("Bilgileri girin.");
+        const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"), where("ad", "==", n), where("soyad", "==", s));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            studentDocId = snap.docs[0].id;
+            await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), { linkedDocId: studentDocId });
+            document.getElementById('modalMatchProfile').classList.add('hidden');
+            alert("Eşleşme başarılı!");
+            loadDashboardData();
+            enableHeaderIcons();
+        } else document.getElementById('matchError').classList.remove('hidden');
     };
 }
 
 // =================================================================
-// 4. HEADER & AVATAR İŞLEMLERİ
+// 4. HEADER & AVATAR
 // =================================================================
 function enableHeaderIcons() {
     const btnMsg = document.getElementById('btnHeaderMessages');
@@ -252,10 +173,15 @@ window.selectAvatar = async (icon) => {
             avatarEl.style.fontSize = '3rem';
         }
         document.getElementById('modalAvatarSelect').classList.add('hidden');
-    } catch (e) {
-        console.error("Avatar güncellenemedi:", e);
-        alert("Avatar güncellenemedi.");
-    }
+        
+        // Header logosunu da güncelle
+        const headerLogo = document.querySelector('#headerLogoContainer i');
+        if(headerLogo) {
+            headerLogo.className = ''; // Class'ları temizle
+            headerLogo.textContent = icon;
+            headerLogo.style.fontStyle = 'normal';
+        }
+    } catch (e) { console.error(e); }
 };
 
 function loadNotifications() {
@@ -280,20 +206,26 @@ function listenUnreadMessages() {
 // =================================================================
 async function loadDashboardData() {
     if (!coachId || !studentDocId) return;
-    if(document.getElementById('motivasyonSozu')) {
-        const randomSoz = motivasyonSozleri[Math.floor(Math.random() * motivasyonSozleri.length)];
-        document.getElementById('motivasyonSozu').textContent = `"${randomSoz}"`;
-    }
     
     const snap = await getDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId));
     if (snap.exists()) {
         const d = snap.data();
         
+        // Header & Profil
         if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
         if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
         if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = d.sinif;
         if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email;
         
+        // Avatar - Header
+        const headerLogoContainer = document.getElementById('headerLogoContainer');
+        if(d.avatarIcon && headerLogoContainer) {
+            headerLogoContainer.innerHTML = `<span class="text-2xl">${d.avatarIcon}</span>`;
+            headerLogoContainer.style.backgroundColor = 'transparent';
+            headerLogoContainer.style.border = 'none';
+        }
+
+        // Avatar - Profil
         const avatarEl = document.getElementById('profileAvatar');
         if (d.avatarIcon) {
             avatarEl.textContent = d.avatarIcon;
@@ -304,6 +236,7 @@ async function loadDashboardData() {
             avatarEl.style.fontSize = '';
         }
         
+        // Dersler
         if (d.takipDersleri && Array.isArray(d.takipDersleri) && d.takipDersleri.length > 0) {
             studentDersler = d.takipDersleri;
         } else {
@@ -313,8 +246,88 @@ async function loadDashboardData() {
 
         renderProfileLessons(studentDersler);
     }
-    updateHomeworkMetrics();
-    loadActiveGoalsForDashboard();
+    
+    updateHomeworkMetrics(); // İlerleme Barı
+    loadActiveGoalsForDashboard(); // Aktif Hedefler
+    loadStudentStats(); // YENİ: KPI Kartları
+    loadTodayAppointment(); // YENİ: Randevu
+}
+
+// YENİ: Dashboard KPI Hesaplama
+async function loadStudentStats() {
+    // 1. Hedefler
+    const qGoals = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), where("durum", "==", "tamamlandi"));
+    // 2. Ödevler
+    const qHomework = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "tamamlandi"));
+    // 3. Denemeler
+    const qExams = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"));
+    // 4. Sorular
+    const qQuestions = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"));
+
+    const [sGoals, sHomework, sExams, sQuestions] = await Promise.all([
+        getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions)
+    ]);
+
+    // Hesaplamalar
+    document.getElementById('kpiCompletedGoals').textContent = sGoals.size;
+    document.getElementById('kpiCompletedHomework').textContent = sHomework.size;
+    document.getElementById('kpiTotalExams').textContent = sExams.size;
+
+    let totalQ = 0;
+    let totalRead = 0;
+    sQuestions.forEach(doc => {
+        const d = doc.data();
+        if(d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += (parseInt(d.adet)||0);
+        else totalQ += (parseInt(d.adet)||0);
+    });
+    document.getElementById('kpiTotalQuestions').textContent = totalQ;
+    document.getElementById('kpiReading').textContent = totalRead;
+
+    // Ortalama Net & En İyi Ders
+    let totalNet = 0;
+    let subjectStats = {};
+    sExams.forEach(doc => {
+        const d = doc.data();
+        totalNet += (parseFloat(d.toplamNet) || 0);
+        if(d.netler) {
+            for (const [ders, stats] of Object.entries(d.netler)) {
+                if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 };
+                subjectStats[ders].total += (parseFloat(stats.net) || 0);
+                subjectStats[ders].count++;
+            }
+        }
+    });
+
+    document.getElementById('kpiAvgNet').textContent = sExams.size > 0 ? (totalNet / sExams.size).toFixed(2) : '-';
+
+    let bestLesson = { name: '-', avg: -Infinity };
+    for (const [name, stat] of Object.entries(subjectStats)) {
+        const avg = stat.total / stat.count;
+        if (avg > bestLesson.avg) bestLesson = { name, avg };
+    }
+    if(bestLesson.name !== '-') {
+        document.getElementById('kpiBestLesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`;
+    }
+}
+
+// YENİ: Bugünkü Randevu
+async function loadTodayAppointment() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), 
+        where("studentId", "==", studentDocId), 
+        where("tarih", "==", todayStr)
+    );
+    const snap = await getDocs(q);
+    const container = document.getElementById('dashboardTodayAppointment');
+    
+    if (!snap.empty) {
+        const appt = snap.docs[0].data();
+        container.classList.remove('hidden');
+        document.getElementById('todayApptTitle').textContent = appt.baslik || 'Koç Görüşmesi';
+        document.getElementById('todayApptTime').innerHTML = `<i class="fa-regular fa-clock"></i> ${appt.baslangic} - ${appt.bitis}`;
+    } else {
+        container.classList.add('hidden');
+    }
 }
 
 function renderProfileLessons(dersler) {
@@ -732,7 +745,35 @@ document.getElementById('btnSaveDeneme').onclick = async () => {
 };
 
 const modalSoru = document.getElementById('modalSoruEkle');
-document.getElementById('btnOpenSoruEkle').onclick = () => { document.getElementById('inpSoruDers').value=""; document.getElementById('inpSoruAdet').value=""; document.getElementById('inpModalSoruTarih').value=new Date().toISOString().split('T')[0]; modalSoru.classList.remove('hidden'); };
+document.getElementById('btnOpenSoruEkle').onclick = () => { 
+    // Modalı Açarken Select'i Dinamik Doldur (YENİ EKLENEN KISIM)
+    const select = document.getElementById('inpSoruDers');
+    select.innerHTML = '<option value="" disabled selected>Ders veya Rutin Seç</option>';
+    
+    const grpDers = document.createElement('optgroup'); grpDers.label = "Dersler";
+    const grpRutin = document.createElement('optgroup'); grpRutin.label = "Rutinler";
+    
+    studentDersler.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d; opt.textContent = d;
+        grpDers.appendChild(opt);
+    });
+    
+    studentRutinler.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r; opt.textContent = r;
+        grpRutin.appendChild(opt);
+    });
+    
+    select.appendChild(grpDers);
+    select.appendChild(grpRutin);
+
+    // Formu Temizle
+    document.getElementById('inpSoruAdet').value=""; 
+    document.getElementById('inpModalSoruTarih').value=new Date().toISOString().split('T')[0]; 
+    modalSoru.classList.remove('hidden'); 
+};
+
 document.getElementById('btnSaveModalSoru').onclick = async () => {
     const d=document.getElementById('inpSoruDers').value, a=parseInt(document.getElementById('inpSoruAdet').value), t=document.getElementById('inpModalSoruTarih').value;
     if(d&&a) { await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), {tarih:t,ders:d,adet:a,konu:'Hızlı',onayDurumu:'bekliyor',kocId:coachId,eklenmeTarihi:serverTimestamp()}); modalSoru.classList.add('hidden'); alert('Kaydedildi'); }

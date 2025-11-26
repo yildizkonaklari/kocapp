@@ -1,4 +1,4 @@
-// === YARDIMCI (HELPER) FONKSİYONLAR MODÜLÜ ===
+// === MODULES/HELPERS.JS ===
 
 import { getDocs, collection, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -139,7 +139,6 @@ export async function populateStudentSelect(db, currentUserId, appId, selectId) 
     } catch (error) {
         console.error("Öğrenci listesi hatası:", error);
         select.innerHTML = '<option value="">Listeleme Hatası</option>';
-        throw error;
     }
 }
 

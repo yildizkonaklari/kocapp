@@ -44,6 +44,11 @@ let coachId = null;
 let studentDocId = null; 
 let studentDersler = []; 
 
+const AVATAR_LIBRARY = [
+    "👨‍🎓", "👩‍🎓", "🚀", "🦁", "⚡", "🌟", "🎯", "📚",
+    "🦊", "🐱", "🐶", "🐼", "🐯", "⚽", "🏀", "🎮"
+];
+
 // Rutinler ve Ders Havuzları
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
 const DERS_HAVUZU = { 
@@ -122,7 +127,7 @@ if (btnMatch) {
 }
 
 // =================================================================
-// 4. HEADER
+// 4. HEADER & AVATAR İŞLEMLERİ
 // =================================================================
 function enableHeaderIcons() {
     const btnMsg = document.getElementById('btnHeaderMessages');
@@ -135,11 +140,6 @@ function enableHeaderIcons() {
             document.querySelectorAll('.nav-btn').forEach(b => {
                 b.classList.remove('active', 'text-indigo-600');
                 b.classList.add('text-gray-400');
-                const icon = b.querySelector('.bottom-nav-center-btn');
-                if(icon) {
-                    icon.classList.remove('bg-indigo-600', 'text-white');
-                    icon.classList.add('bg-white', 'text-indigo-600');
-                }
             });
 
             for(let k in listeners) { if(listeners[k] && k!=='notifications' && k!=='unreadMsg') { listeners[k](); listeners[k]=null; } }
@@ -157,7 +157,37 @@ function enableHeaderIcons() {
         document.addEventListener('click', (e) => { if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.add('hidden'); });
         loadNotifications();
     }
+
+    // Avatar Değiştirme
+    const btnChangeAvatar = document.getElementById('btnChangeAvatar');
+    const modalAvatar = document.getElementById('modalAvatarSelect');
+    if (btnChangeAvatar && modalAvatar) {
+        btnChangeAvatar.onclick = () => {
+            const grid = document.getElementById('avatarGrid');
+            grid.innerHTML = AVATAR_LIBRARY.map(icon => 
+                `<button class="text-4xl p-2 hover:bg-gray-100 rounded-lg transition-colors" onclick="selectAvatar('${icon}')">${icon}</button>`
+            ).join('');
+            modalAvatar.classList.remove('hidden');
+        };
+    }
 }
+
+window.selectAvatar = async (icon) => {
+    try {
+        await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon });
+        // Profili güncelle
+        const avatarEl = document.getElementById('profileAvatar');
+        if (avatarEl) {
+            avatarEl.textContent = icon;
+            avatarEl.style.backgroundColor = '#fff'; // Arkaplanı temizle
+            avatarEl.style.fontSize = '3rem';
+        }
+        document.getElementById('modalAvatarSelect').classList.add('hidden');
+    } catch (e) {
+        console.error("Avatar güncellenemedi:", e);
+        alert("Avatar güncellenemedi.");
+    }
+};
 
 function loadNotifications() {
     const list = document.getElementById('notificationList'); if(!list) return;
@@ -189,18 +219,29 @@ async function loadDashboardData() {
     const snap = await getDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId));
     if (snap.exists()) {
         const d = snap.data();
+        
+        // Header & Profil Bilgileri
         if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
         if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
         if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = d.sinif;
-        if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email;
-        if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = d.ad[0].toUpperCase();
+        if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email; // Giriş yapan kullanıcının emaili
         
-        // --- DERS LİSTESİNİ GÜNCELLE ---
-        // Eğer koç özel ders atamışsa onu kullan, yoksa sınıfına göre genel havuzu kullan.
+        // Avatar İşlemi
+        const avatarEl = document.getElementById('profileAvatar');
+        if (d.avatarIcon) {
+            avatarEl.textContent = d.avatarIcon;
+            avatarEl.style.backgroundColor = '#fff';
+            avatarEl.style.fontSize = '3rem';
+        } else {
+            avatarEl.textContent = d.ad[0].toUpperCase();
+            avatarEl.style.fontSize = ''; // Varsayılana dön
+            // Gradient arka planı CSS'den geliyor, dokunmaya gerek yok
+        }
+        
+        // Dersleri Belirle
         if (d.takipDersleri && Array.isArray(d.takipDersleri) && d.takipDersleri.length > 0) {
             studentDersler = d.takipDersleri;
         } else {
-            // Varsayılan Dersleri Yükle
             const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(d.sinif);
             studentDersler = isOrtaokul ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE'];
         }
@@ -212,18 +253,15 @@ async function loadDashboardData() {
     loadActiveGoalsForDashboard();
 }
 
-// YENİ: Profil Sayfasında Takip Edilen Dersleri Göster
 function renderProfileLessons(dersler) {
     const profileTab = document.getElementById('tab-profile');
     if(!profileTab) return;
 
-    // Varsa eski listeyi temizle
     const oldSection = document.getElementById('profileLessonsContainer');
     if(oldSection) oldSection.remove();
 
-    // Hesap Bilgileri kartını bul ve altına ekle
     const infoCards = profileTab.querySelectorAll('.profile-info-card');
-    const lastInfoCard = infoCards[infoCards.length - 1]; // Genellikle 'Koçum' kartı sonuncudur
+    const lastInfoCard = infoCards[infoCards.length - 1]; 
 
     if (lastInfoCard) {
         const lessonsDiv = document.createElement('div');
@@ -311,7 +349,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 // 7. MODÜLLER
 // =================================================================
 
-// --- SORU TAKİBİ (DÜZELTİLMİŞ) ---
+// --- SORU TAKİBİ ---
 async function renderSoruTakibiGrid() {
     const container = document.getElementById('weeklyAccordion'); if(!container) return;
     if(!coachId) { container.innerHTML='<p class="text-center text-red-500">Hata.</p>'; return; }

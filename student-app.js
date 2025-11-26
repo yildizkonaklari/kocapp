@@ -44,7 +44,7 @@ let coachId = null;
 let studentDocId = null; 
 let studentDersler = []; 
 
-// Rutinler ve Ders Havuzları (Yedek olarak tutuluyor)
+// Rutinler ve Ders Havuzları
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
 const DERS_HAVUZU = { 
     'ORTAOKUL': [
@@ -195,51 +195,49 @@ async function loadDashboardData() {
         if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email;
         if(document.getElementById('profileAvatar')) document.getElementById('profileAvatar').textContent = d.ad[0].toUpperCase();
         
-        // --- ÖNEMLİ: Dersleri Belirle ---
-        // Koçun belirlediği 'takipDersleri' varsa onu kullan, yoksa sınıfına uygun varsayılanları al.
-        if (d.takipDersleri && d.takipDersleri.length > 0) {
+        // --- DERS LİSTESİNİ GÜNCELLE ---
+        // Eğer koç özel ders atamışsa onu kullan, yoksa sınıfına göre genel havuzu kullan.
+        if (d.takipDersleri && Array.isArray(d.takipDersleri) && d.takipDersleri.length > 0) {
             studentDersler = d.takipDersleri;
         } else {
+            // Varsayılan Dersleri Yükle
             const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(d.sinif);
             studentDersler = isOrtaokul ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE'];
         }
 
-        // Profil Sekmesine Dersleri Ekle (Yeni Özellik)
+        // Profil sayfasına ders listesini ekle
         renderProfileLessons(studentDersler);
     }
     updateHomeworkMetrics();
     loadActiveGoalsForDashboard();
 }
 
-// YENİ: Profil sekmesine ders listesini ekleyen fonksiyon
+// YENİ: Profil Sayfasında Takip Edilen Dersleri Göster
 function renderProfileLessons(dersler) {
     const profileTab = document.getElementById('tab-profile');
     if(!profileTab) return;
 
-    // Daha önce eklenmişse kaldır (tekrarlamayı önle)
-    const existingSection = document.getElementById('profileLessonsSection');
-    if(existingSection) existingSection.remove();
+    // Varsa eski listeyi temizle
+    const oldSection = document.getElementById('profileLessonsContainer');
+    if(oldSection) oldSection.remove();
 
-    // "Hesap Bilgileri" bölümünü bul
-    const accountInfoTitle = Array.from(profileTab.querySelectorAll('h3')).find(h => h.textContent.includes('Hesap Bilgileri'));
-    
-    if (accountInfoTitle) {
-        const accountInfoContainer = accountInfoTitle.parentElement;
-        
+    // Hesap Bilgileri kartını bul ve altına ekle
+    const infoCards = profileTab.querySelectorAll('.profile-info-card');
+    const lastInfoCard = infoCards[infoCards.length - 1]; // Genellikle 'Koçum' kartı sonuncudur
+
+    if (lastInfoCard) {
         const lessonsDiv = document.createElement('div');
-        lessonsDiv.id = 'profileLessonsSection';
-        lessonsDiv.className = 'mt-4 mb-4';
+        lessonsDiv.id = 'profileLessonsContainer';
+        lessonsDiv.className = 'mt-6';
         lessonsDiv.innerHTML = `
             <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Takip Edilen Dersler</h3>
             <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                 <div class="flex flex-wrap gap-2">
-                    ${dersler.map(d => `<span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100 shadow-sm">${d}</span>`).join('')}
+                    ${dersler.map(d => `<span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100">${d}</span>`).join('')}
                 </div>
             </div>
         `;
-        
-        // Hesap bilgilerinin sonrasına ekle
-        accountInfoContainer.insertAdjacentElement('afterend', lessonsDiv);
+        lastInfoCard.parentNode.insertBefore(lessonsDiv, lastInfoCard.nextSibling);
     }
 }
 
@@ -374,7 +372,6 @@ async function renderSoruTakibiGrid() {
             </div>`;
         };
 
-        // studentDersler artık dolu geldiği için burada sorunsuz çalışacak
         return `
         <div class="accordion-item border-b last:border-0">
             <button class="accordion-header w-full flex justify-between p-4 rounded-xl border mb-2 ${isToday?'bg-purple-50 border-purple-500 text-purple-700':'bg-white border-gray-200'}" onclick="toggleAccordion(this)" aria-expanded="${isToday}">

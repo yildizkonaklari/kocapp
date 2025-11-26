@@ -14,6 +14,23 @@
         .animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
         #notificationDropdown { transform-origin: top right; transition: all 0.2s ease-out; }
         #notificationDropdown.hidden { transform: scale(0.95); opacity: 0; pointer-events: none; }
+        
+        /* Kartlar için yatay kaydırma (Mobilde) */
+        .stats-scroller {
+            display: flex;
+            overflow-x: auto;
+            gap: 0.75rem;
+            padding-bottom: 0.5rem;
+            scroll-snap-type: x mandatory;
+        }
+        .stats-scroller > div {
+            flex: 0 0 40%; /* Mobilde kart genişliği */
+            scroll-snap-align: start;
+        }
+        @media (min-width: 768px) {
+            .stats-scroller { display: grid; grid-template-columns: repeat(4, 1fr); overflow-x: visible; }
+            .stats-scroller > div { flex: auto; }
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
@@ -22,13 +39,12 @@
 
     <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center z-30 shrink-0 relative">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center border border-indigo-100 shrink-0">
-                <img src="public/logo.png" alt="Logo" class="w-6 h-6 object-contain opacity-80" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-                <i class="fa-solid fa-graduation-cap text-indigo-600 text-lg hidden"></i>
+            <div id="headerLogoContainer" class="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center border border-indigo-100 shrink-0 text-xl overflow-hidden">
+                <i class="fa-solid fa-graduation-cap text-indigo-600"></i>
             </div>
             <div>
                 <p class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Hoş geldin</p>
-                <h1 id="headerStudentName" class="text-lg font-bold text-indigo-900 leading-tight truncate max-w-[150px] sm:max-w-xs">Öğrenci</h1>
+                <h1 id="headerStudentName" class="text-lg font-bold text-indigo-900 leading-tight truncate max-w-[150px] sm:max-w-xs">...</h1>
             </div>
         </div>
         
@@ -59,46 +75,89 @@
     <main id="mainContent" class="flex-1 overflow-y-auto no-scrollbar p-4 pb-40">
         
         <div id="tab-home" class="tab-content space-y-6">
-            <div class="bg-gradient-to-r from-purple-700 to-indigo-600 text-white rounded-xl p-5 relative overflow-hidden shadow-lg shadow-indigo-200">
-                <div class="absolute -right-4 -bottom-4 text-white/10 text-8xl"><i class="fa-solid fa-quote-right"></i></div>
-                <p class="text-xs font-bold text-purple-200 uppercase tracking-wider mb-2">GÜNÜN SÖZÜ</p>
-                <p class="text-lg font-medium italic relative z-10" id="motivasyonSozu">...</p>
-            </div>
             
-            <div class="grid grid-cols-3 gap-3">
-                <button id="btnOpenSoruEkle" class="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-xl shadow-sm active:scale-95 transition-transform">
-                    <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-2"><i class="fa-solid fa-plus"></i></div>
-                    <span class="text-xs font-medium text-gray-700">Soru Gir</span>
+            <div id="dashboardTodayAppointment" class="hidden bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 text-white shadow-lg flex items-center justify-between animate-slide-up">
+                <div>
+                    <p class="text-xs text-indigo-100 font-bold uppercase tracking-wider mb-1">Bugünkü Randevu</p>
+                    <h3 id="todayApptTitle" class="text-lg font-bold">Koç Görüşmesi</h3>
+                    <p id="todayApptTime" class="text-sm text-white/90 flex items-center gap-2 mt-1"><i class="fa-regular fa-clock"></i> 14:00 - 15:00</p>
+                </div>
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-2xl backdrop-blur-sm">
+                    <i class="fa-solid fa-video"></i>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-sm font-bold text-gray-700 mb-3 ml-1">Durum Özeti</h3>
+                <div class="stats-scroller no-scrollbar mb-3">
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center h-24">
+                        <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-1"><i class="fa-solid fa-bullseye"></i></div>
+                        <h4 class="text-xl font-bold text-gray-800" id="kpiCompletedGoals">0</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase">Hedef</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center h-24">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-1"><i class="fa-solid fa-list-check"></i></div>
+                        <h4 class="text-xl font-bold text-gray-800" id="kpiCompletedHomework">0</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase">Ödev</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center h-24">
+                        <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-1"><i class="fa-solid fa-file-lines"></i></div>
+                        <h4 class="text-xl font-bold text-gray-800" id="kpiTotalExams">0</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase">Deneme</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center h-24">
+                        <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-1"><i class="fa-solid fa-pen"></i></div>
+                        <h4 class="text-xl font-bold text-gray-800" id="kpiTotalQuestions">0</h4>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase">Soru</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] text-gray-500 font-bold uppercase">Ortalama Net</p>
+                            <h4 class="text-xl font-bold text-indigo-600" id="kpiAvgNet">-</h4>
+                        </div>
+                        <div class="text-indigo-200 text-2xl"><i class="fa-solid fa-chart-line"></i></div>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] text-gray-500 font-bold uppercase">Okuma (Sayfa)</p>
+                            <h4 class="text-xl font-bold text-teal-600" id="kpiReading">-</h4>
+                        </div>
+                        <div class="text-teal-200 text-2xl"><i class="fa-solid fa-book-open"></i></div>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">En Başarılı Ders</p>
+                        <h4 class="text-sm font-bold text-green-600 truncate" id="kpiBestLesson">-</h4>
+                        <div class="w-full bg-green-100 h-1 mt-1 rounded-full"><div class="bg-green-500 h-1 rounded-full" style="width: 70%"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btnOpenSoruEkle" class="flex items-center justify-center p-3 bg-white border border-blue-200 rounded-xl shadow-sm active:scale-95 transition-transform text-blue-700 gap-2">
+                    <i class="fa-solid fa-plus bg-blue-100 p-1.5 rounded-full"></i>
+                    <span class="text-sm font-bold">Soru Gir</span>
                 </button>
-                <button class="nav-btn flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-xl shadow-sm active:scale-95 transition-transform" data-target="tab-denemeler">
-                    <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-2"><i class="fa-solid fa-chart-line"></i></div>
-                    <span class="text-xs font-medium text-gray-700">Deneme Gir</span>
-                </button>
-                <button class="nav-btn flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-xl shadow-sm active:scale-95 transition-transform" data-target="tab-ajanda">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-2"><i class="fa-solid fa-calendar-check"></i></div>
-                    <span class="text-xs font-medium text-gray-700">Ajandam</span>
+                <button class="nav-btn flex items-center justify-center p-3 bg-white border border-purple-200 rounded-xl shadow-sm active:scale-95 transition-transform text-purple-700 gap-2" data-target="tab-denemeler">
+                    <i class="fa-solid fa-chart-simple bg-purple-100 p-1.5 rounded-full"></i>
+                    <span class="text-sm font-bold">Deneme Gir</span>
                 </button>
             </div>
 
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-sm font-semibold text-gray-700">Haftalık Ödev İlerlemesi</h3>
-                    <span id="haftalikIlerlemeText" class="text-sm font-bold text-indigo-600">%0</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-sm font-bold text-gray-700 mb-2 ml-1">Aktif Hedeflerin</h3>
+                    <div id="dashboardHedefList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <p class="text-center text-gray-400 text-sm py-4 bg-white rounded-xl shadow-sm border border-gray-100">Yükleniyor...</p>
+                    </div>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                    <div id="haftalikIlerlemeBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                
+                <div>
+                    <h3 class="text-sm font-bold text-gray-700 mb-2 ml-1">Gecikmiş Ödevler</h3>
+                    <div id="gecikmisOdevlerList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
                 </div>
-            </div>
-            
-            <div>
-                <h3 class="text-sm font-semibold text-gray-700 mb-2">Aktif Hedeflerin</h3>
-                <div id="dashboardHedefList" class="space-y-2">
-                    <p class="text-center text-gray-400 text-sm py-4 bg-white rounded-xl shadow-sm border border-gray-100">Yükleniyor...</p>
-                </div>
-            </div>
-            <div>
-                <h3 class="text-sm font-semibold text-gray-700 mb-2">Gecikmiş Ödevler</h3>
-                <div id="gecikmisOdevlerList" class="space-y-2 pb-4"></div>
             </div>
         </div>
 
@@ -297,8 +356,6 @@
                 <input type="date" id="inpModalSoruTarih" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl">
                 <select id="inpSoruDers" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500">
                     <option value="" disabled selected>Ders veya Rutin Seç</option>
-                    <optgroup label="Dersler"><option>Matematik</option><option>Türkçe</option><option>Fizik</option><option>Kimya</option><option>Biyoloji</option><option>Tarih</option><option>Coğrafya</option><option>İngilizce</option></optgroup>
-                    <optgroup label="Rutinler"><option>Paragraf</option><option>Problem</option><option>Kitap Okuma</option></optgroup>
                 </select>
                 <input type="number" id="inpSoruAdet" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-center text-indigo-600 text-lg" placeholder="0">
                 <button id="btnSaveModalSoru" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg">Kaydet</button>

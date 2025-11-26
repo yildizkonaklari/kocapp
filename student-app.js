@@ -105,7 +105,6 @@ if (btnMatch) {
 // 4. HEADER
 // =================================================================
 function enableHeaderIcons() {
-    // MESAJLAR İKONU
     const btnMsg = document.getElementById('btnHeaderMessages');
     if(btnMsg) {
         btnMsg.onclick = (e) => {
@@ -130,7 +129,6 @@ function enableHeaderIcons() {
         listenUnreadMessages();
     }
 
-    // BİLDİRİMLER
     const btnNotif = document.getElementById('btnHeaderNotifications');
     const dropNotif = document.getElementById('notificationDropdown');
     if(btnNotif && dropNotif) {
@@ -189,7 +187,6 @@ async function updateHomeworkMetrics() {
     let total=0, done=0, overdue=[];
     snap.forEach(doc => {
         const d = doc.data(); 
-        // Haftalık ilerleme için sadece bu haftanın ödevlerini saymak daha doğru olabilir ama dashboard geneli gösteriyor
         total++;
         if(d.durum==='tamamlandi') done++;
         if(d.bitisTarihi < today && d.durum!=='tamamlandi') overdue.push({...d});
@@ -253,13 +250,101 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 // 7. MODÜLLER
 // =================================================================
 
-// --- ÖDEVLER (GÜNCELLENMİŞ: HAFTALIK TAKVİM) ---
+// --- SORU TAKİBİ (YENİ TASARIM) ---
+async function renderSoruTakibiGrid() {
+    const container = document.getElementById('weeklyAccordion'); if(!container) return;
+    if(!coachId) { container.innerHTML='<p class="text-center text-red-500">Hata.</p>'; return; }
+    container.innerHTML = '<p class="text-center text-gray-400">Yükleniyor...</p>';
+    
+    const dates = getWeekDates(currentWeekOffset);
+    document.getElementById('weekRangeTitle').textContent = `${dates[0].dateStr} - ${dates[6].dateStr}`;
+    
+    document.getElementById('prevWeekBtn').onclick = () => { currentWeekOffset--; renderSoruTakibiGrid(); };
+    const next = document.getElementById('nextWeekBtn');
+    next.onclick = () => { currentWeekOffset++; renderSoruTakibiGrid(); };
+    next.disabled = currentWeekOffset >= 0;
+
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), where("tarih", ">=", dates[0].dateStr), where("tarih", "<=", dates[6].dateStr));
+    const snap = await getDocs(q);
+    const data = []; snap.forEach(d => data.push({id:d.id, ...d.data()}));
+
+    container.innerHTML = dates.map(day => {
+        const isToday = day.isToday;
+        
+        // Kart Oluşturucu (Routine ve Dersler için ortak)
+        const createCard = (label, isRoutine = false) => {
+            const r = data.find(d => d.tarih === day.dateStr && d.ders === label);
+            const val = r ? r.adet : '';
+            const isApproved = r && r.onayDurumu === 'onaylandi';
+            const isPending = r && r.onayDurumu === 'bekliyor';
+            
+            // Stil Ayarları
+            let borderClass = 'border-gray-200';
+            let bgClass = 'bg-white';
+            let textClass = 'text-gray-800';
+            let statusIcon = '';
+
+            if (isApproved) {
+                borderClass = 'border-green-400';
+                bgClass = 'bg-green-50';
+                textClass = 'text-green-700';
+                statusIcon = '<i class="fa-solid fa-check-circle text-green-500 absolute top-1 right-1 text-[10px]"></i>';
+            } else if (isPending) {
+                borderClass = 'border-orange-300';
+                bgClass = 'bg-orange-50';
+                textClass = 'text-orange-700';
+                statusIcon = '<i class="fa-solid fa-clock text-orange-400 absolute top-1 right-1 text-[10px]"></i>';
+            }
+
+            return `
+            <div class="subject-card relative p-2 rounded-lg border ${borderClass} ${bgClass} shadow-sm flex flex-col items-center justify-center transition-all">
+                ${statusIcon}
+                <label class="text-[10px] font-bold text-center w-full truncate text-gray-500 mb-1">${label}</label>
+                <input type="number" 
+                    class="text-2xl font-bold text-center w-full outline-none bg-transparent placeholder-gray-300 ${textClass}" 
+                    placeholder="0" 
+                    value="${val}" 
+                    data-tarih="${day.dateStr}" 
+                    data-ders="${label}" 
+                    data-doc-id="${r ? r.id : ''}" 
+                    ${isApproved ? 'disabled' : ''} 
+                    onblur="saveInput(this)">
+                <span class="text-[9px] text-gray-400">${isRoutine && label === 'Kitap Okuma' ? 'Sayfa' : 'Soru'}</span>
+            </div>`;
+        };
+
+        return `
+        <div class="accordion-item border-b last:border-0">
+            <button class="accordion-header w-full flex justify-between p-4 rounded-xl border mb-2 ${isToday?'bg-purple-50 border-purple-500 text-purple-700':'bg-white border-gray-200'}" onclick="toggleAccordion(this)" aria-expanded="${isToday}">
+                <span class="font-bold">${day.dayNum} ${day.dayName}</span>
+                <i class="fa-solid fa-chevron-down transition-transform"></i>
+            </button>
+            <div class="accordion-content ${isToday?'':'hidden'} px-1 pb-4">
+                
+                <div class="mb-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <h4 class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2 pl-1 flex items-center"><i class="fa-solid fa-star mr-1"></i> Rutinler</h4>
+                    <div class="grid grid-cols-3 gap-2">
+                        ${studentRutinler.map(r => createCard(r, true)).join('')}
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 pl-1 flex items-center"><i class="fa-solid fa-book mr-1"></i> Dersler</h4>
+                    <div class="grid grid-cols-3 gap-2">
+                        ${studentDersler.map(d => createCard(d)).join('')}
+                    </div>
+                </div>
+
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// --- ÖDEVLER ---
 function loadHomeworksTab() {
     const container = document.getElementById('studentOdevList');
     if(!container) return;
 
-    // HTML Yapısını Takvime Dönüştür
-    // Not: student-dashboard.html'deki 'studentOdevList' div'inin içeriğini değiştiriyoruz.
     container.innerHTML = `
         <div class="flex justify-between items-center mb-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
             <button id="btnOdevPrevWeek" class="p-2 hover:bg-gray-100 rounded-full text-gray-600"><i class="fa-solid fa-chevron-left"></i></button>
@@ -274,7 +359,6 @@ function loadHomeworksTab() {
     document.getElementById('btnOdevPrevWeek').onclick = () => { odevWeekOffset--; renderOdevCalendar(); };
     document.getElementById('btnOdevNextWeek').onclick = () => { odevWeekOffset++; renderOdevCalendar(); };
 
-    // Verileri Çek ve Render Et
     renderOdevCalendar();
 }
 
@@ -282,18 +366,15 @@ function renderOdevCalendar() {
     const grid = document.getElementById('odevWeeklyGrid');
     const rangeDisplay = document.getElementById('odevWeekRangeDisplay');
     
-    // Tarih Hesaplama
     const today = new Date();
-    const currentDay = today.getDay(); // 0: Pazar
-    const diff = today.getDate() - currentDay + (currentDay == 0 ? -6 : 1) + (odevWeekOffset * 7); // Pazartesi
+    const currentDay = today.getDay(); 
+    const diff = today.getDate() - currentDay + (currentDay == 0 ? -6 : 1) + (odevWeekOffset * 7); 
     const startOfWeek = new Date(today.setDate(diff));
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 6);
 
     rangeDisplay.textContent = `${formatDateTR(startOfWeek.toISOString().split('T')[0])} - ${formatDateTR(endOfWeek.toISOString().split('T')[0])}`;
 
-    // Veritabanından Tüm Ödevleri Çek (Filtreleme JS ile yapılacak)
-    // Not: İdealde tarih aralığı sorgusu yapılabilir ama basitlik için tümünü çekip filtreliyoruz.
     listeners.odevler = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler")), (snap) => {
         const allOdevs = [];
         snap.forEach(doc => allOdevs.push({id: doc.id, ...doc.data()}));
@@ -302,7 +383,6 @@ function renderOdevCalendar() {
         let weeklyTotal = 0;
         let weeklyDone = 0;
 
-        // 7 Günü Döngüye Al (Pazartesi - Pazar)
         for (let i = 0; i < 7; i++) {
             const dayDate = new Date(startOfWeek);
             dayDate.setDate(startOfWeek.getDate() + i);
@@ -310,16 +390,13 @@ function renderOdevCalendar() {
             const dayName = dayDate.toLocaleDateString('tr-TR', { weekday: 'long' });
             const isToday = dateStr === new Date().toISOString().split('T')[0];
 
-            // O günün ödevleri (Bitiş tarihi o gün olanlar)
             const dailyOdevs = allOdevs.filter(o => o.bitisTarihi === dateStr);
             
-            // İlerleme hesabı
             dailyOdevs.forEach(o => {
                 weeklyTotal++;
                 if(o.durum === 'tamamlandi') weeklyDone++;
             });
 
-            // HTML Kartı
             const dayCard = document.createElement('div');
             dayCard.className = `bg-white rounded-xl border ${isToday ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'} overflow-hidden`;
             
@@ -335,26 +412,22 @@ function renderOdevCalendar() {
                 contentHtml += `<p class="text-center text-xs text-gray-400 py-2">Ödev yok.</p>`;
             } else {
                 dailyOdevs.forEach(o => {
-                    // Durum ve Renk Mantığı
-                    let statusClass = "bg-blue-50 border-blue-100 text-blue-800"; // Yapılacak
+                    let statusClass = "bg-blue-50 border-blue-100 text-blue-800"; 
                     let statusText = "Yapılacak";
                     let actionBtn = `<button class="w-full mt-2 bg-blue-600 text-white text-xs py-1.5 rounded hover:bg-blue-700 transition-colors" onclick="completeOdev('${o.id}')">Tamamladım</button>`;
                     const todayStr = new Date().toISOString().split('T')[0];
 
                     if (o.durum === 'tamamlandi') {
                         if (o.onayDurumu === 'onaylandi') {
-                            // YEŞİL: Onaylandı
                             statusClass = "bg-green-50 border-green-100 text-green-800";
                             statusText = '<i class="fa-solid fa-check-double"></i> Tamamlandı';
                             actionBtn = '';
                         } else {
-                            // TURUNCU: Onay Bekliyor
                             statusClass = "bg-orange-50 border-orange-100 text-orange-800";
                             statusText = '<i class="fa-solid fa-clock"></i> Onay Bekliyor';
                             actionBtn = '';
                         }
                     } else if (o.bitisTarihi < todayStr) {
-                        // KIRMIZI: Gecikti
                         statusClass = "bg-red-50 border-red-100 text-red-800";
                         statusText = "Gecikti";
                     }
@@ -376,14 +449,12 @@ function renderOdevCalendar() {
             grid.appendChild(dayCard);
         }
 
-        // Haftalık İlerleme Güncellemesi
         const p = weeklyTotal === 0 ? 0 : Math.round((weeklyDone / weeklyTotal) * 100);
         if(document.getElementById('haftalikIlerlemeText2')) document.getElementById('haftalikIlerlemeText2').textContent = `%${p}`;
         if(document.getElementById('haftalikIlerlemeBar2')) document.getElementById('haftalikIlerlemeBar2').style.width = `${p}%`;
     });
 }
 
-// Ödev Tamamlama Fonksiyonu (Global erişim için window'a ekliyoruz)
 window.completeOdev = async (odevId) => {
     if(!confirm("Ödevi tamamladın mı?")) return;
     try {
@@ -431,33 +502,6 @@ function loadDenemelerTab() {
             return `<div class="bg-white p-4 rounded-xl border ${pending?'border-yellow-200 bg-yellow-50':'border-gray-200'} shadow-sm mb-2"><div class="flex justify-between"><span class="font-bold text-sm text-gray-800">${d.ad}</span><span class="text-[10px] px-2 py-1 rounded-full ${pending?'bg-yellow-200 text-yellow-800':'bg-green-100 text-green-800'}">${pending?'Bekliyor':'Onaylı'}</span></div><div class="flex justify-between mt-2 text-xs text-gray-500"><span>${d.tur} • ${d.tarih}</span><span class="font-bold text-indigo-600 text-base">${net.toFixed(2)} Net</span></div></div>`;
         }).join('');
     });
-}
-
-// --- SORU TAKİBİ ---
-async function renderSoruTakibiGrid() {
-    const container = document.getElementById('weeklyAccordion'); if(!container) return;
-    if(!coachId) { container.innerHTML='<p class="text-center text-red-500">Hata.</p>'; return; }
-    container.innerHTML = '<p class="text-center text-gray-400">Yükleniyor...</p>';
-    
-    const dates = getWeekDates(currentWeekOffset);
-    document.getElementById('weekRangeTitle').textContent = `${dates[0].dateStr} - ${dates[6].dateStr}`;
-    
-    document.getElementById('prevWeekBtn').onclick = () => { currentWeekOffset--; renderSoruTakibiGrid(); };
-    const next = document.getElementById('nextWeekBtn');
-    next.onclick = () => { currentWeekOffset++; renderSoruTakibiGrid(); };
-    next.disabled = currentWeekOffset >= 0;
-
-    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), where("tarih", ">=", dates[0].dateStr), where("tarih", "<=", dates[6].dateStr));
-    const snap = await getDocs(q);
-    const data = []; snap.forEach(d => data.push({id:d.id, ...d.data()}));
-
-    container.innerHTML = dates.map(day => {
-        const isToday = day.isToday;
-        return `<div class="accordion-item border-b last:border-0"><button class="accordion-header w-full flex justify-between p-4 rounded-xl border mb-2 ${isToday?'bg-purple-50 border-purple-500 text-purple-700':'bg-white border-gray-200'}" onclick="toggleAccordion(this)" aria-expanded="${isToday}"><span class="font-bold">${day.dayNum} ${day.dayName}</span><i class="fa-solid fa-chevron-down"></i></button><div class="accordion-content ${isToday?'':'hidden'} px-1 pb-4"><div class="grid grid-cols-2 gap-3 mb-4">${studentDersler.map(ders => {
-            const r = data.find(d => d.tarih === day.dateStr && d.ders === ders);
-            return `<div class="subject-card"><label class="text-xs font-bold text-center w-full truncate">${ders}</label><input type="number" class="text-3xl font-bold text-center w-full outline-none bg-transparent placeholder-gray-200" placeholder="0" value="${r?r.adet:''}" data-tarih="${day.dateStr}" data-ders="${ders}" data-doc-id="${r?r.id:''}" onblur="saveInput(this)"></div>`;
-        }).join('')}</div></div></div>`;
-    }).join('');
 }
 
 // --- MESAJLAR ---
@@ -543,6 +587,8 @@ window.saveInput = async (input) => {
     const val = parseInt(input.value)||0, old = parseInt(input.defaultValue)||0;
     if(val===old) return;
     const ref = collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi");
+    
+    // Bekliyor durumuna çek
     if(input.dataset.docId) {
         if(val>0) await updateDoc(doc(ref, input.dataset.docId), {adet:val, onayDurumu:'bekliyor'});
         else { await deleteDoc(doc(ref, input.dataset.docId)); input.dataset.docId=""; }
@@ -550,7 +596,9 @@ window.saveInput = async (input) => {
         const d = await addDoc(ref, {tarih:input.dataset.tarih, ders:input.dataset.ders, adet:val, konu:'Genel', onayDurumu:'bekliyor', eklenmeTarihi:serverTimestamp(), kocId:coachId});
         input.dataset.docId = d.id;
     }
-    input.parentElement.classList.add('border-green-500'); setTimeout(()=>input.parentElement.classList.remove('border-green-500'),1000);
+    // Görsel Geri Bildirim (Turuncu Sınır)
+    input.parentElement.classList.add('border-orange-300', 'bg-orange-50');
+    setTimeout(() => renderSoruTakibiGrid(), 500); // Grid'i yeniden çizip ikonları güncelle
 };
 function getWeekDates(offset) {
     const d=['Paz','Sal','Çar','Per','Cum','Cmt','Paz'], w=[], t=new Date();

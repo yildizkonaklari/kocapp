@@ -36,6 +36,8 @@ export async function renderHedeflerSayfasi(db, currentUserId, appId) {
     // Ekle Butonu
     document.getElementById('btnAddNewGoal').addEventListener('click', async () => {
         const sid = document.getElementById('filterGoalStudent').value;
+        const modal = document.getElementById('addHedefModal');
+        
         document.getElementById('hedefTitle').value = '';
         document.getElementById('hedefAciklama').value = '';
         document.getElementById('hedefBitisTarihi').value = '';
@@ -47,7 +49,7 @@ export async function renderHedeflerSayfasi(db, currentUserId, appId) {
             document.getElementById('hedefStudentSelectContainer').classList.add('hidden');
             document.getElementById('currentStudentIdForHedef').value = sid;
         }
-        document.getElementById('addHedefModal').style.display = 'block';
+        modal.style.display = 'block';
     });
 }
 
@@ -70,6 +72,7 @@ async function loadStudentMap(db, uid, appId) {
 function startGoalListener(db, uid, appId) {
     const container = document.getElementById('goalsListContainer');
     
+    // İndeks Gerektiren Sorgu: hedefler (Collection Group) -> kocId ASC, olusturmaTarihi DESC
     const q = query(
         collectionGroup(db, 'hedefler'), 
         where('kocId', '==', uid), 
@@ -81,13 +84,23 @@ function startGoalListener(db, uid, appId) {
     activeListeners.hedeflerUnsubscribe = onSnapshot(q, (snap) => {
         allGoals = [];
         snap.forEach(doc => {
+            // Parent ID'den öğrenciyi bul
             const sid = doc.ref.parent.parent.id; 
             allGoals.push({ id: doc.id, ...doc.data(), studentId: sid, path: doc.ref.path });
         });
         renderGoals(db);
     }, (error) => {
         console.error("Hedefler yüklenirken hata:", error);
-        container.innerHTML = `<p class="col-span-full text-center text-red-500 p-8">Hata: ${error.message}</p>`;
+        if (error.code === 'failed-precondition') {
+            container.innerHTML = `
+                <div class="col-span-full bg-red-50 border-l-4 border-red-500 p-4 text-red-700">
+                    <p class="font-bold">Veritabanı İndeksi Eksik</p>
+                    <p class="text-sm">Bu sayfanın çalışması için bir indeks gerekiyor. Lütfen aşağıdaki linke tıklayıp indeksi oluşturun:</p>
+                    <a href="${error.message.match(/https:\/\/[^\s]+/)?.[0]}" target="_blank" class="text-blue-600 underline text-xs break-all mt-2 block">İndeks Oluşturmak İçin Tıklayın</a>
+                </div>`;
+        } else {
+            container.innerHTML = `<p class="col-span-full text-center text-red-500 p-8">Hata: ${error.message}</p>`;
+        }
     });
 }
 
@@ -95,17 +108,8 @@ function renderGoals(db) {
     const container = document.getElementById('goalsListContainer');
     const filter = document.getElementById('filterGoalStudent').value;
     
-    let filtered = filter === 'all' ? allGoals : allGoals.filter(g => g.studentId === filter);
+    const filtered = filter === 'all' ? allGoals : allGoals.filter(g => g.studentId === filter);
     
-    // SIRALAMA: Başa Tutturulanlar En Üstte, Sonra Tarihe Göre
-    filtered.sort((a, b) => {
-        // Önce pin durumuna bak (true olanlar üstte)
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        // Pin durumu aynıysa tarihe göre sırala (bitiş tarihi yakın olan üstte)
-        return new Date(a.bitisTarihi) - new Date(b.bitisTarihi);
-    });
-
     if (filtered.length === 0) {
         container.innerHTML = '<p class="col-span-full text-center text-gray-400 p-8">Kayıtlı hedef bulunamadı.</p>';
         return;
@@ -113,58 +117,32 @@ function renderGoals(db) {
 
     container.innerHTML = filtered.map(g => {
         const isDone = g.durum === 'tamamlandi';
-        const isPinned = g.isPinned === true;
         const sName = studentMap[g.studentId] || 'Öğrenci';
-        
-        // Stil Ayarları
-        let cardClass = isDone ? 'border-green-200 bg-green-50 opacity-75' : 'border-gray-200 bg-white';
-        if (isPinned && !isDone) cardClass = 'border-yellow-400 bg-yellow-50 ring-2 ring-yellow-100'; // Pinli ve yapılmamışsa vurgula
-
         return `
-        <div class="p-4 rounded-xl border shadow-sm relative group transition-all hover:shadow-md ${cardClass}">
-            
-            ${isPinned ? '<div class="absolute -top-2 -right-2 bg-yellow-400 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm text-xs"><i class="fa-solid fa-thumbtack"></i></div>' : ''}
-
-            <div class="flex justify-between items-start mb-2 pr-4">
+        <div class="bg-white p-4 rounded-xl border ${isDone ? 'border-green-200 bg-green-50' : 'border-gray-200'} shadow-sm relative group transition-shadow hover:shadow-md">
+            <div class="flex justify-between items-start mb-2">
                 <span class="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded">${sName}</span>
-                <span class="text-xs text-gray-500 flex items-center gap-1"><i class="fa-regular fa-calendar"></i> ${formatDateTR(g.bitisTarihi)}</span>
+                <span class="text-xs text-gray-500">${formatDateTR(g.bitisTarihi)}</span>
             </div>
-            
-            <h4 class="font-bold text-gray-800 ${isDone ? 'line-through text-gray-500' : ''} mb-1">${g.title}</h4>
-            <p class="text-sm text-gray-600 line-clamp-2 mb-3">${g.aciklama || ''}</p>
-            
-            <div class="flex justify-between items-center pt-3 border-t border-gray-100">
-                <button class="text-gray-400 hover:text-yellow-500 transition-colors p-1" 
-                        onclick="toggleGoalPin('${g.path}', ${isPinned})" 
-                        title="${isPinned ? 'Başa tutturmayı kaldır' : 'Başa tuttur'}">
-                    <i class="fa-solid fa-thumbtack ${isPinned ? 'text-yellow-500' : ''}"></i>
+            <h4 class="font-bold text-gray-800 ${isDone ? 'line-through text-gray-500' : ''}">${g.title}</h4>
+            <p class="text-sm text-gray-600 mt-1 line-clamp-2">${g.aciklama || ''}</p>
+            <div class="mt-4 flex justify-end gap-2">
+                <button class="text-xs px-3 py-1 rounded border ${isDone ? 'border-gray-400 text-gray-600' : 'border-green-500 text-green-600 hover:bg-green-50'}" 
+                        onclick="toggleGlobalGoalStatus('${g.path}', '${g.durum}')">
+                    ${isDone ? 'Geri Al' : 'Tamamla'}
                 </button>
-
-                <div class="flex gap-2">
-                    <button class="text-xs px-3 py-1 rounded border ${isDone ? 'border-gray-400 text-gray-600' : 'border-green-500 text-green-600 hover:bg-green-50'}" 
-                            onclick="toggleGlobalGoalStatus('${g.path}', '${g.durum}')">
-                        ${isDone ? 'Geri Al' : 'Tamamla'}
-                    </button>
-                    <button class="text-xs px-3 py-1 rounded border border-red-200 text-red-500 hover:bg-red-50" 
-                            onclick="deleteGlobalDoc('${g.path}')">Sil</button>
-                </div>
+                <button class="text-xs px-3 py-1 rounded border border-red-200 text-red-500 hover:bg-red-50" 
+                        onclick="deleteGlobalDoc('${g.path}')">Sil</button>
             </div>
         </div>
         `;
     }).join('');
     
-    // Global Fonksiyonlar
     window.toggleGlobalGoalStatus = async (path, current) => {
         await updateDoc(doc(db, path), { durum: current === 'tamamlandi' ? 'devam' : 'tamamlandi' });
     };
-    
     window.deleteGlobalDoc = async (path) => {
         if(confirm('Silinsin mi?')) await deleteDoc(doc(db, path));
-    };
-
-    // YENİ: Pinleme Fonksiyonu
-    window.toggleGoalPin = async (path, currentStatus) => {
-        await updateDoc(doc(db, path), { isPinned: !currentStatus });
     };
 }
 
@@ -180,7 +158,6 @@ export async function saveGlobalHedef(db, uid, appId) {
         aciklama: document.getElementById('hedefAciklama').value,
         bitisTarihi: document.getElementById('hedefBitisTarihi').value,
         durum: 'devam',
-        isPinned: false, // Varsayılan olarak pinli değil
         kocId: uid,
         olusturmaTarihi: serverTimestamp()
     });

@@ -286,9 +286,45 @@
     <div id="editRandevuModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-lg rounded-lg shadow-lg p-6 m-4"><div class="flex justify-between items-center pb-4 border-b"><h3 id="editRandevuTitle" class="text-xl font-bold">Randevu Detayı</h3><button id="closeEditRandevuModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="mt-4 space-y-4"><input type="hidden" id="editRandevuId"><input type="hidden" id="editRandevuStudentId"><input type="text" id="editRandevuBaslik" class="w-full p-2 border rounded"><div class="grid grid-cols-3 gap-2"><input type="date" id="editRandevuTarih" class="w-full p-2 border rounded"><input type="time" id="editRandevuBaslangic" class="w-full p-2 border rounded"><input type="time" id="editRandevuBitis" class="w-full p-2 border rounded"></div><input type="text" id="editRandevuNot" class="w-full p-2 border rounded"></div><div class="flex justify-between items-center pt-4 mt-2 border-t"><div class="flex gap-2"><button id="btnToggleRandevuDurum" class="px-3 py-2 bg-green-100 text-green-700 rounded font-bold">Yapıldı</button><button id="btnDeleteRandevu" class="px-3 py-2 bg-red-100 text-red-700 rounded font-bold">Sil</button></div><div class="flex gap-2"><button id="cancelEditRandevuModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveRandevuChangesButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div></div>
 
     <!-- 9. MUHASEBE -->
-    <div id="addTahsilatModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6 m-4"><div class="flex justify-between mb-4"><h3 class="text-xl font-bold text-green-700">Tahsilat</h3><button id="closeTahsilatModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="space-y-3"><select id="tahsilatStudentId" class="w-full p-2 border rounded"></select><input type="number" id="tahsilatTutar" class="w-full p-2 border rounded" placeholder="Tutar"><input type="date" id="tahsilatTarih" class="w-full p-2 border rounded"><input type="text" id="tahsilatAciklama" class="w-full p-2 border rounded" placeholder="Açıklama"></div><div class="mt-4 flex justify-end gap-2"><button id="cancelTahsilatModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveTahsilatButton" class="px-4 py-2 bg-green-600 text-white rounded">Kaydet</button></div></div></div>
-    <div id="addBorcModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6 m-4"><div class="flex justify-between mb-4"><h3 class="text-xl font-bold text-blue-700">Hizmet</h3><button id="closeBorcModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="space-y-3"><select id="borcStudentId" class="w-full p-2 border rounded"></select><input type="number" id="borcTutar" class="w-full p-2 border rounded" placeholder="Tutar"><input type="date" id="borcTarih" class="w-full p-2 border rounded"><input type="text" id="borcAciklama" class="w-full p-2 border rounded" placeholder="Açıklama"></div><div class="mt-4 flex justify-end gap-2"><button id="cancelBorcModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveBorcButton" class="px-4 py-2 bg-blue-600 text-white rounded">Kaydet</button></div></div></div>
+    <div id="addTahsilatModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6 m-4">
+            <div class="flex justify-between mb-4">
+                <h3 class="text-xl font-bold text-green-700">Tahsilat</h3>
+                <button id="closeTahsilatModalButton" class="text-gray-400 text-2xl">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <select id="tahsilatStudentId" class="w-full p-2 border rounded bg-white"></select>
+                <input type="number" id="tahsilatTutar" class="w-full p-2 border rounded" placeholder="Tutar">
+                <input type="date" id="tahsilatTarih" class="w-full p-2 border rounded">
+                <input type="text" id="tahsilatAciklama" class="w-full p-2 border rounded" placeholder="Açıklama">
+                <p id="tahsilatModalErrorMessage" class="text-red-500 text-sm hidden"></p>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+                <button id="cancelTahsilatModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button>
+                <button id="saveTahsilatButton" class="px-4 py-2 bg-green-600 text-white rounded">Kaydet</button>
+            </div>
+        </div>
+    </div>
 
+    <div id="addBorcModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6 m-4">
+            <div class="flex justify-between mb-4">
+                <h3 class="text-xl font-bold text-blue-700">Hizmet</h3>
+                <button id="closeBorcModalButton" class="text-gray-400 text-2xl">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <select id="borcStudentId" class="w-full p-2 border rounded bg-white"></select>
+                <input type="number" id="borcTutar" class="w-full p-2 border rounded" placeholder="Tutar">
+                <input type="date" id="borcTarih" class="w-full p-2 border rounded">
+                <input type="text" id="borcAciklama" class="w-full p-2 border rounded" placeholder="Açıklama">
+                <p id="borcModalErrorMessage" class="text-red-500 text-sm hidden"></p>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+                <button id="cancelBorcModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button>
+                <button id="saveBorcButton" class="px-4 py-2 bg-blue-600 text-white rounded">Kaydet</button>
+            </div>
+        </div>
+    </div>
     <!-- 10. PROFİL AYARLARI (YASAL BİLGİLER DAHİL) -->
     <div id="profileModal" class="hidden fixed inset-0 bg-gray-900/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">

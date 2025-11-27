@@ -414,7 +414,7 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
             document.getElementById('editStudentName').value = s.ad;
             document.getElementById('editStudentSurname').value = s.soyad;
             document.getElementById('editStudentClass').value = s.sinif;
-            renderDersSecimi(s.sinif, dersContainer, s.takipDersleri);
+            renderDersSecimi(renderStudentOptions(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
             modal.style.display = 'block';
         }
     });

@@ -54,6 +54,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         </div>
         
         <div id="tabContentArea"></div>
+        <div class="h-24"></div>
     `;
 
     // Event Listeners
@@ -83,19 +84,15 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
 async function renderOzetTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
     
-    // Öğrenci Detaylarını Çek
     const studentSnap = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId));
     const studentData = studentSnap.exists() ? studentSnap.data() : {};
     
-    // Header bilgilerini güncelle
     if(document.getElementById('studentDetailClass')) document.getElementById('studentDetailClass').textContent = studentData.sinif || 'Sınıf Yok';
     
-    // Kayıt Tarihi
     if(document.getElementById('studentDetailJoinDate') && studentData.olusturmaTarihi) {
         document.getElementById('studentDetailJoinDate').textContent = `Kayıt: ${formatDateTR(studentData.olusturmaTarihi.toDate().toISOString().split('T')[0])}`;
     }
 
-    // Alan Bilgisi (Varsa Göster)
     if(studentData.alan) {
         const areaEl = document.getElementById('studentDetailArea');
         if(areaEl) {
@@ -177,16 +174,13 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
         </div>
     `;
 
-    // Filtre Listener
     const filterSelect = document.getElementById('summaryTimeFilter');
     filterSelect.addEventListener('change', () => loadStats(db, currentUserId, appId, studentId, filterSelect.value));
 
-    // Verileri Yükle
     loadStats(db, currentUserId, appId, studentId, 'month'); 
     loadOverdueHomeworks(db, currentUserId, appId, studentId);
 }
 
-// Helper: KPI Kartı HTML
 function renderKpiCard(title, valueId, colorClass, icon, id) {
     return `
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center h-32 transition-transform hover:-translate-y-1">
@@ -196,10 +190,10 @@ function renderKpiCard(title, valueId, colorClass, icon, id) {
     </div>`;
 }
 
-// --- VERİ YÜKLEME & HESAPLAMA ---
 async function loadStats(db, uid, appId, sid, period) {
     const now = new Date();
     let startDate = null;
+    
     if (period === 'week') {
         const day = now.getDay() || 7; 
         if(day !== 1) now.setHours(-24 * (day - 1)); 
@@ -272,7 +266,6 @@ async function loadStats(db, uid, appId, sid, period) {
     }
 }
 
-// --- GECİKMİŞ ÖDEVLER ---
 async function loadOverdueHomeworks(db, uid, appId, sid) {
     const today = new Date().toISOString().split('T')[0];
     const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"),
@@ -305,7 +298,6 @@ async function loadOverdueHomeworks(db, uid, appId, sid) {
     }
 }
 
-// --- SEKME 2: KOÇLUK NOTLARI ---
 function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
     area.innerHTML = `
@@ -321,6 +313,7 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
         <div id="noteList" class="space-y-3">
             <p class="text-center text-gray-400 py-8">Notlar yükleniyor...</p>
         </div>
+        <div class="h-24"></div>
     `;
 
     document.getElementById('btnSaveNote').onclick = async () => {
@@ -375,13 +368,13 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
         <div id="studentListContainer" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <p class="text-gray-500 text-center py-8">Yükleniyor...</p>
         </div>
+        <div class="h-24"></div>
     `;
     
     document.getElementById('showAddStudentModalButton').addEventListener('click', () => {
         document.getElementById('studentName').value = '';
         document.getElementById('studentSurname').value = '';
         document.getElementById('studentClass').value = '';
-        // Opsiyon alanını temizle
         document.getElementById('studentOptionsContainer').innerHTML = '';
         document.getElementById('studentDersSecimiContainer').innerHTML = '';
         document.getElementById('addStudentModal').style.display = 'block';
@@ -427,7 +420,6 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
     });
 }
 
-// --- YARDIMCI: DÜZENLEME MODALI AÇ ---
 function showEditStudentModal(db, currentUserId, appId, studentId) {
     const modal = document.getElementById('editStudentModal');
     
@@ -441,32 +433,39 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
             const classSelect = document.getElementById('editStudentClass');
             classSelect.value = s.sinif;
             
-            // Seçenekleri Render Et
-            renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
+            classSelect.dispatchEvent(new Event('change'));
 
-            // Eğer "Alan" bilgisi varsa ve select kutusu oluşturulmuşsa, onu seç
             setTimeout(() => {
+                // helpers.js içindeki fonksiyonu globalden (veya importtan) çağırıyoruz
+                // Burada renderStudentOptions fonksiyonunun doğru import edildiğinden emin olunmalıdır.
+                // Eğer hata verirse: Bu dosyaya renderStudentOptions import edilmelidir.
+                // Şimdilik varsayılan olarak import edildiğini varsayıyoruz.
+                
+                // NOT: Modüler yapıda 'renderDersSecimi' alias olarak kullanılabilir veya 
+                // doğrudan renderStudentOptions import edilmelidir. 
+                // Güvenli olması için helpers.js'den import edilen renderDersSecimi'ni kullanabiliriz
+                // ancak yeni mantık renderStudentOptions adıyla helpers.js'de tanımlandıysa onu import etmeliyiz.
+                
+                // Eğer import edilen renderDersSecimi aslında renderStudentOptions ise:
+                renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
+                
                 if (s.alan) {
                     const alanSelect = document.querySelector('#editStudentOptionsContainer select');
-                    if (alanSelect) {
-                        alanSelect.value = s.alan;
-                    }
+                    if (alanSelect) alanSelect.value = s.alan;
                 }
+                
+                modal.style.display = 'block';
             }, 100);
-            
-            modal.style.display = 'block';
         }
     });
 }
 
-// --- KAYIT FONKSİYONLARI ---
 export async function saveNewStudent(db, currentUserId, appId) {
     const ad = document.getElementById('studentName').value.trim();
     const soyad = document.getElementById('studentSurname').value.trim();
     const sinif = document.getElementById('studentClass').value;
     const dersler = Array.from(document.querySelectorAll('#studentDersSecimiContainer input:checked')).map(cb => cb.value);
     
-    // ALAN BİLGİSİNİ AL (Varsa)
     const alanSelect = document.querySelector('#studentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
     
@@ -474,7 +473,7 @@ export async function saveNewStudent(db, currentUserId, appId) {
     
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
         ad, soyad, sinif, 
-        alan: alan, // Alanı kaydet
+        alan: alan, 
         takipDersleri: dersler, 
         olusturmaTarihi: serverTimestamp(), 
         toplamBorc: 0, 
@@ -490,13 +489,12 @@ export async function saveStudentChanges(db, currentUserId, appId) {
     const sinif = document.getElementById('editStudentClass').value;
     const dersler = Array.from(document.querySelectorAll('#editStudentDersSecimiContainer input:checked')).map(cb => cb.value);
     
-    // ALAN BİLGİSİNİ AL (Varsa)
     const alanSelect = document.querySelector('#editStudentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
     
     await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), {
         ad, soyad, sinif, 
-        alan: alan, // Alanı güncelle
+        alan: alan, 
         takipDersleri: dersler
     });
     document.getElementById('editStudentModal').style.display = 'none';

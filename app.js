@@ -1,11 +1,15 @@
-// === APP.JS ===
-
+// =================================================================
+// 0. HATA YAKALAMA
+// =================================================================
 window.addEventListener('error', function(e) {
     const spinner = document.getElementById('loadingSpinner');
     if (spinner) spinner.style.display = 'none';
     console.error("Global Hata:", e);
 });
 
+// =================================================================
+// 1. FİREBASE KÜTÜPHANELERİ
+// =================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { 
     getAuth, onAuthStateChanged, signOut, updateProfile, 
@@ -17,7 +21,16 @@ import {
     onSnapshot, getDocs, serverTimestamp, writeBatch, limit 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
 
-import { cleanUpListeners, populateStudentSelect, renderDersSecimi, renderPlaceholderSayfasi, formatDateTR } from './modules/helpers.js';
+// Modül Importları (DÜZELTME: renderStudentOptions eklendi)
+import { 
+    cleanUpListeners, 
+    populateStudentSelect, 
+    renderDersSecimi, 
+    renderStudentOptions, // EKLENDİ
+    renderPlaceholderSayfasi, 
+    formatDateTR 
+} from './modules/helpers.js';
+
 import { renderAnaSayfa } from './modules/anasayfa.js';
 import { renderOgrenciSayfasi, renderOgrenciDetaySayfasi, saveNewStudent, saveStudentChanges } from './modules/ogrencilerim.js';
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
@@ -28,6 +41,7 @@ import { renderSoruTakibiSayfasi, saveGlobalSoru } from './modules/sorutakibi.js
 import { renderHedeflerSayfasi, saveGlobalHedef } from './modules/hedefler.js';
 import { renderOdevlerSayfasi, saveGlobalOdev } from './modules/odevler.js';
 
+// --- CONFIG ---
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -44,16 +58,24 @@ const appId = "kocluk-sistemi";
 
 let currentUserId = null;
 
+// =================================================================
+// 2. BAŞLATMA
+// =================================================================
 async function main() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUserId = user.uid;
+            
             const spinner = document.getElementById('loadingSpinner');
             if (spinner) spinner.style.display = 'none';
+            
             const container = document.getElementById('appContainer');
             if (container) container.classList.remove('hidden');
+            
             updateUIForLoggedInUser(user);
             navigateToPage('anasayfa');
+            
+            // Bildirimleri başlat
             initNotifications(user.uid); 
         } else {
             window.location.href = 'login.html';
@@ -61,16 +83,24 @@ async function main() {
     });
 }
 
+// =================================================================
+// 3. UI & NAVİGASYON
+// =================================================================
+
 function updateUIForLoggedInUser(user) {
     const displayName = user.displayName || "Koç";
     const initials = displayName.substring(0, 2).toUpperCase();
+
+    // Profil Bilgileri
     if(document.getElementById("userName")) document.getElementById("userName").textContent = displayName;
     if(document.getElementById("userEmail")) document.getElementById("userEmail").textContent = user.email;
     if(document.getElementById("userAvatar")) document.getElementById("userAvatar").textContent = initials;
+    
     if(document.getElementById("drawerUserName")) document.getElementById("drawerUserName").textContent = displayName;
     if(document.getElementById("drawerUserEmail")) document.getElementById("drawerUserEmail").textContent = user.email;
     if(document.getElementById("drawerUserAvatar")) document.getElementById("drawerUserAvatar").textContent = initials;
 
+    // Profil Tıklama
     const openProfileHandler = (e) => {
         e.preventDefault();
         const drawer = document.getElementById('mobileMenuDrawer');
@@ -84,17 +114,22 @@ function updateUIForLoggedInUser(user) {
 
     const desktopProfile = document.getElementById("userProfileArea");
     if (desktopProfile) desktopProfile.onclick = openProfileHandler;
+
     const headerProfile = document.getElementById("headerCoachProfile");
     if (headerProfile) headerProfile.onclick = openProfileHandler;
+    
     const btnDrawerSettings = document.getElementById("btnDrawerProfileSettings");
     if (btnDrawerSettings) btnDrawerSettings.onclick = openProfileHandler;
+
     const btnMobileProfileList = document.getElementById("btnMobileProfile");
     if (btnMobileProfileList) btnMobileProfileList.onclick = openProfileHandler;
     
+    // Çıkış
     const handleLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
     if(document.getElementById("logoutButton")) document.getElementById("logoutButton").onclick = handleLogout;
     if(document.getElementById("btnMobileLogout")) document.getElementById("btnMobileLogout").onclick = handleLogout;
 
+    // Navigasyon
     document.querySelectorAll('.nav-link, .bottom-nav-btn, .mobile-drawer-link').forEach(link => {
         link.addEventListener('click', (e) => {
             if (link.id !== 'mobileMenuBtn' && link.id !== 'btnToggleMobileMenu') {
@@ -109,6 +144,7 @@ function updateUIForLoggedInUser(user) {
     });
 }
 
+// --- MOBİL MENÜ KONTROLÜ ---
 const mobileDrawer = document.getElementById('mobileMenuDrawer');
 const overlay = document.getElementById('mobileOverlay');
 const headerMenuBtn = document.getElementById('mobileMenuBtn'); 
@@ -130,11 +166,15 @@ if(bottomMenuBtn) bottomMenuBtn.onclick = openMobileMenu;
 if(closeDrawerBtn) closeDrawerBtn.onclick = closeMobileMenu;
 if(overlay) overlay.onclick = closeMobileMenu;
 
+
+// Sayfa Yönlendirme
 function navigateToPage(pageId) {
     cleanUpListeners(); 
+    
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-purple-50', 'text-purple-700', 'font-semibold'));
     const activeLink = document.getElementById(`nav-${pageId}`);
     if(activeLink) activeLink.classList.add('bg-purple-50', 'text-purple-700', 'font-semibold');
+    
     document.querySelectorAll('.bottom-nav-btn').forEach(l => {
         l.classList.remove('active', 'text-purple-600');
         l.classList.add('text-gray-500');
@@ -144,6 +184,7 @@ function navigateToPage(pageId) {
         bottomLink.classList.add('active', 'text-purple-600');
         bottomLink.classList.remove('text-gray-500');
     }
+
     try {
         switch(pageId) {
             case 'anasayfa': renderAnaSayfa(db, currentUserId, appId); break;
@@ -163,6 +204,9 @@ function navigateToPage(pageId) {
     }
 }
 
+// =================================================================
+// BİLDİRİMLER
+// =================================================================
 function initNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
     const dot = document.getElementById('coachNotificationDot');
@@ -251,6 +295,10 @@ if(document.getElementById('btnHeaderMessages')) {
     document.getElementById('btnHeaderMessages').onclick = () => navigateToPage('mesajlar');
 }
 
+// =================================================================
+// 4. MODAL KONTROLLERİ
+// =================================================================
+
 function addListener(id, event, handler) {
     const el = document.getElementById(id);
     if (el) el.addEventListener(event, handler);
@@ -280,19 +328,16 @@ document.querySelectorAll(closeButtons.join(', ')).forEach(btn => {
         }
     });
 });
+
+// Kayıt Butonları
 addListener('saveStudentButton', 'click', () => saveNewStudent(db, currentUserId, appId));
 addListener('saveStudentChangesButton', 'click', () => saveStudentChanges(db, currentUserId, appId));
 
-// Sınıf Değişikliği (Yeni Öğrenci)
+// YENİ: Sınıf Seçimi Dinleyicileri (Ders/Alan seçimi için)
 addListener('studentClass', 'change', (e) => {
-    // renderStudentOptions(SınıfDeğeri, OpsiyonContainerID, DersContainerID)
     renderStudentOptions(e.target.value, 'studentOptionsContainer', 'studentDersSecimiContainer');
 });
-
-// Sınıf Değişikliği (Düzenle)
 addListener('editStudentClass', 'change', (e) => {
-    // Düzenleme modunda, mevcut seçili dersleri korumak zor olduğu için sıfırlanır veya tekrar seçilmesi beklenir.
-    // İleri seviye: Mevcut dersleri alıp 4. parametre olarak geçebilirsiniz.
     renderStudentOptions(e.target.value, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer');
 });
 
@@ -309,8 +354,11 @@ addListener('saveRandevuButton', 'click', () => saveNewRandevu(db, currentUserId
 addListener('saveTahsilatButton', 'click', () => saveNewTahsilat(db, currentUserId, appId));
 addListener('saveBorcButton', 'click', () => saveNewBorc(db, currentUserId, appId));
 
+// Window Helpers
 window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
 
+
+// --- PROFİL MODALI ---
 const profileModal = document.getElementById("profileModal");
 
 function showProfileModal(user) {
@@ -383,4 +431,5 @@ addListener('btnKopyala', 'click', () => {
     navigator.clipboard.writeText(input.value).then(() => alert("Kopyalandı!"));
 });
 
+// BAŞLAT
 main();

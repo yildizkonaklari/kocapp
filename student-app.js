@@ -309,59 +309,91 @@ async function loadStudentStats(db, uid, appId, sid, period) {
         startDate = '2000-01-01'; 
     }
 
-    const qGoals = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("durum", "==", "tamamlandi"), where("bitisTarihi", ">=", startDate));
-    const qHomework = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("durum", "==", "tamamlandi"), where("bitisTarihi", ">=", startDate));
+    // DÜZELTME: İndeks hatasını önlemek için sorgulardan 'durum' filtresi kaldırıldı.
+    // Filtreleme JS tarafında yapılacak.
+    const qGoals = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("bitisTarihi", ">=", startDate));
+    const qHomework = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("bitisTarihi", ">=", startDate));
     const qExams = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"), where("tarih", ">=", startDate));
     const qQuestions = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate));
-    const qSessions = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid), where("tarih", ">=", startDate), where("durum", "==", "tamamlandi"));
+    
+    // Ajanda için composite index hatası almamak için sadece studentId ile çekip, tarihi JS'de filtreliyoruz.
+    const qSessions = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid));
 
-    const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
-        getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions), getDocs(qSessions)
-    ]);
+    try {
+        const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
+            getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions), getDocs(qSessions)
+        ]);
 
-    document.getElementById('kpiCompletedGoals').textContent = sGoals.size;
-    document.getElementById('kpiCompletedHomework').textContent = sHomework.size;
-    document.getElementById('kpiTotalExams').textContent = sExams.size;
-    document.getElementById('kpiTotalSessions').textContent = sSessions.size;
+        // Hedefler (JS Filtreleme)
+        let completedGoals = 0;
+        snapGoals.forEach(doc => {
+            if (doc.data().durum === 'tamamlandi') completedGoals++;
+        });
+        document.getElementById('kpiCompletedGoals').textContent = completedGoals;
 
-    let totalQ = 0;
-    let totalRead = 0;
-    sQuestions.forEach(doc => {
-        const d = doc.data();
-        const adet = parseInt(d.adet) || 0;
-        if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += adet;
-        else totalQ += adet;
-    });
-    document.getElementById('kpiTotalQuestions').textContent = totalQ;
-    document.getElementById('kpiReading').textContent = totalRead;
+        // Ödevler (JS Filtreleme)
+        let completedHomework = 0;
+        snapHomework.forEach(doc => {
+            if (doc.data().durum === 'tamamlandi') completedHomework++;
+        });
+        document.getElementById('kpiCompletedHomework').textContent = completedHomework;
 
-    let totalNet = 0;
-    let subjectStats = {}; 
+        // Denemeler
+        document.getElementById('kpiTotalExams').textContent = snapExams.size;
 
-    sExams.forEach(doc => {
-        const d = doc.data();
-        totalNet += (parseFloat(d.toplamNet) || 0);
-        if(d.netler) {
-            for (const [ders, stats] of Object.entries(d.netler)) {
-                if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 };
-                subjectStats[ders].total += (parseFloat(stats.net) || 0);
-                subjectStats[ders].count++;
+        // Seanslar (JS Filtreleme: Tarih >= startDate ve Durum = tamamlandi)
+        let completedSessions = 0;
+        snapSessions.forEach(doc => {
+            const d = doc.data();
+            if (d.tarih >= startDate && d.durum === 'tamamlandi') completedSessions++;
+        });
+        document.getElementById('kpiTotalSessions').textContent = completedSessions;
+
+        // Sorular
+        let totalQ = 0;
+        let totalRead = 0;
+        snapQuestions.forEach(doc => {
+            const d = doc.data();
+            const adet = parseInt(d.adet) || 0;
+            if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += adet;
+            else totalQ += adet;
+        });
+        document.getElementById('kpiTotalQuestions').textContent = totalQ;
+        document.getElementById('kpiReading').textContent = totalRead;
+
+        // Deneme Analizi
+        let totalNet = 0;
+        let subjectStats = {}; 
+
+        snapExams.forEach(doc => {
+            const d = doc.data();
+            totalNet += (parseFloat(d.toplamNet) || 0);
+            if(d.netler) {
+                for (const [ders, stats] of Object.entries(d.netler)) {
+                    if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 };
+                    subjectStats[ders].total += (parseFloat(stats.net) || 0);
+                    subjectStats[ders].count++;
+                }
             }
+        });
+
+        const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-';
+        document.getElementById('kpiAvgNet').textContent = avgNet;
+
+        let bestLesson = { name: '-', avg: -Infinity };
+        for (const [name, stat] of Object.entries(subjectStats)) {
+            const avg = stat.total / stat.count;
+            if (avg > bestLesson.avg) bestLesson = { name, avg };
         }
-    });
+        if(bestLesson.name !== '-') {
+            document.getElementById('kpiBestLesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`;
+        } else {
+            document.getElementById('kpiBestLesson').textContent = '-';
+        }
 
-    const avgNet = sExams.size > 0 ? (totalNet / sExams.size).toFixed(2) : '-';
-    document.getElementById('kpiAvgNet').textContent = avgNet;
-
-    let bestLesson = { name: '-', avg: -Infinity };
-    for (const [name, stat] of Object.entries(subjectStats)) {
-        const avg = stat.total / stat.count;
-        if (avg > bestLesson.avg) bestLesson = { name, avg };
-    }
-    if(bestLesson.name !== '-') {
-        document.getElementById('kpiBestLesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`;
-    } else {
-        document.getElementById('kpiBestLesson').textContent = '-';
+    } catch (err) {
+        console.error("Dashboard istatistik hatası:", err);
+        // Hata olsa bile UI'ın çökmemesi için sessizce logla
     }
 }
 
@@ -728,17 +760,15 @@ window.completeOdev = async (odevId) => {
 function loadGoalsTab() {
     const list = document.getElementById('studentHedefList'); if(!list) return;
     
-    // Temel sorgu (Tarih sıralı)
     const q = query(
         collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), 
-        orderBy("bitisTarihi", "asc")
+        orderBy("bitisTarihi", "asc") 
     );
 
     listeners.hedefler = onSnapshot(q, (snap) => {
         const goals = [];
         snap.forEach(doc => goals.push({ id: doc.id, ...doc.data() }));
 
-        // SIRALAMA: Pinli olanlar en üstte, sonra tarih
         goals.sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
@@ -756,9 +786,8 @@ function loadGoalsTab() {
             const olusturma = h.olusturmaTarihi ? formatDateTR(h.olusturmaTarihi.toDate().toISOString().split('T')[0]) : '-';
             const bitis = formatDateTR(h.bitisTarihi);
 
-            // Stil Ayarları
             let cardClass = isDone ? 'border-green-100 bg-green-50 opacity-80' : 'border-gray-100 bg-white';
-            if (isPinned && !isDone) cardClass = 'border-yellow-300 bg-yellow-50 shadow-md ring-1 ring-yellow-200'; // Önemli Vurgusu
+            if (isPinned && !isDone) cardClass = 'border-yellow-300 bg-yellow-50 shadow-md ring-1 ring-yellow-200'; 
 
             return `
             <div class="p-4 rounded-xl border shadow-sm mb-3 flex gap-4 relative ${cardClass}">
@@ -769,7 +798,9 @@ function loadGoalsTab() {
                     <i class="fa-solid ${isDone ? 'fa-check' : 'fa-bullseye'}"></i>
                 </div>
                 <div class="flex-1">
-                    <div class="flex justify-between items-start pr-6"> <h4 class="font-bold text-gray-800 text-sm">${h.title}</h4>
+                    <div class="flex justify-between items-start pr-6">
+                        <h4 class="font-bold text-gray-800 text-sm">${h.title}</h4>
+                        ${isDone ? '<span class="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold">Tamamlandı</span>' : ''}
                     </div>
                     <p class="text-xs text-gray-600 mt-1 leading-relaxed">${h.aciklama || ''}</p>
                     
@@ -787,9 +818,7 @@ function loadGoalsTab() {
     });
 }
 
-// ... (Diğer fonksiyonlar: Denemeler, Mesajlar, Ajanda vb. aynı kalıyor) ...
-// (Kod tekrarını önlemek için yukarıdaki loadGoalsTab değişikliğini tam dosyaya uyguladım)
-
+// --- DENEMELER ---
 function loadDenemelerTab() {
     const list = document.getElementById('studentDenemeList'); if(!list) return;
     const btn = document.getElementById('btnAddNewDeneme');
@@ -817,6 +846,7 @@ function loadDenemelerTab() {
     });
 }
 
+// --- MESAJLAR ---
 function loadStudentMessages() {
     const container = document.getElementById('studentMessagesContainer'); if(!container) return;
     listeners.chat = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), orderBy("tarih")), (snap) => {
@@ -836,6 +866,7 @@ async function markMessagesAsRead() {
     const b = writeBatch(db); snap.forEach(d => b.update(d.ref, { okundu: true })); await b.commit();
 }
 
+// --- AJANDA ---
 function loadCalendarDataAndDraw(date) {
     const m = date.getMonth(), y = date.getFullYear();
     document.getElementById('currentMonthYear').textContent = date.toLocaleString('tr-TR', {month:'long', year:'numeric'});
@@ -860,6 +891,9 @@ function loadCalendarDataAndDraw(date) {
 document.getElementById('prevMonth').onclick = () => { currentCalDate.setMonth(currentCalDate.getMonth()-1); loadCalendarDataAndDraw(currentCalDate); };
 document.getElementById('nextMonth').onclick = () => { currentCalDate.setMonth(currentCalDate.getMonth()+1); loadCalendarDataAndDraw(currentCalDate); };
 
+// =================================================================
+// 8. MODALLAR VE HELPERLAR
+// =================================================================
 document.querySelectorAll('.close-modal').forEach(b => b.onclick=()=>b.closest('.fixed').classList.add('hidden'));
 const openDenemeModal = () => { document.getElementById('modalDenemeEkle').classList.remove('hidden'); renderDenemeInputs('TYT'); document.getElementById('inpDenemeTarih').value=new Date().toISOString().split('T')[0]; };
 function renderDenemeInputs(tur) {
@@ -880,33 +914,7 @@ document.getElementById('btnSaveDeneme').onclick = async () => {
 };
 
 const modalSoru = document.getElementById('modalSoruEkle');
-document.getElementById('btnOpenSoruEkle').onclick = () => { 
-    const select = document.getElementById('inpSoruDers');
-    select.innerHTML = '<option value="" disabled selected>Ders veya Rutin Seç</option>';
-    
-    const grpDers = document.createElement('optgroup'); grpDers.label = "Dersler";
-    const grpRutin = document.createElement('optgroup'); grpRutin.label = "Rutinler";
-    
-    studentDersler.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d; opt.textContent = d;
-        grpDers.appendChild(opt);
-    });
-    
-    studentRutinler.forEach(r => {
-        const opt = document.createElement('option');
-        opt.value = r; opt.textContent = r;
-        grpRutin.appendChild(opt);
-    });
-    
-    select.appendChild(grpDers);
-    select.appendChild(grpRutin);
-
-    document.getElementById('inpSoruAdet').value=""; 
-    document.getElementById('inpModalSoruTarih').value=new Date().toISOString().split('T')[0]; 
-    modalSoru.classList.remove('hidden'); 
-};
-
+document.getElementById('btnOpenSoruEkle').onclick = () => { document.getElementById('inpSoruDers').value=""; document.getElementById('inpSoruAdet').value=""; document.getElementById('inpModalSoruTarih').value=new Date().toISOString().split('T')[0]; modalSoru.classList.remove('hidden'); };
 document.getElementById('btnSaveModalSoru').onclick = async () => {
     const d=document.getElementById('inpSoruDers').value, a=parseInt(document.getElementById('inpSoruAdet').value), t=document.getElementById('inpModalSoruTarih').value;
     if(d&&a) { await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), {tarih:t,ders:d,adet:a,konu:'Hızlı',onayDurumu:'bekliyor',kocId:coachId,eklenmeTarihi:serverTimestamp()}); modalSoru.classList.add('hidden'); alert('Kaydedildi'); }

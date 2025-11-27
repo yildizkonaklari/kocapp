@@ -1,4 +1,4 @@
-// === MUHASEBE MODÜLÜ ===
+// === MUHASEBE MODÜLÜ (GÜNCELLENMİŞ) ===
 
 import { 
     doc, 
@@ -81,7 +81,7 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
                 document.getElementById("addBorcModal").style.display = "block";
             } catch (e) {
                 console.error("Borç modalı hatası:", e);
-                alert("Öğrenci listesi yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
+                alert("Öğrenci listesi yüklenemedi: " + e.message);
             }
         });
     }
@@ -98,7 +98,7 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
                 document.getElementById("addTahsilatModal").style.display = "block";
             } catch (e) {
                 console.error("Tahsilat modalı hatası:", e);
-                alert("Öğrenci listesi yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
+                alert("Öğrenci listesi yüklenemedi: " + e.message);
             }
         });
     }
@@ -110,32 +110,38 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
 
 function loadMuhasebeVerileri(db, currentUserId, appId) {
     const listContainer = document.getElementById("muhasebeListContainer");
-    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
     
-    if (activeListeners.muhasebeUnsubscribe) activeListeners.muhasebeUnsubscribe();
-
-    activeListeners.muhasebeUnsubscribe = onSnapshot(q, (snapshot) => {
-        const students = [];
-        let totalTahsilat = 0;
-        let totalBorc = 0;
+    // Verileri çekmeye çalış
+    try {
+        const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
         
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            students.push({ id: doc.id, ...data });
-            totalTahsilat += (data.toplamOdenen || 0);
-            totalBorc += (data.toplamBorc || 0);
+        if (activeListeners.muhasebeUnsubscribe) activeListeners.muhasebeUnsubscribe();
+
+        activeListeners.muhasebeUnsubscribe = onSnapshot(q, (snapshot) => {
+            const students = [];
+            let totalTahsilat = 0;
+            let totalBorc = 0;
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                students.push({ id: doc.id, ...data });
+                totalTahsilat += (data.toplamOdenen || 0);
+                totalBorc += (data.toplamBorc || 0);
+            });
+
+            if(document.getElementById("kpiTotalTahsilat")) document.getElementById("kpiTotalTahsilat").textContent = formatCurrency(totalTahsilat);
+            if(document.getElementById("kpiTotalAlacak")) document.getElementById("kpiTotalAlacak").textContent = formatCurrency(totalBorc - totalTahsilat);
+            if(document.getElementById("kpiTotalHizmet")) document.getElementById("kpiTotalHizmet").textContent = formatCurrency(totalBorc);
+
+            renderMuhasebeList(students);
+            
+        }, (error) => {
+            console.error("Muhasebe verileri hatası:", error);
+            if(listContainer) listContainer.innerHTML = `<p class="text-red-500 text-center py-8">Veri hatası: ${error.message}</p>`;
         });
-
-        if(document.getElementById("kpiTotalTahsilat")) document.getElementById("kpiTotalTahsilat").textContent = formatCurrency(totalTahsilat);
-        if(document.getElementById("kpiTotalAlacak")) document.getElementById("kpiTotalAlacak").textContent = formatCurrency(totalBorc - totalTahsilat);
-        if(document.getElementById("kpiTotalHizmet")) document.getElementById("kpiTotalHizmet").textContent = formatCurrency(totalBorc);
-
-        renderMuhasebeList(students);
-        
-    }, (error) => {
-        console.error("Muhasebe verileri yüklenirken hata:", error);
-        if(listContainer) listContainer.innerHTML = `<p class="text-red-500 text-center py-8">Veri yüklenemedi.</p>`;
-    });
+    } catch (e) {
+        console.error("Muhasebe sorgu hatası:", e);
+    }
 }
 
 function renderMuhasebeList(students) {
@@ -189,7 +195,9 @@ function renderMuhasebeList(students) {
 function loadIslemGecmisi(db, currentUserId, appId) {
     const container = document.getElementById("transactionLogContainer");
     
-    // DÜZELTME: Sadece eklenmeZamani'na göre sıralama yaparak composite index hatasını önlüyoruz.
+    // HATA DÜZELTME: Sıralama kriteri değiştirildi. 'eklenmeZamani' daha güvenilir.
+    // Eğer bu da hata verirse, Firestore konsolunda bu sorgu için indeks oluşturmanız gerektiğine dair
+    // konsolda (F12) bir link çıkacaktır. O linke tıklamanız gerekebilir.
     const q = query(
         collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), 
         orderBy("eklenmeZamani", "desc"), 
@@ -240,8 +248,8 @@ function loadIslemGecmisi(db, currentUserId, appId) {
             </div>
         `;
     }, (error) => {
-        console.error("İşlem geçmişi yüklenirken hata:", error);
-        container.innerHTML = `<p class="text-red-500 text-center py-4">Geçmiş yüklenemedi. (Index sorunu olabilir)</p>`;
+        console.error("İşlem geçmişi hatası:", error);
+        container.innerHTML = `<p class="text-red-500 text-center py-4">Veri yüklenemedi: ${error.message}</p>`;
     });
 }
 

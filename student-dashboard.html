@@ -75,18 +75,6 @@
     <main id="mainContent" class="flex-1 overflow-y-auto no-scrollbar p-4 pb-40">
         
         <div id="tab-home" class="tab-content space-y-6">
-            
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-50 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
-                    <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                        <i class="fa-regular fa-calendar-check text-indigo-500"></i> Yaklaşan Randevular
-                    </h3>
-                    <button onclick="document.getElementById('nav-ajandam').click()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Tümü</button>
-                </div>
-                <div id="upcomingAppointmentsList" class="divide-y divide-gray-50">
-                    <p class="text-center text-gray-400 text-xs py-4">Planlanmış randevu yok.</p>
-                </div>
-            </div>
 
             <div>
                 <div class="flex justify-between items-end mb-3 ml-1">
@@ -143,6 +131,18 @@
                         <div class="w-full bg-green-100 h-1 mt-1 rounded-full"><div class="bg-green-500 h-1 rounded-full" style="width: 70%"></div></div>
                     </div>
                 </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-50 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
+                    <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                        <i class="fa-regular fa-calendar-check text-indigo-500"></i> Yaklaşan Randevular
+                    </h3>
+                    <button onclick="document.getElementById('nav-ajandam').click()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Tümü</button>
+                </div>
+                <div id="upcomingAppointmentsList" class="divide-y divide-gray-50">
+                    <p class="text-center text-gray-400 text-xs py-4">Planlanmış randevu yok.</p>
+                </div>
+            </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">

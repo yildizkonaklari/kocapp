@@ -71,7 +71,6 @@ let denemeChartInstance = null;
 let currentCalDate = new Date();
 let currentWeekOffset = 0;
 let odevWeekOffset = 0;
-
 let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null };
 
 // =================================================================
@@ -466,7 +465,68 @@ async function loadOverdueHomeworks(db, uid, appId, sid) {
         }).join('');
     }
 }
+// --- HEDEFLER (GÜNCELLENMİŞ) ---
+function loadGoalsTab() {
+    const list = document.getElementById('studentHedefList'); if(!list) return;
+    
+    // Temel sorgu (Tarih sıralı)
+    const q = query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), 
+        orderBy("bitisTarihi", "asc")
+    );
 
+    listeners.hedefler = onSnapshot(q, (snap) => {
+        const goals = [];
+        snap.forEach(doc => goals.push({ id: doc.id, ...doc.data() }));
+
+        // SIRALAMA: Pinli olanlar en üstte, sonra tarih
+        goals.sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return new Date(a.bitisTarihi) - new Date(b.bitisTarihi);
+        });
+
+        if (goals.length === 0) {
+            list.innerHTML = '<p class="text-center text-gray-400 py-8">Henüz hedef atanmamış.</p>';
+            return;
+        }
+
+        list.innerHTML = goals.map(h => {
+            const isDone = h.durum === 'tamamlandi';
+            const isPinned = h.isPinned === true;
+            const olusturma = h.olusturmaTarihi ? formatDateTR(h.olusturmaTarihi.toDate().toISOString().split('T')[0]) : '-';
+            const bitis = formatDateTR(h.bitisTarihi);
+
+            // Stil Ayarları
+            let cardClass = isDone ? 'border-green-100 bg-green-50 opacity-80' : 'border-gray-100 bg-white';
+            if (isPinned && !isDone) cardClass = 'border-yellow-300 bg-yellow-50 shadow-md ring-1 ring-yellow-200'; // Önemli Vurgusu
+
+            return `
+            <div class="p-4 rounded-xl border shadow-sm mb-3 flex gap-4 relative ${cardClass}">
+                
+                ${isPinned ? '<div class="absolute top-0 right-0 bg-yellow-400 text-white rounded-bl-xl rounded-tr-xl w-8 h-8 flex items-center justify-center shadow-sm"><i class="fa-solid fa-thumbtack text-sm"></i></div>' : ''}
+
+                <div class="w-10 h-10 rounded-full ${isDone ? 'bg-green-100 text-green-600' : (isPinned ? 'bg-yellow-200 text-yellow-700' : 'bg-purple-100 text-purple-600')} flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid ${isDone ? 'fa-check' : 'fa-bullseye'}"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex justify-between items-start pr-6"> <h4 class="font-bold text-gray-800 text-sm">${h.title}</h4>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-1 leading-relaxed">${h.aciklama || ''}</p>
+                    
+                    <div class="flex items-center gap-3 mt-2 pt-2 border-t border-gray-200/50 text-[10px] text-gray-400">
+                        <span title="Veriliş Tarihi" class="flex items-center gap-1">
+                            <i class="fa-regular fa-calendar-plus text-purple-400"></i> ${olusturma}
+                        </span>
+                        <span title="Bitiş Tarihi" class="flex items-center gap-1 ${!isDone ? 'text-orange-500 font-bold' : ''}">
+                            <i class="fa-regular fa-flag"></i> ${bitis}
+                        </span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    });
+}
 // =================================================================
 // 6. TAB NAVİGASYONU
 // =================================================================

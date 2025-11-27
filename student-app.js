@@ -36,36 +36,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "kocluk-sistemi";
 
-// =================================================================
-// 2. GLOBAL DEĞİŞKENLER VE SABİTLER
-// =================================================================
+// ... (Global Değişkenler ve Auth işlemleri aynı) ...
 let currentUser = null;
 let coachId = null;     
 let studentDocId = null; 
 let studentDersler = []; 
 let homeworkChart = null; 
 
-const AVATAR_LIBRARY = [
-    "👨‍🎓", "👩‍🎓", "🚀", "🦁", "⚡", "🌟", "🎯", "📚",
-    "🦊", "🐱", "🐶", "🐼", "🐯", "⚽", "🏀", "🎮"
-];
-
+const AVATAR_LIBRARY = ["👨‍🎓", "👩‍🎓", "🚀", "🦁", "⚡", "🌟", "🎯", "📚", "🦊", "🐱", "🐶", "🐼", "🐯", "⚽", "🏀", "🎮"];
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
-const DERS_HAVUZU = { 
-    'ORTAOKUL': [
-        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
-        "T.C. İnkılap", "Din Kültürü", "İngilizce"
-    ], 
-    'LISE': [
-        "Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji",
-        "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"
-    ] 
-};
-const SINAV_DERSLERI = { 
-    'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 
-    'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu'], 
-    'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'] 
-};
+const DERS_HAVUZU = { 'ORTAOKUL': ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "T.C. İnkılap", "Din Kültürü", "İngilizce"], 'LISE': ["Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"] };
+const SINAV_DERSLERI = { 'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu'], 'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'] };
 
 let denemeChartInstance = null;
 let currentCalDate = new Date();
@@ -73,9 +54,6 @@ let currentWeekOffset = 0;
 let odevWeekOffset = 0;
 let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null };
 
-// =================================================================
-// 3. KİMLİK DOĞRULAMA
-// =================================================================
 onAuthStateChanged(auth, async (user) => {
     if (user) { currentUser = user; await initializeStudentApp(user.uid); } 
     else { window.location.href = "student-login.html"; }

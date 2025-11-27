@@ -29,10 +29,13 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
             
             <div class="flex-1 text-center md:text-left z-10">
                 <h2 class="text-2xl font-bold text-gray-800">${studentName}</h2>
-                <p class="text-sm text-gray-500 flex justify-center md:justify-start items-center gap-2 mt-1">
-                    <span id="studentDetailClass" class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">...</span>
-                    <span id="studentDetailJoinDate" class="text-gray-400 text-xs"></span>
-                </p>
+                <div class="flex flex-col md:items-start items-center mt-1 gap-1">
+                    <p class="text-sm text-gray-500 flex items-center gap-2">
+                        <span id="studentDetailClass" class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">...</span>
+                        <span id="studentDetailJoinDate" class="text-gray-400 text-xs"></span>
+                    </p>
+                    <p id="studentDetailArea" class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded hidden"></p>
+                </div>
             </div>
             
             <div class="flex gap-3 z-10">
@@ -86,8 +89,19 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
     
     // Header bilgilerini güncelle
     if(document.getElementById('studentDetailClass')) document.getElementById('studentDetailClass').textContent = studentData.sinif || 'Sınıf Yok';
+    
+    // Kayıt Tarihi
     if(document.getElementById('studentDetailJoinDate') && studentData.olusturmaTarihi) {
         document.getElementById('studentDetailJoinDate').textContent = `Kayıt: ${formatDateTR(studentData.olusturmaTarihi.toDate().toISOString().split('T')[0])}`;
+    }
+
+    // Alan Bilgisi (Varsa Göster)
+    if(studentData.alan) {
+        const areaEl = document.getElementById('studentDetailArea');
+        if(areaEl) {
+            areaEl.textContent = studentData.alan;
+            areaEl.classList.remove('hidden');
+        }
     }
 
     area.innerHTML = `
@@ -184,7 +198,6 @@ function renderKpiCard(title, valueId, colorClass, icon, id) {
 
 // --- VERİ YÜKLEME & HESAPLAMA ---
 async function loadStats(db, uid, appId, sid, period) {
-    // Tarih Aralığı
     const now = new Date();
     let startDate = null;
     if (period === 'week') {
@@ -197,25 +210,21 @@ async function loadStats(db, uid, appId, sid, period) {
         startDate = '2000-01-01'; 
     }
 
-    // Sorgular
     const qGoals = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("durum", "==", "tamamlandi"), where("bitisTarihi", ">=", startDate));
     const qHomework = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("durum", "==", "tamamlandi"), where("bitisTarihi", ">=", startDate));
     const qExams = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"), where("tarih", ">=", startDate));
     const qQuestions = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate));
     const qSessions = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid), where("tarih", ">=", startDate), where("durum", "==", "tamamlandi"));
 
-    // Paralel Çekim
     const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
         getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions), getDocs(qSessions)
     ]);
 
-    // KPI Güncelleme
     document.getElementById('kpi-goal').textContent = snapGoals.size;
     document.getElementById('kpi-homework').textContent = snapHomework.size;
     document.getElementById('kpi-exam-count').textContent = snapExams.size;
     document.getElementById('kpi-session').textContent = snapSessions.size;
 
-    // Soru & Okuma
     let totalQuestions = 0;
     let totalReading = 0;
     snapQuestions.forEach(doc => {
@@ -227,7 +236,6 @@ async function loadStats(db, uid, appId, sid, period) {
     document.getElementById('kpi-question').textContent = totalQuestions;
     document.getElementById('stat-reading').textContent = totalReading;
 
-    // Deneme Analizi
     let totalNet = 0;
     let subjectStats = {}; 
 
@@ -246,7 +254,6 @@ async function loadStats(db, uid, appId, sid, period) {
     const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-';
     document.getElementById('stat-avg-net').textContent = avgNet;
 
-    // En İyi / En Kötü Ders
     let bestLesson = { name: '-', avg: -Infinity };
     let worstLesson = { name: '-', avg: Infinity };
 
@@ -374,8 +381,9 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
         document.getElementById('studentName').value = '';
         document.getElementById('studentSurname').value = '';
         document.getElementById('studentClass').value = '';
-        // Opsiyon alanını temizle ve varsayılan 5. sınıfı tetikle (veya boş bırak)
-        // renderStudentOptions(...); // app.js listener'ı halledecek
+        // Opsiyon alanını temizle
+        document.getElementById('studentOptionsContainer').innerHTML = '';
+        document.getElementById('studentDersSecimiContainer').innerHTML = '';
         document.getElementById('addStudentModal').style.display = 'block';
     });
 
@@ -422,8 +430,6 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
 // --- YARDIMCI: DÜZENLEME MODALI AÇ ---
 function showEditStudentModal(db, currentUserId, appId, studentId) {
     const modal = document.getElementById('editStudentModal');
-    // Opsiyonel: render fonksiyonlarını import etmen gerekebilir veya globalden çağırabilirsin
-    // import { renderStudentOptions } from './helpers.js'; (Zaten import edilmiş olmalı)
     
     getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId)).then(snap => {
         if(snap.exists()) {
@@ -432,26 +438,23 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
             document.getElementById('editStudentName').value = s.ad;
             document.getElementById('editStudentSurname').value = s.soyad;
             
-            // Sınıfı seç ve change eventini tetikle (böylece seçenekler yüklenir)
             const classSelect = document.getElementById('editStudentClass');
             classSelect.value = s.sinif;
             
-            // Manuel tetikleme yerine helper fonksiyonu direkt çağıralım (Daha güvenli)
-            // Ancak app.js'de tanımlı listener'lar var. Manuel dispatchEvent yapalım.
-            classSelect.dispatchEvent(new Event('change'));
+            // Seçenekleri Render Et
+            renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
 
-            // Biraz bekleyip checkboxları işaretle (Asenkron render yüzünden)
+            // Eğer "Alan" bilgisi varsa ve select kutusu oluşturulmuşsa, onu seç
             setTimeout(() => {
-                // Burada renderStudentOptions fonksiyonunu 4. parametre (seçili dersler) ile çağırmak en temizi
-                // Ancak app.js yapısını bozmadan, global helper'a erişim sağlayalım.
-                // Modüler yapıda import ettiğimiz 'renderDersSecimi' (ki bu renderStudentOptions alias'ı) kullanılabilir.
-                
-                // NOT: helpers.js'deki renderStudentOptions fonksiyonu export edildiği için burada kullanılabilir.
-                // renderDersSecimi alias'ı helpers.js'de tanımlı.
-                renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
-                
-                modal.style.display = 'block';
+                if (s.alan) {
+                    const alanSelect = document.querySelector('#editStudentOptionsContainer select');
+                    if (alanSelect) {
+                        alanSelect.value = s.alan;
+                    }
+                }
             }, 100);
+            
+            modal.style.display = 'block';
         }
     });
 }
@@ -461,13 +464,21 @@ export async function saveNewStudent(db, currentUserId, appId) {
     const ad = document.getElementById('studentName').value.trim();
     const soyad = document.getElementById('studentSurname').value.trim();
     const sinif = document.getElementById('studentClass').value;
-    // Yeni sistemde checkboxlar 'studentDersSecimiContainer' içinde
     const dersler = Array.from(document.querySelectorAll('#studentDersSecimiContainer input:checked')).map(cb => cb.value);
+    
+    // ALAN BİLGİSİNİ AL (Varsa)
+    const alanSelect = document.querySelector('#studentOptionsContainer select');
+    const alan = alanSelect ? alanSelect.value : null;
     
     if(!ad || !soyad || !sinif) { alert('Lütfen Ad, Soyad ve Sınıf bilgilerini girin.'); return; }
     
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
-        ad, soyad, sinif, takipDersleri: dersler, olusturmaTarihi: serverTimestamp(), toplamBorc: 0, toplamOdenen: 0
+        ad, soyad, sinif, 
+        alan: alan, // Alanı kaydet
+        takipDersleri: dersler, 
+        olusturmaTarihi: serverTimestamp(), 
+        toplamBorc: 0, 
+        toplamOdenen: 0
     });
     document.getElementById('addStudentModal').style.display = 'none';
 }
@@ -479,8 +490,14 @@ export async function saveStudentChanges(db, currentUserId, appId) {
     const sinif = document.getElementById('editStudentClass').value;
     const dersler = Array.from(document.querySelectorAll('#editStudentDersSecimiContainer input:checked')).map(cb => cb.value);
     
+    // ALAN BİLGİSİNİ AL (Varsa)
+    const alanSelect = document.querySelector('#editStudentOptionsContainer select');
+    const alan = alanSelect ? alanSelect.value : null;
+    
     await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), {
-        ad, soyad, sinif, takipDersleri: dersler
+        ad, soyad, sinif, 
+        alan: alan, // Alanı güncelle
+        takipDersleri: dersler
     });
     document.getElementById('editStudentModal').style.display = 'none';
 }

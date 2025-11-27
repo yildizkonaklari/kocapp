@@ -1,7 +1,5 @@
 // === MUHASEBE MODÜLÜ ===
-// Bu dosya, koçun "Muhasebe" sayfasıyla ilgili tüm fonksiyonları yönetir.
 
-// 1. GEREKLİ IMPORTLAR
 import { 
     doc, 
     addDoc, 
@@ -16,15 +14,11 @@ import {
     getDocs 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// helpers.js dosyamızdan ortak fonksiyonları import ediyoruz
 import { 
     activeListeners, 
     formatCurrency, 
     populateStudentSelect 
 } from './helpers.js';
-
-
-// --- 2. ANA FONKSİYON: MUHASEBE SAYFASI ---
 
 export function renderMuhasebeSayfasi(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
@@ -32,8 +26,6 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
     
     mainContentTitle.textContent = "Muhasebe & Finans";
     
-    // HTML iskeletini oluştur
-    // YENİ: En alta 'h-32' (yaklaşık 128px) boşluk divi eklendi (Tablet menüsü altında kalmaması için)
     mainContentArea.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500">
@@ -76,7 +68,7 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
         <div class="h-32 lg:h-12 w-full"></div>
     `;
 
-    // Buton Bağlantıları (Hata yakalama eklendi)
+    // Buton Bağlantıları
     const btnBorc = document.getElementById("showAddBorcButton");
     if (btnBorc) {
         btnBorc.addEventListener("click", async () => {
@@ -88,8 +80,8 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
                 document.getElementById("borcModalErrorMessage").classList.add("hidden");
                 document.getElementById("addBorcModal").style.display = "block";
             } catch (e) {
-                console.error("Borç modalı açılırken hata:", e);
-                alert("Öğrenci listesi yüklenemedi. Lütfen sayfayı yenileyin.");
+                console.error("Borç modalı hatası:", e);
+                alert("Öğrenci listesi yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
             }
         });
     }
@@ -105,8 +97,8 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
                 document.getElementById("tahsilatModalErrorMessage").classList.add("hidden");
                 document.getElementById("addTahsilatModal").style.display = "block";
             } catch (e) {
-                console.error("Tahsilat modalı açılırken hata:", e);
-                alert("Öğrenci listesi yüklenemedi. Lütfen sayfayı yenileyin.");
+                console.error("Tahsilat modalı hatası:", e);
+                alert("Öğrenci listesi yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
             }
         });
     }
@@ -116,9 +108,6 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
     loadIslemGecmisi(db, currentUserId, appId);
 }
 
-/**
- * Öğrenci bakiyelerini ve KPI'ları yükler/dinler.
- */
 function loadMuhasebeVerileri(db, currentUserId, appId) {
     const listContainer = document.getElementById("muhasebeListContainer");
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
@@ -137,7 +126,6 @@ function loadMuhasebeVerileri(db, currentUserId, appId) {
             totalBorc += (data.toplamBorc || 0);
         });
 
-        // KPI'ları Güncelle
         if(document.getElementById("kpiTotalTahsilat")) document.getElementById("kpiTotalTahsilat").textContent = formatCurrency(totalTahsilat);
         if(document.getElementById("kpiTotalAlacak")) document.getElementById("kpiTotalAlacak").textContent = formatCurrency(totalBorc - totalTahsilat);
         if(document.getElementById("kpiTotalHizmet")) document.getElementById("kpiTotalHizmet").textContent = formatCurrency(totalBorc);
@@ -150,9 +138,6 @@ function loadMuhasebeVerileri(db, currentUserId, appId) {
     });
 }
 
-/**
- * Öğrenci bakiye listesini HTML olarak çizer.
- */
 function renderMuhasebeList(students) {
     const container = document.getElementById("muhasebeListContainer");
     if (students.length === 0) {
@@ -160,7 +145,6 @@ function renderMuhasebeList(students) {
         return;
     }
 
-    // YENİ: overflow-x-auto eklendi (Mobil uyumluluk için)
     container.innerHTML = `
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -202,15 +186,13 @@ function renderMuhasebeList(students) {
     `;
 }
 
-/**
- * Son 10 finansal işlemi (log) yükler.
- */
 function loadIslemGecmisi(db, currentUserId, appId) {
     const container = document.getElementById("transactionLogContainer");
+    
+    // DÜZELTME: Sadece eklenmeZamani'na göre sıralama yaparak composite index hatasını önlüyoruz.
     const q = query(
         collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), 
-        orderBy("tarih", "desc"), 
-        orderBy("eklenmeZamani", "desc"), // Sıralamayı garantiye almak için
+        orderBy("eklenmeZamani", "desc"), 
         limit(10)
     );
     
@@ -225,7 +207,6 @@ function loadIslemGecmisi(db, currentUserId, appId) {
             return;
         }
 
-        // YENİ: overflow-x-auto eklendi (Mobil uyumluluk için)
         container.innerHTML = `
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -260,7 +241,7 @@ function loadIslemGecmisi(db, currentUserId, appId) {
         `;
     }, (error) => {
         console.error("İşlem geçmişi yüklenirken hata:", error);
-        container.innerHTML = `<p class="text-red-500 text-center py-4">Geçmiş yüklenemedi.</p>`;
+        container.innerHTML = `<p class="text-red-500 text-center py-4">Geçmiş yüklenemedi. (Index sorunu olabilir)</p>`;
     });
 }
 

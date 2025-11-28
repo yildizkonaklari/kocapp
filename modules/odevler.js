@@ -42,7 +42,7 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
         </div>
     `;
 
-    // Öğrenci Listesini Doldur (Tüm Öğrenciler seçeneği olmadan)
+    // Öğrenci Listesini Doldur
     await loadStudentSelect(db, currentUserId, appId);
 
     // Event Listeners
@@ -82,11 +82,9 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
         document.getElementById('odevBaslangicTarihi').value = new Date().toISOString().split('T')[0];
         document.getElementById('odevBitisTarihi').value = new Date().toISOString().split('T')[0];
         
-        // Öğrenci seçimi zaten yapıldı, modalda gizli inputa ata
         document.getElementById('currentStudentIdForOdev').value = currentStudentId;
-        document.getElementById('odevStudentSelectContainer').classList.add('hidden'); // Modal içindeki seçimi gizle
+        document.getElementById('odevStudentSelectContainer').classList.add('hidden'); 
         
-        // Modal HTML'ini güncelle (Serbest seçeneğini kaldır)
         updateModalContent();
         
         document.getElementById('addOdevModal').style.display = 'block';
@@ -97,7 +95,6 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
 function startOdevListener(db, uid, studentId) {
     if (unsubscribeOdevler) unsubscribeOdevler();
 
-    // Sadece seçili öğrencinin ödevlerini getir
     const q = query(
         collection(db, "artifacts", "kocluk-sistemi", "users", uid, "ogrencilerim", studentId, "odevler")
     );
@@ -124,15 +121,13 @@ function renderWeeklyCalendar(db) {
 
     // Haftanın tarihlerini hesapla
     const today = new Date();
-    const currentDay = today.getDay(); // 0: Pazar, 1: Ptesi
-    const diff = today.getDate() - currentDay + (currentDay == 0 ? -6 : 1) + (currentWeekOffset * 7); // Pazartesiye git
+    const currentDay = today.getDay(); 
+    const diff = today.getDate() - currentDay + (currentDay == 0 ? -6 : 1) + (currentWeekOffset * 7); 
     
-    const weekDates = [];
     const startOfWeek = new Date(today.setDate(diff));
-    
-    // Başlık Tarihi Güncelle
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 6);
+    
     rangeDisplay.textContent = `${formatDateTR(startOfWeek.toISOString().split('T')[0])} - ${formatDateTR(endOfWeek.toISOString().split('T')[0])}`;
 
     // 7 Günü Oluştur
@@ -142,16 +137,11 @@ function renderWeeklyCalendar(db) {
         const dateStr = dayDate.toISOString().split('T')[0];
         const dayName = dayDate.toLocaleDateString('tr-TR', { weekday: 'long' });
         
-        // O güne ait ödevleri bul
-        // Kural: Ödevin 'bitisTarihi' bu gün ise o günde göster.
-        // (Haftalık ödevler bitiş gününde, günlük ödevler o günde gözükür)
         const dailyOdevs = allOdevs.filter(o => o.bitisTarihi === dateStr);
 
-        // HTML
         const col = document.createElement('div');
         col.className = 'bg-gray-50 rounded-lg border border-gray-200 flex flex-col min-h-[150px]';
         
-        // Başlık (Gün)
         const isToday = dateStr === new Date().toISOString().split('T')[0];
         col.innerHTML = `
             <div class="p-2 border-b border-gray-200 text-center ${isToday ? 'bg-purple-100 text-purple-800' : 'bg-white'} rounded-t-lg">
@@ -166,42 +156,41 @@ function renderWeeklyCalendar(db) {
         dailyOdevs.forEach(o => {
             const card = document.createElement('div');
             
-            // RENK VE DURUM MANTIĞI
-            // 1. Süresi Geçmiş (Kırmızı): Yapılmamış (devam) VE tarih geçmiş
-            // 2. Onay Bekliyor (Turuncu): Öğrenci yapmış (tamamlandi) AMA Koç onaylamamış (onayDurumu yok veya 'bekliyor')
-            // 3. Tamamlandı (Yeşil): Öğrenci yapmış VE Koç onaylamış (onayDurumu == 'onaylandi')
-            // 4. Devam Ediyor (Mavi): Varsayılan
-            
-            let colorClass = "bg-blue-50 border-blue-200 text-blue-800"; // Varsayılan: Mavi
+            let colorClass = "bg-blue-50 border-blue-200 text-blue-800"; 
             let statusIcon = '<i class="fa-regular fa-clock"></i>';
             let actionBtn = '';
             const todayStr = new Date().toISOString().split('T')[0];
 
             if (o.durum === 'tamamlandi') {
                 if (o.onayDurumu === 'onaylandi') {
-                    // YEŞİL: Tamamen bitti
+                    // YEŞİL
                     colorClass = "bg-green-50 border-green-200 text-green-800";
                     statusIcon = '<i class="fa-solid fa-check-double"></i>';
                 } else {
-                    // TURUNCU: Öğrenci yaptı, Onay bekliyor
+                    // TURUNCU
                     colorClass = "bg-orange-50 border-orange-200 text-orange-800";
                     statusIcon = '<i class="fa-solid fa-hourglass-half"></i>';
                     actionBtn = `<button class="btn-approve text-[10px] bg-white border border-orange-300 px-2 py-1 rounded hover:bg-orange-100 transition-colors mt-1 w-full">Onayla</button>`;
                 }
             } else {
-                // Yapılmamış
                 if (o.bitisTarihi < todayStr) {
-                    // KIRMIZI: Gecikmiş
+                    // KIRMIZI
                     colorClass = "bg-red-50 border-red-200 text-red-800";
                     statusIcon = '<i class="fa-solid fa-triangle-exclamation"></i>';
                 }
             }
 
+            // Link Gösterimi (YENİ EKLENDİ)
+            const linkHtml = o.link ? `<a href="${o.link}" target="_blank" class="ml-1 text-indigo-600 hover:text-indigo-800" title="Bağlantıya Git" onclick="event.stopPropagation();"><i class="fa-solid fa-link"></i></a>` : '';
+
             card.className = `p-2 rounded border text-xs shadow-sm relative group ${colorClass}`;
             card.innerHTML = `
                 <div class="flex justify-between items-start">
-                    <span class="font-bold line-clamp-2">${o.title}</span>
-                    <span class="ml-1">${statusIcon}</span>
+                    <span class="font-bold line-clamp-2 flex items-center gap-1">
+                        ${o.title}
+                        ${linkHtml}
+                    </span>
+                    <span class="ml-1 shrink-0">${statusIcon}</span>
                 </div>
                 <p class="text-[10px] opacity-75 mt-1 truncate">${o.aciklama || ''}</p>
                 ${actionBtn}
@@ -239,7 +228,6 @@ function renderWeeklyCalendar(db) {
 export async function saveGlobalOdev(db, uid, appId) {
     let sid = document.getElementById('currentStudentIdForOdev').value;
     
-    // Eğer modal içindeki select görünürse oradan al (ama artık gizliyoruz)
     if (!document.getElementById('odevStudentSelectContainer').classList.contains('hidden')) {
         sid = document.getElementById('odevStudentSelect').value;
     }
@@ -268,7 +256,6 @@ export async function saveGlobalOdev(db, uid, appId) {
     let count = 0;
 
     if (turu === 'gunluk') {
-        // GÜNLÜK: Her gün için bir kayıt
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
             const dateStr = d.toISOString().split('T')[0];
             const newDocRef = doc(collectionRef);
@@ -285,7 +272,6 @@ export async function saveGlobalOdev(db, uid, appId) {
             count++;
         }
     } else {
-        // HAFTALIK: 7 günlük periyotlar
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 7)) {
             const weekStart = new Date(d);
             const weekEnd = new Date(d);
@@ -322,7 +308,6 @@ async function loadStudentSelect(db, uid, appId) {
     const snap = await getDocs(q);
     const select = document.getElementById('filterOdevStudent');
     
-    // İlk seçeneği koru (Öğrenci Seçiniz...)
     select.innerHTML = '<option value="" disabled selected>Öğrenci Seçiniz...</option>';
     
     snap.forEach(doc => {
@@ -334,19 +319,16 @@ async function loadStudentSelect(db, uid, appId) {
     });
 }
 
-// Modal İçeriğini Güncelle (Serbest seçeneğini kaldır)
 function updateModalContent() {
     const modalBody = document.querySelector('#addOdevModal .mt-4');
     if (!modalBody) return;
 
-    // Ödev Türü Alanını Bul ve Değiştir
-    // (DOM yapısına göre sıra değişebilir, metin içeriğinden buluyoruz)
     const allLabels = modalBody.querySelectorAll('label');
     let targetLabel = null;
     allLabels.forEach(lbl => { if(lbl.textContent.includes('Ödev Türü')) targetLabel = lbl; });
 
     if (targetLabel) {
-        const container = targetLabel.parentElement; // div kapsayıcısı
+        const container = targetLabel.parentElement; 
         container.innerHTML = `
             <label class="block text-sm font-medium mb-1">Ödev Türü</label>
             <div class="grid grid-cols-2 gap-2">
@@ -362,7 +344,6 @@ function updateModalContent() {
             <p class="text-xs text-gray-500 mt-1 ml-1" id="odevTuruInfo">Seçilen tarih aralığındaki her gün için ayrı ödev oluşturur.</p>
         `;
 
-        // Radyo buton değişimi için listener
         container.querySelectorAll('input[name="odevTuru"]').forEach(r => {
             r.addEventListener('change', (e) => {
                 const info = document.getElementById('odevTuruInfo');

@@ -21,16 +21,8 @@ import {
     onSnapshot, getDocs, serverTimestamp, writeBatch, limit 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
 
-// Modül Importları (DÜZELTME: renderStudentOptions eklendi)
-import { 
-    cleanUpListeners, 
-    populateStudentSelect, 
-    renderDersSecimi, 
-    renderStudentOptions, // EKLENDİ
-    renderPlaceholderSayfasi, 
-    formatDateTR 
-} from './modules/helpers.js';
-
+// Modül Importları
+import { cleanUpListeners, populateStudentSelect, renderDersSecimi, renderPlaceholderSayfasi, formatDateTR } from './modules/helpers.js';
 import { renderAnaSayfa } from './modules/anasayfa.js';
 import { renderOgrenciSayfasi, renderOgrenciDetaySayfasi, saveNewStudent, saveStudentChanges } from './modules/ogrencilerim.js';
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
@@ -75,8 +67,9 @@ async function main() {
             updateUIForLoggedInUser(user);
             navigateToPage('anasayfa');
             
-            // Bildirimleri başlat
+            // Bildirimleri ve Mesaj Sayacını Başlat
             initNotifications(user.uid); 
+            listenHeaderMessages(user.uid);
         } else {
             window.location.href = 'login.html';
         }
@@ -91,7 +84,6 @@ function updateUIForLoggedInUser(user) {
     const displayName = user.displayName || "Koç";
     const initials = displayName.substring(0, 2).toUpperCase();
 
-    // Profil Bilgileri
     if(document.getElementById("userName")) document.getElementById("userName").textContent = displayName;
     if(document.getElementById("userEmail")) document.getElementById("userEmail").textContent = user.email;
     if(document.getElementById("userAvatar")) document.getElementById("userAvatar").textContent = initials;
@@ -100,7 +92,6 @@ function updateUIForLoggedInUser(user) {
     if(document.getElementById("drawerUserEmail")) document.getElementById("drawerUserEmail").textContent = user.email;
     if(document.getElementById("drawerUserAvatar")) document.getElementById("drawerUserAvatar").textContent = initials;
 
-    // Profil Tıklama
     const openProfileHandler = (e) => {
         e.preventDefault();
         const drawer = document.getElementById('mobileMenuDrawer');
@@ -114,22 +105,17 @@ function updateUIForLoggedInUser(user) {
 
     const desktopProfile = document.getElementById("userProfileArea");
     if (desktopProfile) desktopProfile.onclick = openProfileHandler;
-
     const headerProfile = document.getElementById("headerCoachProfile");
     if (headerProfile) headerProfile.onclick = openProfileHandler;
-    
     const btnDrawerSettings = document.getElementById("btnDrawerProfileSettings");
     if (btnDrawerSettings) btnDrawerSettings.onclick = openProfileHandler;
-
     const btnMobileProfileList = document.getElementById("btnMobileProfile");
     if (btnMobileProfileList) btnMobileProfileList.onclick = openProfileHandler;
     
-    // Çıkış
     const handleLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
     if(document.getElementById("logoutButton")) document.getElementById("logoutButton").onclick = handleLogout;
     if(document.getElementById("btnMobileLogout")) document.getElementById("btnMobileLogout").onclick = handleLogout;
 
-    // Navigasyon
     document.querySelectorAll('.nav-link, .bottom-nav-btn, .mobile-drawer-link').forEach(link => {
         link.addEventListener('click', (e) => {
             if (link.id !== 'mobileMenuBtn' && link.id !== 'btnToggleMobileMenu') {
@@ -144,7 +130,6 @@ function updateUIForLoggedInUser(user) {
     });
 }
 
-// --- MOBİL MENÜ KONTROLÜ ---
 const mobileDrawer = document.getElementById('mobileMenuDrawer');
 const overlay = document.getElementById('mobileOverlay');
 const headerMenuBtn = document.getElementById('mobileMenuBtn'); 
@@ -166,15 +151,11 @@ if(bottomMenuBtn) bottomMenuBtn.onclick = openMobileMenu;
 if(closeDrawerBtn) closeDrawerBtn.onclick = closeMobileMenu;
 if(overlay) overlay.onclick = closeMobileMenu;
 
-
-// Sayfa Yönlendirme
 function navigateToPage(pageId) {
     cleanUpListeners(); 
-    
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-purple-50', 'text-purple-700', 'font-semibold'));
     const activeLink = document.getElementById(`nav-${pageId}`);
     if(activeLink) activeLink.classList.add('bg-purple-50', 'text-purple-700', 'font-semibold');
-    
     document.querySelectorAll('.bottom-nav-btn').forEach(l => {
         l.classList.remove('active', 'text-purple-600');
         l.classList.add('text-gray-500');
@@ -184,7 +165,6 @@ function navigateToPage(pageId) {
         bottomLink.classList.add('active', 'text-purple-600');
         bottomLink.classList.remove('text-gray-500');
     }
-
     try {
         switch(pageId) {
             case 'anasayfa': renderAnaSayfa(db, currentUserId, appId); break;
@@ -205,8 +185,39 @@ function navigateToPage(pageId) {
 }
 
 // =================================================================
-// BİLDİRİMLER
+// BİLDİRİMLER VE MESAJLAR
 // =================================================================
+
+// YENİ: Header'daki Okunmamış Mesaj Sayısını Dinle
+function listenHeaderMessages(uid) {
+    const badge = document.getElementById('headerUnreadMsgCount');
+    
+    // Tüm öğrencilerden gelen, bana ait (kocId), öğrencinin gönderdiği ve okunmamış mesajlar
+    const q = query(
+        collectionGroup(db, 'mesajlar'), 
+        where('kocId', '==', uid), 
+        where('gonderen', '==', 'ogrenci'), 
+        where('okundu', '==', false)
+    );
+
+    onSnapshot(q, (snapshot) => {
+        const count = snapshot.size;
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }, (error) => {
+        console.error("Mesaj sayısı dinlenirken hata:", error);
+    });
+}
+
+if(document.getElementById('btnHeaderMessages')) {
+    document.getElementById('btnHeaderMessages').onclick = () => navigateToPage('mesajlar');
+}
+
+// Bildirimler (Ödev, Soru, Deneme, Seans)
 function initNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
     const dot = document.getElementById('coachNotificationDot');
@@ -238,10 +249,16 @@ function initNotifications(uid) {
         dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
     };
 
-    let notifications = { appointments: [], pendingQuestions: [], pendingExams: [] };
+    let notifications = { appointments: [], pendingQuestions: [], pendingExams: [], pendingHomeworks: [] };
 
     const renderNotifications = () => {
-        const all = [...notifications.appointments, ...notifications.pendingQuestions, ...notifications.pendingExams];
+        const all = [
+            ...notifications.appointments,
+            ...notifications.pendingHomeworks, // Ödevler eklendi
+            ...notifications.pendingExams,
+            ...notifications.pendingQuestions
+        ];
+
         if (all.length > 0) {
             dot.classList.remove('hidden');
             let html = '';
@@ -261,38 +278,59 @@ function initNotifications(uid) {
         }
     };
 
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-    const tStr = tomorrow.toISOString().split('T')[0];
-    onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", "==", tStr)), (snap) => {
+    // 1. Yaklaşan Seanslar (Randevular)
+    const today = new Date().toISOString().split('T')[0];
+    onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(3)), (snap) => {
         notifications.appointments = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.appointments.push({ title: 'Yarınki Randevu', desc: `${data.baslangic} - ${data.ogrenciAd}`, badgeText: 'Ajanda', badgeClass: 'bg-blue-100 text-blue-700', action: "document.getElementById('nav-ajandam').click()" });
+            const isToday = data.tarih === today;
+            notifications.appointments.push({ 
+                title: isToday ? 'Bugünkü Seans' : 'Yaklaşan Seans', 
+                desc: `${formatDateTR(data.tarih)} ${data.baslangic} - ${data.ogrenciAd}`, 
+                badgeText: 'Seans', 
+                badgeClass: 'bg-blue-100 text-blue-700', 
+                action: "document.getElementById('nav-ajandam').click()" 
+            });
         });
         renderNotifications();
     });
 
+    // 2. Onay Bekleyen Sorular
     onSnapshot(query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
         notifications.pendingQuestions = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.pendingQuestions.push({ title: 'Soru Onayı Bekliyor', desc: `${formatDateTR(data.tarih)} - ${data.ders}`, badgeText: 'Onay', badgeClass: 'bg-yellow-100 text-yellow-700', action: "document.getElementById('nav-sorutakibi').click()" });
+            notifications.pendingQuestions.push({ title: 'Soru Onayı', desc: `${formatDateTR(data.tarih)} - ${data.ders}`, badgeText: 'Onay', badgeClass: 'bg-yellow-100 text-yellow-700', action: "document.getElementById('nav-sorutakibi').click()" });
         });
         renderNotifications();
     });
 
+    // 3. Onay Bekleyen Denemeler
     onSnapshot(query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
         notifications.pendingExams = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.pendingExams.push({ title: 'Deneme Onayı Bekliyor', desc: `${data.studentAd || 'Öğrenci'} - ${data.tur} Denemesi`, badgeText: 'Onay', badgeClass: 'bg-purple-100 text-purple-700', action: "document.getElementById('nav-denemeler').click()" });
+            notifications.pendingExams.push({ title: 'Deneme Onayı', desc: `${data.studentAd || 'Öğrenci'} - ${data.tur}`, badgeText: 'Onay', badgeClass: 'bg-purple-100 text-purple-700', action: "document.getElementById('nav-denemeler').click()" });
         });
         renderNotifications();
     });
-}
 
-if(document.getElementById('btnHeaderMessages')) {
-    document.getElementById('btnHeaderMessages').onclick = () => navigateToPage('mesajlar');
+    // 4. Onay Bekleyen Ödevler (Tamamlanmış ama Koç Onaylamamış)
+    onSnapshot(query(collectionGroup(db, 'odevler'), where('kocId', '==', uid), where('durum', '==', 'tamamlandi'), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+        notifications.pendingHomeworks = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.pendingHomeworks.push({ 
+                title: 'Ödev Onayı', 
+                desc: `${data.title}`, 
+                badgeText: 'Ödev', 
+                badgeClass: 'bg-orange-100 text-orange-700', 
+                action: "document.getElementById('nav-odevler').click()" 
+            });
+        });
+        renderNotifications();
+    });
 }
 
 // =================================================================
@@ -332,14 +370,8 @@ document.querySelectorAll(closeButtons.join(', ')).forEach(btn => {
 // Kayıt Butonları
 addListener('saveStudentButton', 'click', () => saveNewStudent(db, currentUserId, appId));
 addListener('saveStudentChangesButton', 'click', () => saveStudentChanges(db, currentUserId, appId));
-
-// YENİ: Sınıf Seçimi Dinleyicileri (Ders/Alan seçimi için)
-addListener('studentClass', 'change', (e) => {
-    renderStudentOptions(e.target.value, 'studentOptionsContainer', 'studentDersSecimiContainer');
-});
-addListener('editStudentClass', 'change', (e) => {
-    renderStudentOptions(e.target.value, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer');
-});
+addListener('studentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('studentDersSecimiContainer')));
+addListener('editStudentClass', 'change', (e) => renderDersSecimi(e.target.value, document.getElementById('editStudentDersSecimiContainer')));
 
 addListener('saveDenemeButton', 'click', () => saveGlobalDeneme(db, currentUserId, appId));
 addListener('denemeTuru', 'change', (e) => renderDenemeNetInputs(e.target.value));
@@ -354,11 +386,8 @@ addListener('saveRandevuButton', 'click', () => saveNewRandevu(db, currentUserId
 addListener('saveTahsilatButton', 'click', () => saveNewTahsilat(db, currentUserId, appId));
 addListener('saveBorcButton', 'click', () => saveNewBorc(db, currentUserId, appId));
 
-// Window Helpers
 window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
 
-
-// --- PROFİL MODALI ---
 const profileModal = document.getElementById("profileModal");
 
 function showProfileModal(user) {

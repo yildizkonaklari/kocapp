@@ -146,7 +146,7 @@
                         <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
                             <i class="fa-solid fa-calendar-day text-purple-500"></i> Yaklaşan Seanslar
                         </h3>
-                        <button onclick="document.querySelector('[data-target=\'tab-ajanda\']').click()" class="text-xs text-purple-600 hover:text-purple-800 font-bold bg-purple-50 px-2 py-1 rounded border border-purple-100">Ajandam</button>
+                        <button onclick="document.getElementById('btnNavAjanda').click()" class="text-xs text-purple-600 hover:text-purple-800 font-medium">Tümü</button>
                     </div>
                     <div id="upcomingAppointmentsList" class="divide-y divide-gray-50 flex-1">
                         <p class="text-center text-gray-400 text-xs py-6">Planlanmış seans yok.</p>
@@ -192,178 +192,40 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3 mt-4">
-                <button id="btnOpenSoruEkle" class="flex items-center justify-center p-3 bg-white border border-blue-200 rounded-xl shadow-sm active:scale-95 transition-transform text-blue-700 gap-2">
-                    <i class="fa-solid fa-plus bg-blue-100 p-1.5 rounded-full"></i>
-                    <span class="text-sm font-bold">Soru Gir</span>
+            <div class="grid grid-cols-3 gap-3 mt-4">
+                <button id="btnOpenSoruEkle" class="flex flex-col items-center justify-center p-3 bg-white border border-blue-200 rounded-xl shadow-sm active:scale-95 transition-transform text-blue-700">
+                    <i class="fa-solid fa-plus bg-blue-100 p-1.5 rounded-full mb-1"></i>
+                    <span class="text-xs font-bold">Soru Gir</span>
                 </button>
-                <button class="nav-btn flex items-center justify-center p-3 bg-white border border-purple-200 rounded-xl shadow-sm active:scale-95 transition-transform text-purple-700 gap-2" data-target="tab-denemeler">
-                    <i class="fa-solid fa-chart-simple bg-purple-100 p-1.5 rounded-full"></i>
-                    <span class="text-sm font-bold">Deneme Gir</span>
+                <button class="nav-btn flex flex-col items-center justify-center p-3 bg-white border border-purple-200 rounded-xl shadow-sm active:scale-95 transition-transform text-purple-700" data-target="tab-denemeler">
+                    <i class="fa-solid fa-chart-simple bg-purple-100 p-1.5 rounded-full mb-1"></i>
+                    <span class="text-xs font-bold">Deneme Gir</span>
                 </button>
-            </div>
-
-        </div>
-
-        <div id="tab-homework" class="tab-content hidden space-y-4">
-             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-800">Ödevlerim</h2>
-            </div>
-            <div id="studentOdevList" class="space-y-3 pb-20">
-                <p class="text-center text-gray-400 py-8">Ödevler yükleniyor...</p>
-            </div>
-        </div>
-
-        <div id="tab-tracking" class="tab-content hidden space-y-4">
-             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-800">Soru Takibi</h2>
-                <p class="text-xs text-gray-500">Haftalık Çizelge</p>
-            </div>
-            <div class="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm border">
-                <button id="prevWeekBtn" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button>
-                <h2 id="weekRangeTitle" class="text-sm font-bold text-indigo-600 text-center">...</h2>
-                <button id="nextWeekBtn" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-right"></i></button>
-            </div>
-            <div class="w-full overflow-x-auto bg-white rounded-xl shadow-sm border tracking-container">
-                <div id="weeklyAccordion" class="min-w-[300px] p-2"></div>
-            </div>
-        </div>
-        
-        <div id="tab-denemeler" class="tab-content hidden space-y-4">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="text-lg font-bold text-gray-800">Deneme Analizi</h2>
-                <button id="btnAddNewDeneme" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center shadow-sm active:scale-95 transition-transform">
-                    <i class="fa-solid fa-plus mr-2"></i> Yeni Ekle
+                <button id="btnNavAjanda" class="nav-btn flex flex-col items-center justify-center p-3 bg-white border border-indigo-200 rounded-xl shadow-sm active:scale-95 transition-transform text-indigo-700" data-target="tab-ajanda">
+                    <i class="fa-solid fa-calendar-check bg-indigo-100 p-1.5 rounded-full mb-1"></i>
+                    <span class="text-xs font-bold">Ajandam</span>
                 </button>
             </div>
-            <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <h3 class="text-xs font-bold text-gray-500 mb-3 uppercase">Net Gelişimi</h3>
-                <div class="h-48"><canvas id="studentDenemeChart"></canvas></div>
-            </div>
-            <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="bg-white p-2 rounded border"><p class="text-[10px] text-gray-500">ORTALAMA</p><h4 id="studentKpiAvg" class="font-bold text-purple-600">0.00</h4></div>
-                <div class="bg-white p-2 rounded border"><p class="text-[10px] text-gray-500">EN YÜKSEK</p><h4 id="studentKpiMax" class="font-bold text-green-600">0.00</h4></div>
-                <div class="bg-white p-2 rounded border"><p class="text-[10px] text-gray-500">TOPLAM</p><h4 id="studentKpiTotal" class="font-bold text-gray-800">0</h4></div>
-            </div>
-            <div id="studentDenemeList" class="space-y-3 pb-20"></div>
+
         </div>
 
-        <div id="tab-goals" class="tab-content hidden space-y-4">
-             <h2 class="text-lg font-bold text-gray-800 mb-2">Tüm Hedeflerim</h2>
-            <div id="studentHedefList" class="space-y-3 pb-20">
-                 <p class="text-center text-gray-400 py-8">Hedefler yükleniyor...</p>
-            </div>
-        </div>
-        
-        <div id="tab-ajanda" class="tab-content hidden space-y-4">
-             <h2 class="text-lg font-bold text-gray-800">Ajandam</h2>
-             
-             <div class="bg-white rounded-lg shadow border border-gray-200">
-                <div class="flex justify-between items-center p-3 border-b border-gray-200">
-                    <button id="prevMonth" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button>
-                    <h2 id="currentMonthYear" class="text-base font-bold text-gray-800 text-center">...</h2>
-                    <button id="nextMonth" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-right"></i></button>
-                </div>
-                <div id="calendarHeader" class="grid grid-cols-7 p-2 border-b border-gray-200 bg-gray-50 text-center text-xs font-semibold text-gray-500">
-                    <div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div>
-                </div>
-                <div id="calendarGrid" class="relative p-1"></div>
-            </div>
-             
-             <div class="mt-4">
-                <h3 class="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2"><i class="fa-solid fa-list text-indigo-500"></i> Yaklaşan Seanslar</h3>
-                <div id="appointmentListContainer" class="space-y-2 pb-20">
-                    <p class="text-center text-gray-400 text-xs py-4">Planlanmış seans yok.</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-messages" class="tab-content hidden flex flex-col h-full pb-20 relative">
-             <div class="bg-white p-4 border-b border-gray-200 flex items-center gap-3 shadow-sm shrink-0 sticky top-0 z-10">
-                <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><i class="fa-solid fa-user-tie"></i></div>
-                <div><h3 class="font-bold text-gray-800 text-sm">Koçum</h3><p class="text-xs text-green-500 flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Çevrimiçi</p></div>
-            </div>
-            <div id="studentMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 h-[calc(100vh-180px)]">
-                <p class="text-center text-gray-400 py-8">Mesajlar yükleniyor...</p>
-            </div>
-            <div class="p-3 bg-white border-t border-gray-200 shrink-0 fixed bottom-24 lg:bottom-0 left-0 w-full z-20">
-                <form id="studentChatForm" class="flex gap-2">
-                    <input type="text" id="studentMessageInput" placeholder="Mesaj yaz..." class="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="off">
-                    <button type="submit" class="bg-indigo-600 text-white rounded-full w-11 h-11 flex items-center justify-center shadow-lg active:scale-95"><i class="fa-solid fa-paper-plane"></i></button>
-                </form>
-            </div>
-        </div>
-
-        <div id="tab-profile" class="tab-content hidden space-y-6 p-4">
-            <h2 class="text-xl font-bold text-gray-800">Profilim</h2>
-            
-            <div class="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center gap-3 text-center border border-gray-100 relative">
-                <div class="relative group">
-                    <div id="profileAvatar" class="w-24 h-24 bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-full flex items-center justify-center text-3xl font-bold shadow-lg overflow-hidden">
-                        </div>
-                    <button id="btnChangeAvatar" class="absolute bottom-0 right-0 bg-white text-gray-700 p-2 rounded-full shadow-md border border-gray-200 hover:text-purple-600 active:scale-95 transition-transform" title="Logo Değiştir">
-                        <i class="fa-solid fa-camera"></i>
-                    </button>
-                </div>
-                <div>
-                    <h3 id="profileName" class="text-xl font-bold text-gray-900">Yükleniyor...</h3>
-                    <span id="profileClass" class="inline-block bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-bold tracking-wide mt-1 border border-purple-100">...</span>
-                </div>
-            </div>
-
-            <div>
-                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Hesap Bilgileri</h3>
-                <div class="profile-info-card">
-                    <div class="profile-icon-box bg-blue-50 text-blue-600"><i class="fa-regular fa-envelope"></i></div>
-                    <div class="flex-1"><p class="text-xs text-gray-400 font-medium">E-posta</p><p id="profileEmail" class="text-sm font-semibold text-gray-800">...</p></div>
-                </div>
-                <div class="profile-info-card">
-                    <div class="profile-icon-box bg-green-50 text-green-600"><i class="fa-solid fa-user-tie"></i></div>
-                    <div class="flex-1"><p class="text-xs text-gray-400 font-medium">Koçum</p><p id="profileCoachName" class="text-sm font-semibold text-gray-800">Atanmış Koç</p></div>
-                </div>
-            </div>
-
-            <div id="profileLessonsPlaceholder"></div>
-
-            <div>
-                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Ayarlar</h3>
-                <button onclick="document.getElementById('modalYasal').classList.remove('hidden')" class="w-full profile-info-card hover:bg-gray-50 transition-colors group text-left mb-2">
-                    <div class="profile-icon-box bg-gray-100 text-gray-600"><i class="fa-solid fa-scale-balanced"></i></div>
-                    <div class="flex-1"><p class="text-sm font-semibold text-gray-800">Kullanım & Gizlilik</p></div>
-                    <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-gray-500"></i>
-                </button>
-
-                <button id="btnLogout" class="w-full profile-info-card hover:bg-red-50 transition-colors group text-left border-red-100">
-                    <div class="profile-icon-box bg-red-100 text-red-600"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
-                    <div class="flex-1"><p class="text-sm font-semibold text-red-600">Çıkış Yap</p></div>
-                </button>
-            </div>
-        </div>
+        <div id="tab-homework" class="tab-content hidden space-y-4"><div class="flex justify-between items-center"><h2 class="text-lg font-bold text-gray-800">Ödevlerim</h2></div><div id="studentOdevList" class="space-y-3 pb-20"><p class="text-center text-gray-400 py-8">Ödevler yükleniyor...</p></div></div>
+        <div id="tab-tracking" class="tab-content hidden space-y-4"><div class="flex justify-between items-center"><h2 class="text-lg font-bold text-gray-800">Soru Takibi</h2><p class="text-xs text-gray-500">Haftalık Çizelge</p></div><div class="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm border"><button id="prevWeekBtn" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button><h2 id="weekRangeTitle" class="text-sm font-bold text-indigo-600 text-center">...</h2><button id="nextWeekBtn" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-right"></i></button></div><div class="w-full overflow-x-auto bg-white rounded-xl shadow-sm border tracking-container"><div id="weeklyAccordion" class="min-w-[300px] p-2"></div></div></div>
+        <div id="tab-denemeler" class="tab-content hidden space-y-4"><div class="flex justify-between items-center mb-2"><h2 class="text-lg font-bold text-gray-800">Deneme Analizi</h2><button id="btnAddNewDeneme" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center shadow-sm active:scale-95 transition-transform"><i class="fa-solid fa-plus mr-2"></i> Yeni Ekle</button></div><div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"><h3 class="text-xs font-bold text-gray-500 mb-3 uppercase">Net Gelişimi</h3><div class="h-48"><canvas id="studentDenemeChart"></canvas></div></div><div class="grid grid-cols-3 gap-2 text-center"><div class="bg-white p-2 rounded border"><p class="text-[10px] text-gray-500">ORTALAMA</p><h4 id="studentKpiAvg" class="font-bold text-purple-600">0.00</h4></div><div class="bg-white p-2 rounded border"><p class="text-[10px] text-gray-500">EN YÜKSEK</p><h4 id="studentKpiMax" class="font-bold text-green-600">0.00</h4></div><div class="bg-white p-2 rounded border"><p class="text-[10px] text-gray-500">TOPLAM</p><h4 id="studentKpiTotal" class="font-bold text-gray-800">0</h4></div></div><div id="studentDenemeList" class="space-y-3 pb-20"></div></div>
+        <div id="tab-goals" class="tab-content hidden space-y-4"><h2 class="text-lg font-bold text-gray-800 mb-2">Tüm Hedeflerim</h2><div id="studentHedefList" class="space-y-3 pb-20"><p class="text-center text-gray-400 py-8">Hedefler yükleniyor...</p></div></div>
+        <div id="tab-ajanda" class="tab-content hidden space-y-4"><h2 class="text-lg font-bold text-gray-800">Ajandam</h2><div class="bg-white rounded-lg shadow border border-gray-200"><div class="flex justify-between items-center p-3 border-b border-gray-200"><button id="prevMonth" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button><h2 id="currentMonthYear" class="text-base font-bold text-gray-800 text-center">...</h2><button id="nextMonth" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-right"></i></button></div><div id="calendarHeader" class="grid grid-cols-7 p-2 border-b border-gray-200 bg-gray-50 text-center text-xs font-semibold text-gray-500"><div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div></div><div id="calendarGrid" class="relative p-1"></div></div><div class="mt-4"><h3 class="text-sm font-semibold text-gray-700 mb-2">Bu Hafta</h3><div id="appointmentListContainer" class="space-y-2"></div></div></div>
+        <div id="tab-messages" class="tab-content hidden flex flex-col h-full pb-20 relative"><div class="bg-white p-4 border-b border-gray-200 flex items-center gap-3 shadow-sm shrink-0 sticky top-0 z-10"><div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><i class="fa-solid fa-user-tie"></i></div><div><h3 class="font-bold text-gray-800 text-sm">Koçum</h3><p class="text-xs text-green-500 flex items-center gap-1"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Çevrimiçi</p></div></div><div id="studentMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 h-[calc(100vh-180px)]"><p class="text-center text-gray-400 py-8">Mesajlar yükleniyor...</p></div><div class="p-3 bg-white border-t border-gray-200 shrink-0 fixed bottom-24 lg:bottom-0 left-0 w-full z-20"><form id="studentChatForm" class="flex gap-2"><input type="text" id="studentMessageInput" placeholder="Mesaj yaz..." class="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-full focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="off"><button type="submit" class="bg-indigo-600 text-white rounded-full w-11 h-11 flex items-center justify-center shadow-lg active:scale-95"><i class="fa-solid fa-paper-plane"></i></button></form></div></div>
+        <div id="tab-profile" class="tab-content hidden space-y-6 p-4"><h2 class="text-xl font-bold text-gray-800">Profilim</h2><div class="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center gap-3 text-center border border-gray-100 relative"><div class="relative group"><div id="profileAvatar" class="w-24 h-24 bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-full flex items-center justify-center text-3xl font-bold shadow-lg overflow-hidden"></div><button id="btnChangeAvatar" class="absolute bottom-0 right-0 bg-white text-gray-700 p-2 rounded-full shadow-md border border-gray-200 hover:text-purple-600 active:scale-95 transition-transform" title="Logo Değiştir"><i class="fa-solid fa-camera"></i></button></div><div><h3 id="profileName" class="text-xl font-bold text-gray-900">Yükleniyor...</h3><span id="profileClass" class="inline-block bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-bold tracking-wide mt-1 border border-purple-100">...</span></div></div><div><h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Hesap Bilgileri</h3><div class="profile-info-card"><div class="profile-icon-box bg-blue-50 text-blue-600"><i class="fa-regular fa-envelope"></i></div><div class="flex-1"><p class="text-xs text-gray-400 font-medium">E-posta</p><p id="profileEmail" class="text-sm font-semibold text-gray-800">...</p></div></div><div class="profile-info-card"><div class="profile-icon-box bg-green-50 text-green-600"><i class="fa-solid fa-user-tie"></i></div><div class="flex-1"><p class="text-xs text-gray-400 font-medium">Koçum</p><p id="profileCoachName" class="text-sm font-semibold text-gray-800">Atanmış Koç</p></div></div></div><div id="profileLessonsPlaceholder"></div><div><h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Ayarlar</h3><button onclick="document.getElementById('modalYasal').classList.remove('hidden')" class="w-full profile-info-card hover:bg-gray-50 transition-colors group text-left mb-2"><div class="profile-icon-box bg-gray-100 text-gray-600"><i class="fa-solid fa-scale-balanced"></i></div><div class="flex-1"><p class="text-sm font-semibold text-gray-800">Kullanım & Gizlilik</p></div><i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-gray-500"></i></button><button id="btnLogout" class="w-full profile-info-card hover:bg-red-50 transition-colors group text-left border-red-100"><div class="profile-icon-box bg-red-100 text-red-600"><i class="fa-solid fa-arrow-right-from-bracket"></i></div><div class="flex-1"><p class="text-sm font-semibold text-red-600">Çıkış Yap</p></div></button></div></div>
 
     </main>
 
     <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-40 overflow-visible shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
         <div class="flex justify-between items-end h-16 px-4 relative">
-            <button class="nav-btn active flex flex-col items-center justify-center w-1/5 h-full text-indigo-600 pb-1" data-target="tab-home">
-                <i class="fa-solid fa-house text-xl mb-1"></i><span class="text-[10px] font-medium">Ana Sayfa</span>
-            </button>
-            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-homework">
-                <i class="fa-solid fa-list-check text-xl mb-1"></i><span class="text-[10px] font-medium">Ödevler</span>
-            </button>
-            <div class="relative w-1/5 h-full flex justify-center z-50">
-                <button class="nav-btn flex flex-col items-center justify-center w-16 absolute bottom-0" data-target="tab-tracking">
-                    <div class="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center bottom-nav-center-btn transition-all duration-300 border-4 border-gray-50 shadow-lg text-white">
-                        <i class="fa-solid fa-pen-to-square text-2xl"></i>
-                    </div>
-                    <span class="text-[10px] font-medium mt-8 text-gray-500">Takip</span>
-                </button>
-            </div>
-            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-goals">
-                <i class="fa-solid fa-bullseye text-xl mb-1"></i><span class="text-[10px] font-medium">Hedef</span>
-            </button>
-            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-profile">
-                <i class="fa-regular fa-user text-xl mb-1"></i><span class="text-[10px] font-medium">Profilim</span>
-            </button>
+            <button class="nav-btn active flex flex-col items-center justify-center w-1/5 h-full text-indigo-600 pb-1" data-target="tab-home"><i class="fa-solid fa-house text-xl mb-1"></i><span class="text-[10px] font-medium">Ana Sayfa</span></button>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-homework"><i class="fa-solid fa-list-check text-xl mb-1"></i><span class="text-[10px] font-medium">Ödevler</span></button>
+            <div class="relative w-1/5 h-full flex justify-center z-50"><button class="nav-btn flex flex-col items-center justify-center w-16 absolute bottom-0" data-target="tab-tracking"><div class="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center bottom-nav-center-btn transition-all duration-300 border-4 border-gray-50 shadow-lg text-white"><i class="fa-solid fa-pen-to-square text-2xl"></i></div><span class="text-[10px] font-medium mt-8 text-gray-500">Takip</span></button></div>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-goals"><i class="fa-solid fa-bullseye text-xl mb-1"></i><span class="text-[10px] font-medium">Hedef</span></button>
+            <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-profile"><i class="fa-regular fa-user text-xl mb-1"></i><span class="text-[10px] font-medium">Profilim</span></button>
         </div>
     </nav>
 

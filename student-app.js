@@ -309,14 +309,10 @@ async function loadStudentStats(db, uid, appId, sid, period) {
         startDate = '2000-01-01'; 
     }
 
-    // DÜZELTME: İndeks hatasını önlemek için sorgulardan 'durum' filtresi kaldırıldı.
-    // Filtreleme JS tarafında yapılacak.
     const qGoals = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("bitisTarihi", ">=", startDate));
     const qHomework = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("bitisTarihi", ">=", startDate));
     const qExams = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"), where("tarih", ">=", startDate));
     const qQuestions = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate));
-    
-    // Ajanda için composite index hatası almamak için sadece studentId ile çekip, tarihi JS'de filtreliyoruz.
     const qSessions = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid));
 
     try {
@@ -324,24 +320,20 @@ async function loadStudentStats(db, uid, appId, sid, period) {
             getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions), getDocs(qSessions)
         ]);
 
-        // Hedefler (JS Filtreleme)
         let completedGoals = 0;
         snapGoals.forEach(doc => {
             if (doc.data().durum === 'tamamlandi') completedGoals++;
         });
         document.getElementById('kpiCompletedGoals').textContent = completedGoals;
 
-        // Ödevler (JS Filtreleme)
         let completedHomework = 0;
         snapHomework.forEach(doc => {
             if (doc.data().durum === 'tamamlandi') completedHomework++;
         });
         document.getElementById('kpiCompletedHomework').textContent = completedHomework;
 
-        // Denemeler
         document.getElementById('kpiTotalExams').textContent = snapExams.size;
 
-        // Seanslar (JS Filtreleme: Tarih >= startDate ve Durum = tamamlandi)
         let completedSessions = 0;
         snapSessions.forEach(doc => {
             const d = doc.data();
@@ -349,7 +341,6 @@ async function loadStudentStats(db, uid, appId, sid, period) {
         });
         document.getElementById('kpiTotalSessions').textContent = completedSessions;
 
-        // Sorular
         let totalQ = 0;
         let totalRead = 0;
         snapQuestions.forEach(doc => {
@@ -361,7 +352,6 @@ async function loadStudentStats(db, uid, appId, sid, period) {
         document.getElementById('kpiTotalQuestions').textContent = totalQ;
         document.getElementById('kpiReading').textContent = totalRead;
 
-        // Deneme Analizi
         let totalNet = 0;
         let subjectStats = {}; 
 
@@ -393,7 +383,6 @@ async function loadStudentStats(db, uid, appId, sid, period) {
 
     } catch (err) {
         console.error("Dashboard istatistik hatası:", err);
-        // Hata olsa bile UI'ın çökmemesi için sessizce logla
     }
 }
 
@@ -631,11 +620,12 @@ async function renderSoruTakibiGrid() {
     }).join('');
 }
 
-// --- ÖDEVLER ---
+// --- ÖDEVLER (GÜNCELLENMİŞ) ---
 function loadHomeworksTab() {
     const container = document.getElementById('studentOdevList');
     if(!container) return;
 
+    // HTML Yapısı
     container.innerHTML = `
         <div class="flex justify-between items-center mb-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
             <button id="btnOdevPrevWeek" class="p-2 hover:bg-gray-100 rounded-full text-gray-600"><i class="fa-solid fa-chevron-left"></i></button>
@@ -647,6 +637,7 @@ function loadHomeworksTab() {
         </div>
     `;
 
+    // Eventler
     document.getElementById('btnOdevPrevWeek').onclick = () => { odevWeekOffset--; renderOdevCalendar(); };
     document.getElementById('btnOdevNextWeek').onclick = () => { odevWeekOffset++; renderOdevCalendar(); };
 
@@ -657,15 +648,17 @@ function renderOdevCalendar() {
     const grid = document.getElementById('odevWeeklyGrid');
     const rangeDisplay = document.getElementById('odevWeekRangeDisplay');
     
+    // Tarih Hesaplama
     const today = new Date();
-    const currentDay = today.getDay(); 
-    const diff = today.getDate() - currentDay + (currentDay == 0 ? -6 : 1) + (odevWeekOffset * 7); 
+    const currentDay = today.getDay(); // 0: Pazar
+    const diff = today.getDate() - currentDay + (currentDay == 0 ? -6 : 1) + (odevWeekOffset * 7); // Pazartesi
     const startOfWeek = new Date(today.setDate(diff));
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 6);
 
     rangeDisplay.textContent = `${formatDateTR(startOfWeek.toISOString().split('T')[0])} - ${formatDateTR(endOfWeek.toISOString().split('T')[0])}`;
 
+    // Veritabanı
     listeners.odevler = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler")), (snap) => {
         const allOdevs = [];
         snap.forEach(doc => allOdevs.push({id: doc.id, ...doc.data()}));
@@ -674,6 +667,7 @@ function renderOdevCalendar() {
         let weeklyTotal = 0;
         let weeklyDone = 0;
 
+        // 7 Gün Döngüsü
         for (let i = 0; i < 7; i++) {
             const dayDate = new Date(startOfWeek);
             dayDate.setDate(startOfWeek.getDate() + i);
@@ -681,13 +675,16 @@ function renderOdevCalendar() {
             const dayName = dayDate.toLocaleDateString('tr-TR', { weekday: 'long' });
             const isToday = dateStr === new Date().toISOString().split('T')[0];
 
+            // Filtreleme
             const dailyOdevs = allOdevs.filter(o => o.bitisTarihi === dateStr);
             
+            // İlerleme
             dailyOdevs.forEach(o => {
                 weeklyTotal++;
                 if(o.durum === 'tamamlandi') weeklyDone++;
             });
 
+            // Kart Oluştur
             const dayCard = document.createElement('div');
             dayCard.className = `bg-white rounded-xl border ${isToday ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'} overflow-hidden`;
             
@@ -703,6 +700,7 @@ function renderOdevCalendar() {
                 contentHtml += `<p class="text-center text-xs text-gray-400 py-2">Ödev yok.</p>`;
             } else {
                 dailyOdevs.forEach(o => {
+                    // Durum Mantığı
                     let statusClass = "bg-blue-50 border-blue-100 text-blue-800"; 
                     let statusText = "Yapılacak";
                     let actionBtn = `<button class="w-full mt-2 bg-blue-600 text-white text-xs py-1.5 rounded hover:bg-blue-700 transition-colors" onclick="completeOdev('${o.id}')">Tamamladım</button>`;
@@ -723,11 +721,17 @@ function renderOdevCalendar() {
                         statusText = "Gecikti";
                     }
 
+                    // Ödevin Linki Varsa
+                    const linkHtml = o.link ? `<a href="${o.link}" target="_blank" class="ml-2 text-indigo-600 hover:text-indigo-800" title="Bağlantıya Git"><i class="fa-solid fa-link"></i></a>` : '';
+
                     contentHtml += `
                         <div class="border rounded-lg p-3 ${statusClass}">
                             <div class="flex justify-between items-start mb-1">
-                                <h4 class="font-bold text-sm leading-tight">${o.title}</h4>
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 bg-white bg-opacity-50 rounded">${statusText}</span>
+                                <h4 class="font-bold text-sm leading-tight flex items-center">
+                                    ${o.title}
+                                    ${linkHtml}
+                                </h4>
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 bg-white bg-opacity-50 rounded whitespace-nowrap ml-1">${statusText}</span>
                             </div>
                             <p class="text-xs opacity-80 mb-1">${o.aciklama || ''}</p>
                             ${actionBtn}
@@ -740,21 +744,12 @@ function renderOdevCalendar() {
             grid.appendChild(dayCard);
         }
 
+        // İlerleme Barı
         const p = weeklyTotal === 0 ? 0 : Math.round((weeklyDone / weeklyTotal) * 100);
         if(document.getElementById('haftalikIlerlemeText2')) document.getElementById('haftalikIlerlemeText2').textContent = `%${p}`;
         if(document.getElementById('haftalikIlerlemeBar2')) document.getElementById('haftalikIlerlemeBar2').style.width = `${p}%`;
     });
 }
-
-window.completeOdev = async (odevId) => {
-    if(!confirm("Ödevi tamamladın mı?")) return;
-    try {
-        await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler", odevId), {
-            durum: 'tamamlandi',
-            onayDurumu: 'bekliyor'
-        });
-    } catch (e) { console.error(e); alert("Hata oluştu."); }
-};
 
 // --- HEDEFLER (GÜNCELLENMİŞ) ---
 function loadGoalsTab() {
@@ -791,9 +786,7 @@ function loadGoalsTab() {
 
             return `
             <div class="p-4 rounded-xl border shadow-sm mb-3 flex gap-4 relative ${cardClass}">
-                
                 ${isPinned ? '<div class="absolute top-0 right-0 bg-yellow-400 text-white rounded-bl-xl rounded-tr-xl w-8 h-8 flex items-center justify-center shadow-sm"><i class="fa-solid fa-thumbtack text-sm"></i></div>' : ''}
-
                 <div class="w-10 h-10 rounded-full ${isDone ? 'bg-green-100 text-green-600' : (isPinned ? 'bg-yellow-200 text-yellow-700' : 'bg-purple-100 text-purple-600')} flex items-center justify-center text-lg shrink-0">
                     <i class="fa-solid ${isDone ? 'fa-check' : 'fa-bullseye'}"></i>
                 </div>
@@ -803,14 +796,9 @@ function loadGoalsTab() {
                         ${isDone ? '<span class="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold">Tamamlandı</span>' : ''}
                     </div>
                     <p class="text-xs text-gray-600 mt-1 leading-relaxed">${h.aciklama || ''}</p>
-                    
                     <div class="flex items-center gap-3 mt-2 pt-2 border-t border-gray-200/50 text-[10px] text-gray-400">
-                        <span title="Veriliş Tarihi" class="flex items-center gap-1">
-                            <i class="fa-regular fa-calendar-plus text-purple-400"></i> ${olusturma}
-                        </span>
-                        <span title="Bitiş Tarihi" class="flex items-center gap-1 ${!isDone ? 'text-orange-500 font-bold' : ''}">
-                            <i class="fa-regular fa-flag"></i> ${bitis}
-                        </span>
+                        <span title="Veriliş Tarihi" class="flex items-center gap-1"><i class="fa-regular fa-calendar-plus text-purple-400"></i> ${olusturma}</span>
+                        <span title="Bitiş Tarihi" class="flex items-center gap-1 ${!isDone ? 'text-orange-500 font-bold' : ''}"><i class="fa-regular fa-flag"></i> ${bitis}</span>
                     </div>
                 </div>
             </div>`;

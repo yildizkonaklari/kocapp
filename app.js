@@ -226,45 +226,22 @@ function initNotifications(uid) {
     
     if(!btn || !dropdown) return;
 
-    btn.onclick = (e) => { 
-        e.stopPropagation(); 
-        dropdown.classList.toggle('hidden'); 
-        if (!dropdown.classList.contains('hidden')) {
-            dropdown.classList.remove('scale-95', 'opacity-0');
-        } else {
-            dropdown.classList.add('scale-95', 'opacity-0');
-        }
-        dot.classList.add('hidden'); 
-    };
-
-    document.addEventListener('click', (e) => { 
-        if(!dropdown.contains(e.target) && !btn.contains(e.target)) {
-            dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
-        }
-    });
-
-    const closeBtn = document.getElementById('btnCloseCoachNotifications');
-    if(closeBtn) closeBtn.onclick = (e) => {
-        e.stopPropagation();
-        dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
-    };
+btn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); dot.classList.add('hidden'); };
+    document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.add('hidden'); });
+    document.getElementById('btnCloseCoachNotifications').onclick = (e) => { e.stopPropagation(); dropdown.classList.add('hidden'); };
 
     let notifications = { appointments: [], pendingQuestions: [], pendingExams: [], pendingHomeworks: [] };
 
     const renderNotifications = () => {
-        const all = [
-            ...notifications.appointments,
-            ...notifications.pendingHomeworks, // Ödevler eklendi
-            ...notifications.pendingExams,
-            ...notifications.pendingQuestions
-        ];
+        const all = [...notifications.appointments, ...notifications.pendingHomeworks, ...notifications.pendingExams, ...notifications.pendingQuestions];
 
         if (all.length > 0) {
             dot.classList.remove('hidden');
             let html = '';
             all.forEach(item => {
+                // DÜZELTME: action kısmında ID yerine data-target selector kullanılıyor
                 html += `
-                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors" onclick="${item.action || ''}">
+                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors" onclick="${item.action}">
                     <div class="flex justify-between items-start">
                         <div><p class="text-xs font-bold text-gray-800">${item.title}</p><p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p></div>
                         <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${item.badgeClass}">${item.badgeText}</span>
@@ -278,7 +255,8 @@ function initNotifications(uid) {
         }
     };
 
-    // 1. Yaklaşan Seanslar (Randevular)
+    // 1. Seanslar (Ajanda Sekmesine Git)
+    // HEDEF: id="btnNavAjanda" (HTML'de ekledik)
     const today = new Date().toISOString().split('T')[0];
     onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(3)), (snap) => {
         notifications.appointments = [];
@@ -290,33 +268,45 @@ function initNotifications(uid) {
                 desc: `${formatDateTR(data.tarih)} ${data.baslangic} - ${data.ogrenciAd}`, 
                 badgeText: 'Seans', 
                 badgeClass: 'bg-blue-100 text-blue-700', 
-                action: "document.getElementById('nav-ajandam').click()" 
+                action: "document.getElementById('btnNavAjanda').click()" // ID ile güvenli seçim
             });
         });
         renderNotifications();
     });
 
-    // 2. Onay Bekleyen Sorular
+    // 2. Sorular (Takip Sekmesine Git - data-target ile)
     onSnapshot(query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
         notifications.pendingQuestions = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.pendingQuestions.push({ title: 'Soru Onayı', desc: `${formatDateTR(data.tarih)} - ${data.ders}`, badgeText: 'Onay', badgeClass: 'bg-yellow-100 text-yellow-700', action: "document.getElementById('nav-sorutakibi').click()" });
+            notifications.pendingQuestions.push({ 
+                title: 'Soru Onayı', 
+                desc: `${formatDateTR(data.tarih)} - ${data.ders}`, 
+                badgeText: 'Onay', 
+                badgeClass: 'bg-yellow-100 text-yellow-700', 
+                action: "document.querySelector('[data-target=\"tab-tracking\"]').click()" 
+            });
         });
         renderNotifications();
     });
 
-    // 3. Onay Bekleyen Denemeler
+    // 3. Denemeler (Denemeler Sekmesine Git - data-target ile)
     onSnapshot(query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
         notifications.pendingExams = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.pendingExams.push({ title: 'Deneme Onayı', desc: `${data.studentAd || 'Öğrenci'} - ${data.tur}`, badgeText: 'Onay', badgeClass: 'bg-purple-100 text-purple-700', action: "document.getElementById('nav-denemeler').click()" });
+            notifications.pendingExams.push({ 
+                title: 'Deneme Onayı', 
+                desc: `${data.studentAd || 'Öğrenci'} - ${data.tur}`, 
+                badgeText: 'Onay', 
+                badgeClass: 'bg-purple-100 text-purple-700', 
+                action: "document.querySelector('[data-target=\"tab-denemeler\"]').click()" 
+            });
         });
         renderNotifications();
     });
 
-    // 4. Onay Bekleyen Ödevler (Tamamlanmış ama Koç Onaylamamış)
+    // 4. Ödevler (Ödevler Sekmesine Git - data-target ile)
     onSnapshot(query(collectionGroup(db, 'odevler'), where('kocId', '==', uid), where('durum', '==', 'tamamlandi'), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
         notifications.pendingHomeworks = [];
         snap.forEach(d => {
@@ -326,7 +316,7 @@ function initNotifications(uid) {
                 desc: `${data.title}`, 
                 badgeText: 'Ödev', 
                 badgeClass: 'bg-orange-100 text-orange-700', 
-                action: "document.getElementById('nav-odevler').click()" 
+                action: "document.querySelector('[data-target=\"tab-homework\"]').click()" 
             });
         });
         renderNotifications();

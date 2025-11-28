@@ -36,99 +36,24 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "kocluk-sistemi";
 
-// =================================================================
-// 2. GLOBAL DEĞİŞKENLER VE SABİTLER
-// =================================================================
+// ... (Global Değişkenler ve Auth Aynı) ...
 let currentUser = null;
 let coachId = null;     
 let studentDocId = null; 
 let studentDersler = []; 
 let homeworkChart = null; 
 
-const AVATAR_LIBRARY = [
-    "👨‍🎓", "👩‍🎓", "🚀", "🦁", "⚡", "🌟", "🎯", "📚",
-    "🦊", "🐱", "🐶", "🐼", "🐯", "⚽", "🏀", "🎮"
-];
-
+const AVATAR_LIBRARY = ["👨‍🎓", "👩‍🎓", "🚀", "🦁", "⚡", "🌟", "🎯", "📚", "🦊", "🐱", "🐶", "🐼", "🐯", "⚽", "🏀", "🎮"];
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
-
-// --- YENİ SINAV KONFİGÜRASYONU ---
-const EXAM_CONFIG = {
-    'LGS': {
-        wrongRatio: 3, // 3 yanlış 1 doğruyu götürür
-        subjects: [
-            { name: 'Türkçe', max: 20 },
-            { name: 'Matematik', max: 20 },
-            { name: 'Fen Bilimleri', max: 20 },
-            { name: 'T.C. İnkılap Tarihi', max: 10 },
-            { name: 'Din Kültürü', max: 10 },
-            { name: 'Yabancı Dil', max: 10 }
-        ]
-    },
-    'TYT': {
-        wrongRatio: 4, // 4 yanlış 1 doğruyu götürür
-        subjects: [
-            { name: 'Türkçe', max: 40 },
-            { name: 'Matematik', max: 40 },
-            { name: 'Tarih', max: 5 },
-            { name: 'Coğrafya', max: 5 },
-            { name: 'Felsefe', max: 5 },
-            { name: 'Din Kültürü', max: 5 },
-            { name: 'Fizik', max: 7 },
-            { name: 'Kimya', max: 7 },
-            { name: 'Biyoloji', max: 6 }
-        ]
-    },
-    'AYT': {
-        wrongRatio: 4,
-        subjects: [
-            { name: 'Türk Dili ve Edebiyatı', max: 24 },
-            { name: 'Tarih-1', max: 10 },
-            { name: 'Coğrafya-1', max: 6 },
-            { name: 'Tarih-2', max: 11 },
-            { name: 'Coğrafya-2', max: 11 },
-            { name: 'Felsefe Grubu', max: 12 },
-            { name: 'Din Kültürü', max: 6 },
-            { name: 'Matematik', max: 40 },
-            { name: 'Fizik', max: 14 },
-            { name: 'Kimya', max: 13 },
-            { name: 'Biyoloji', max: 13 }
-        ]
-    },
-    'YDS': {
-        wrongRatio: 0, // Yanlış doğruyu götürmez
-        subjects: [
-            { name: 'Yabancı Dil', max: 80 }
-        ]
-    },
-    'Diger': {
-        wrongRatio: 4,
-        subjects: [{ name: 'Genel', max: 100 }]
-    }
-};
-
-// Normal Ders Havuzları (Soru Takibi İçin)
-const DERS_HAVUZU = { 
-    'ORTAOKUL': [
-        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
-        "T.C. İnkılap", "Din Kültürü", "İngilizce"
-    ], 
-    'LISE': [
-        "Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji",
-        "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"
-    ] 
-};
+const DERS_HAVUZU = { 'ORTAOKUL': ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "T.C. İnkılap", "Din Kültürü", "İngilizce"], 'LISE': ["Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"] };
+const SINAV_DERSLERI = { 'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu'], 'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'] };
 
 let denemeChartInstance = null;
 let currentCalDate = new Date();
 let currentWeekOffset = 0;
 let odevWeekOffset = 0;
-
 let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null };
 
-// =================================================================
-// 3. KİMLİK DOĞRULAMA
-// =================================================================
 onAuthStateChanged(auth, async (user) => {
     if (user) { currentUser = user; await initializeStudentApp(user.uid); } 
     else { window.location.href = "student-login.html"; }
@@ -152,9 +77,6 @@ async function initializeStudentApp(uid) {
         } else signOut(auth);
     } catch (e) { console.error(e); }
 }
-
-// ... (btnMatch, enableHeaderIcons, window.selectAvatar, loadNotifications, listenUnreadMessages aynı kalacak) ...
-// (Kod bütünlüğü için bu kısımları atlamadan kullanın, önceki kod bloklarından alabilirsiniz veya aşağıya ekleyeyim)
 
 const btnMatch = document.getElementById('btnMatchProfile');
 if (btnMatch) {

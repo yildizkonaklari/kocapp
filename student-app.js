@@ -51,6 +51,63 @@ const AVATAR_LIBRARY = [
 ];
 
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
+
+// --- YENİ SINAV KONFİGÜRASYONU ---
+const EXAM_CONFIG = {
+    'LGS': {
+        wrongRatio: 3, // 3 yanlış 1 doğruyu götürür
+        subjects: [
+            { name: 'Türkçe', max: 20 },
+            { name: 'Matematik', max: 20 },
+            { name: 'Fen Bilimleri', max: 20 },
+            { name: 'T.C. İnkılap Tarihi', max: 10 },
+            { name: 'Din Kültürü', max: 10 },
+            { name: 'Yabancı Dil', max: 10 }
+        ]
+    },
+    'TYT': {
+        wrongRatio: 4, // 4 yanlış 1 doğruyu götürür
+        subjects: [
+            { name: 'Türkçe', max: 40 },
+            { name: 'Matematik', max: 40 },
+            { name: 'Tarih', max: 5 },
+            { name: 'Coğrafya', max: 5 },
+            { name: 'Felsefe', max: 5 },
+            { name: 'Din Kültürü', max: 5 },
+            { name: 'Fizik', max: 7 },
+            { name: 'Kimya', max: 7 },
+            { name: 'Biyoloji', max: 6 }
+        ]
+    },
+    'AYT': {
+        wrongRatio: 4,
+        subjects: [
+            { name: 'Türk Dili ve Edebiyatı', max: 24 },
+            { name: 'Tarih-1', max: 10 },
+            { name: 'Coğrafya-1', max: 6 },
+            { name: 'Tarih-2', max: 11 },
+            { name: 'Coğrafya-2', max: 11 },
+            { name: 'Felsefe Grubu', max: 12 },
+            { name: 'Din Kültürü', max: 6 },
+            { name: 'Matematik', max: 40 },
+            { name: 'Fizik', max: 14 },
+            { name: 'Kimya', max: 13 },
+            { name: 'Biyoloji', max: 13 }
+        ]
+    },
+    'YDS': {
+        wrongRatio: 0, // Yanlış doğruyu götürmez
+        subjects: [
+            { name: 'Yabancı Dil', max: 80 }
+        ]
+    },
+    'Diger': {
+        wrongRatio: 4,
+        subjects: [{ name: 'Genel', max: 100 }]
+    }
+};
+
+// Normal Ders Havuzları (Soru Takibi İçin)
 const DERS_HAVUZU = { 
     'ORTAOKUL': [
         "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
@@ -60,11 +117,6 @@ const DERS_HAVUZU = {
         "Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji",
         "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"
     ] 
-};
-const SINAV_DERSLERI = { 
-    'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 
-    'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu'], 
-    'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'] 
 };
 
 let denemeChartInstance = null;
@@ -101,6 +153,9 @@ async function initializeStudentApp(uid) {
     } catch (e) { console.error(e); }
 }
 
+// ... (btnMatch, enableHeaderIcons, window.selectAvatar, loadNotifications, listenUnreadMessages aynı kalacak) ...
+// (Kod bütünlüğü için bu kısımları atlamadan kullanın, önceki kod bloklarından alabilirsiniz veya aşağıya ekleyeyim)
+
 const btnMatch = document.getElementById('btnMatchProfile');
 if (btnMatch) {
     btnMatch.onclick = async () => {
@@ -119,9 +174,6 @@ if (btnMatch) {
     };
 }
 
-// =================================================================
-// 4. HEADER & AVATAR
-// =================================================================
 function enableHeaderIcons() {
     const btnMsg = document.getElementById('btnHeaderMessages');
     if(btnMsg) {
@@ -129,19 +181,13 @@ function enableHeaderIcons() {
             e.preventDefault();
             document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
             document.getElementById('tab-messages').classList.remove('hidden');
-            
-            document.querySelectorAll('.nav-btn').forEach(b => {
-                b.classList.remove('active', 'text-indigo-600');
-                b.classList.add('text-gray-400');
-            });
-
+            document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('active', 'text-indigo-600'); b.classList.add('text-gray-400'); });
             for(let k in listeners) { if(listeners[k] && k!=='notifications' && k!=='unreadMsg') { listeners[k](); listeners[k]=null; } }
             markMessagesAsRead();
             loadStudentMessages();
         };
         listenUnreadMessages();
     }
-
     const btnNotif = document.getElementById('btnHeaderNotifications');
     const dropNotif = document.getElementById('notificationDropdown');
     if(btnNotif && dropNotif) {
@@ -150,15 +196,12 @@ function enableHeaderIcons() {
         document.addEventListener('click', (e) => { if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.add('hidden'); });
         loadNotifications();
     }
-
     const btnChangeAvatar = document.getElementById('btnChangeAvatar');
     const modalAvatar = document.getElementById('modalAvatarSelect');
     if (btnChangeAvatar && modalAvatar) {
         btnChangeAvatar.onclick = () => {
             const grid = document.getElementById('avatarGrid');
-            grid.innerHTML = AVATAR_LIBRARY.map(icon => 
-                `<button class="text-4xl p-2 hover:bg-gray-100 rounded-lg transition-colors" onclick="selectAvatar('${icon}')">${icon}</button>`
-            ).join('');
+            grid.innerHTML = AVATAR_LIBRARY.map(icon => `<button class="text-4xl p-2 hover:bg-gray-100 rounded-lg transition-colors" onclick="selectAvatar('${icon}')">${icon}</button>`).join('');
             modalAvatar.classList.remove('hidden');
         };
     }
@@ -168,19 +211,10 @@ window.selectAvatar = async (icon) => {
     try {
         await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon });
         const avatarEl = document.getElementById('profileAvatar');
-        if (avatarEl) {
-            avatarEl.textContent = icon;
-            avatarEl.style.backgroundColor = '#fff';
-            avatarEl.style.fontSize = '3rem';
-        }
+        if (avatarEl) { avatarEl.textContent = icon; avatarEl.style.backgroundColor = '#fff'; avatarEl.style.fontSize = '3rem'; }
         document.getElementById('modalAvatarSelect').classList.add('hidden');
-        
         const headerLogo = document.querySelector('#headerLogoContainer i');
-        if(headerLogo) {
-            headerLogo.className = ''; 
-            headerLogo.textContent = icon;
-            headerLogo.style.fontStyle = 'normal';
-        }
+        if(headerLogo) { headerLogo.className = ''; headerLogo.textContent = icon; headerLogo.style.fontStyle = 'normal'; }
     } catch (e) { console.error(e); }
 };
 
@@ -200,7 +234,6 @@ function listenUnreadMessages() {
         if(snap.size>0) { b.textContent=snap.size; b.classList.remove('hidden'); } else b.classList.add('hidden');
     });
 }
-
 // =================================================================
 // 5. DASHBOARD & VERİ YÜKLEME
 // =================================================================
@@ -806,20 +839,32 @@ function loadGoalsTab() {
     });
 }
 
-// --- DENEMELER ---
+// --- DENEMELER (GÜNCELLENDİ) ---
 function loadDenemelerTab() {
     const list = document.getElementById('studentDenemeList'); if(!list) return;
     const btn = document.getElementById('btnAddNewDeneme');
-    if(btn) { const n=btn.cloneNode(true); btn.parentNode.replaceChild(n,btn); n.onclick=openDenemeModal; }
+    
+    // Butonu yapılandır
+    if(btn) { 
+        const n=btn.cloneNode(true); 
+        btn.parentNode.replaceChild(n,btn); 
+        n.onclick=openDenemeModal; 
+    }
     
     listeners.denemeler = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), orderBy("tarih", "desc")), (snap) => {
-        const data = []; snap.forEach(d => data.push({id:d.id, ...d.data()}));
+        const data = []; 
+        snap.forEach(d => data.push({id:d.id, ...d.data()}));
+        
+        // KPI Hesaplama
         const onayli = data.filter(x=>x.onayDurumu==='onaylandi');
-        let totalNet=0, maxNet=0; onayli.forEach(x=>{ const n=parseFloat(x.toplamNet); totalNet+=n; if(n>maxNet) maxNet=n; });
+        let totalNet=0, maxNet=0; 
+        onayli.forEach(x=>{ const n=parseFloat(x.toplamNet); totalNet+=n; if(n>maxNet) maxNet=n; });
+        
         if(document.getElementById('studentKpiAvg')) document.getElementById('studentKpiAvg').textContent = (onayli.length ? (totalNet/onayli.length) : 0).toFixed(2);
         if(document.getElementById('studentKpiMax')) document.getElementById('studentKpiMax').textContent = maxNet.toFixed(2);
         if(document.getElementById('studentKpiTotal')) document.getElementById('studentKpiTotal').textContent = data.length;
         
+        // Grafik
         const ctx = document.getElementById('studentDenemeChart');
         if(ctx) {
             const sorted = [...onayli].sort((a,b) => a.tarih.localeCompare(b.tarih)).slice(-10);
@@ -827,9 +872,60 @@ function loadDenemelerTab() {
             denemeChartInstance = new Chart(ctx, { type: 'line', data: { labels: sorted.map(d=>d.tarih.slice(5)), datasets: [{ label: 'Net', data: sorted.map(d=>d.toplamNet), borderColor: '#7c3aed', tension: 0.4 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
         }
 
-        list.innerHTML = data.length === 0 ? '<p class="text-center text-gray-400">Deneme yok.</p>' : data.map(d => {
-            const pending = d.onayDurumu==='bekliyor'; const net = parseFloat(d.toplamNet)||0;
-            return `<div class="bg-white p-4 rounded-xl border ${pending?'border-yellow-200 bg-yellow-50':'border-gray-200'} shadow-sm mb-2"><div class="flex justify-between"><span class="font-bold text-sm text-gray-800">${d.ad}</span><span class="text-[10px] px-2 py-1 rounded-full ${pending?'bg-yellow-200 text-yellow-800':'bg-green-100 text-green-800'}">${pending?'Bekliyor':'Onaylı'}</span></div><div class="flex justify-between mt-2 text-xs text-gray-500"><span>${d.tur} • ${d.tarih}</span><span class="font-bold text-indigo-600 text-base">${net.toFixed(2)} Net</span></div></div>`;
+        // Liste Render (Akordiyon Özellikli)
+        if (data.length === 0) {
+            list.innerHTML = '<p class="text-center text-gray-400 py-8">Henüz deneme girişi yapılmamış.</p>';
+            return;
+        }
+
+        list.innerHTML = data.map(d => {
+            const pending = d.onayDurumu==='bekliyor'; 
+            const net = parseFloat(d.toplamNet)||0;
+            
+            // Detay Grid'ini Oluştur
+            let detailsHtml = '';
+            if (d.netler) {
+                detailsHtml = '<div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">';
+                for (const [ders, stats] of Object.entries(d.netler)) {
+                    // Sadece giriş yapılmış dersleri göster
+                    if (stats.d > 0 || stats.y > 0) {
+                        detailsHtml += `
+                            <div class="flex justify-between items-center text-xs bg-gray-50 p-2 rounded">
+                                <span class="font-medium text-gray-700 truncate w-24">${ders}</span>
+                                <span class="text-gray-500 flex gap-2">
+                                    <span class="text-green-600 font-bold">D:${stats.d}</span>
+                                    <span class="text-red-500 font-bold">Y:${stats.y}</span>
+                                    <span class="text-indigo-600 font-bold">N:${stats.net}</span>
+                                </span>
+                            </div>
+                        `;
+                    }
+                }
+                detailsHtml += '</div>';
+            }
+
+            return `
+            <div class="bg-white rounded-xl border ${pending?'border-yellow-200 bg-yellow-50':'border-gray-200'} shadow-sm mb-3 overflow-hidden transition-all">
+                <div class="p-4 cursor-pointer flex flex-col" onclick="this.nextElementSibling.classList.toggle('hidden');">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-sm text-gray-800">${d.ad}</span>
+                        <span class="text-[10px] px-2 py-1 rounded-full ${pending?'bg-yellow-200 text-yellow-800':'bg-green-100 text-green-800'} font-bold">
+                            ${pending ? 'Onay Bekliyor' : 'Onaylandı'}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <span class="text-xs text-gray-500 font-mono">${d.tur} • ${formatDateTR(d.tarih)}</span>
+                        <div class="text-right">
+                            <span class="block text-lg font-bold text-indigo-600 leading-none">${net.toFixed(2)}</span>
+                            <span class="text-[9px] text-gray-400 uppercase font-bold">NET</span>
+                        </div>
+                    </div>
+                    <div class="text-center mt-1"><i class="fa-solid fa-chevron-down text-gray-300 text-xs"></i></div>
+                </div>
+                <div class="hidden px-4 pb-4 animate-fade-in">
+                    ${detailsHtml || '<p class="text-xs text-gray-400 text-center py-2">Detay bulunamadı.</p>'}
+                </div>
+            </div>`;
         }).join('');
     });
 }
@@ -882,23 +978,131 @@ document.getElementById('nextMonth').onclick = () => { currentCalDate.setMonth(c
 // =================================================================
 // 8. MODALLAR VE HELPERLAR
 // =================================================================
+// =================================================================
+// 8. MODALLAR (GÜNCELLENDİ: EXAM CONFIG)
+// =================================================================
 document.querySelectorAll('.close-modal').forEach(b => b.onclick=()=>b.closest('.fixed').classList.add('hidden'));
-const openDenemeModal = () => { document.getElementById('modalDenemeEkle').classList.remove('hidden'); renderDenemeInputs('TYT'); document.getElementById('inpDenemeTarih').value=new Date().toISOString().split('T')[0]; };
+
+const openDenemeModal = () => { 
+    const select = document.getElementById('inpDenemeTur');
+    // Select'i temizle ve config'den doldur
+    select.innerHTML = '';
+    Object.keys(EXAM_CONFIG).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = key === 'Diger' ? 'Diğer' : key;
+        select.appendChild(opt);
+    });
+
+    document.getElementById('modalDenemeEkle').classList.remove('hidden'); 
+    renderDenemeInputs(select.value); 
+    document.getElementById('inpDenemeTarih').value=new Date().toISOString().split('T')[0]; 
+};
+
 function renderDenemeInputs(tur) {
     const c = document.getElementById('denemeDersContainer'); if(!c) return; c.innerHTML='';
-    (SINAV_DERSLERI[tur]||SINAV_DERSLERI['Diger']).forEach(d => c.innerHTML+=`<div class="flex justify-between text-sm py-2 border-b"><span class="w-24 truncate">${d}</span><div class="flex gap-2"><input type="number" placeholder="D" class="inp-deneme-d w-12 p-1 border rounded text-center" data-ders="${d}"><input type="number" placeholder="Y" class="inp-deneme-y w-12 p-1 border rounded text-center" data-ders="${d}"><input type="number" placeholder="B" class="inp-deneme-b w-12 p-1 border rounded text-center" data-ders="${d}"></div></div>`);
-}
-document.getElementById('inpDenemeTur').onchange=(e)=>renderDenemeInputs(e.target.value);
-document.getElementById('btnSaveDeneme').onclick = async () => {
-    const ad = document.getElementById('inpDenemeAd').value||"Deneme", tur = document.getElementById('inpDenemeTur').value, tarih = document.getElementById('inpDenemeTarih').value;
-    if(!tarih) return alert('Tarih seçin');
-    let total=0, netler={}, k=tur==='LGS'?3:4;
-    document.querySelectorAll('.inp-deneme-d').forEach(i => {
-        const d=parseInt(i.value)||0, y=parseInt(i.parentElement.querySelector('.inp-deneme-y').value)||0;
-        const n = d-(y/k); total+=n; netler[i.dataset.ders]={d,y,net:n.toFixed(2)};
+    const config = EXAM_CONFIG[tur] || EXAM_CONFIG['Diger'];
+    
+    // Başlık (Sınav Türü Bilgisi)
+    const infoText = config.wrongRatio > 0 
+        ? `<p class="text-xs text-orange-500 mb-2 font-medium text-center"><i class="fa-solid fa-circle-info"></i> Bu sınavda ${config.wrongRatio} yanlış 1 doğruyu götürür.</p>`
+        : `<p class="text-xs text-green-600 mb-2 font-medium text-center"><i class="fa-solid fa-circle-check"></i> Yanlışlar doğruyu götürmez.</p>`;
+    
+    c.innerHTML = infoText;
+
+    config.subjects.forEach(sub => {
+        c.innerHTML += `
+        <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+            <div class="flex flex-col w-1/2">
+                <span class="text-sm font-bold text-gray-700 truncate" title="${sub.name}">${sub.name}</span>
+                <span class="text-[10px] text-gray-400">Maks: ${sub.max}</span>
+            </div>
+            <div class="flex gap-2 w-1/2 justify-end">
+                <div class="flex flex-col items-center">
+                    <input type="number" placeholder="0" class="inp-deneme-d w-12 p-1.5 border border-green-200 rounded-lg text-center text-sm font-bold text-green-700 outline-none focus:ring-2 focus:ring-green-500 transition-shadow" data-ders="${sub.name}" max="${sub.max}">
+                    <span class="text-[9px] text-green-600 mt-0.5 font-bold">DOĞRU</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <input type="number" placeholder="0" class="inp-deneme-y w-12 p-1.5 border border-red-200 rounded-lg text-center text-sm font-bold text-red-700 outline-none focus:ring-2 focus:ring-red-500 transition-shadow" data-ders="${sub.name}" max="${sub.max}">
+                    <span class="text-[9px] text-red-500 mt-0.5 font-bold">YANLIŞ</span>
+                </div>
+            </div>
+        </div>`;
     });
-    await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), {ad,tur,tarih,toplamNet:total,netler,onayDurumu:'bekliyor',kocId:coachId,studentId:studentDocId,studentAd:document.getElementById('headerStudentName').textContent,eklenmeTarihi:serverTimestamp()});
-    document.getElementById('modalDenemeEkle').classList.add('hidden'); alert(`Kaydedildi: ${total.toFixed(2)} Net`);
+}
+
+document.getElementById('inpDenemeTur').onchange=(e)=>renderDenemeInputs(e.target.value);
+
+document.getElementById('btnSaveDeneme').onclick = async () => {
+    const ad = document.getElementById('inpDenemeAd').value || "Deneme";
+    const tur = document.getElementById('inpDenemeTur').value;
+    const tarih = document.getElementById('inpDenemeTarih').value;
+    
+    if(!tarih) return alert('Lütfen tarih seçin');
+
+    const config = EXAM_CONFIG[tur] || EXAM_CONFIG['Diger'];
+    const ratio = config.wrongRatio;
+    
+    let totalNet = 0;
+    let netler = {};
+    
+    // Tüm inputları topla
+    const inputs = document.querySelectorAll('.inp-deneme-d');
+    let hasData = false;
+
+    inputs.forEach(inp => {
+        const ders = inp.dataset.ders;
+        const d = parseInt(inp.value) || 0;
+        const yInp = inp.parentElement.nextElementSibling.querySelector('.inp-deneme-y');
+        const y = parseInt(yInp.value) || 0;
+        
+        if (d > 0 || y > 0) hasData = true;
+
+        let net = d;
+        if (ratio > 0) {
+            net = d - (y / ratio);
+        }
+        // Negatif net kontrolü (isteğe bağlı, genelde 0'ın altına düşebilir)
+        // net = Math.max(0, net); 
+        
+        totalNet += net;
+        
+        // Detayları kaydet
+        netler[ders] = { 
+            d: d, 
+            y: y, 
+            net: net.toFixed(2) 
+        };
+    });
+
+    if (!hasData) {
+        alert("Lütfen en az bir ders için sonuç girin.");
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), {
+            ad, tur, tarih, 
+            toplamNet: totalNet.toFixed(2), 
+            netler, 
+            onayDurumu: 'bekliyor',
+            kocId: coachId,
+            studentId: studentDocId,
+            studentAd: document.getElementById('headerStudentName').textContent,
+            eklenmeTarihi: serverTimestamp()
+        });
+        
+        document.getElementById('modalDenemeEkle').classList.add('hidden'); 
+        alert(`Deneme kaydedildi! Toplam Net: ${totalNet.toFixed(2)}`);
+        
+        // Formu temizle
+        document.querySelectorAll('.inp-deneme-d, .inp-deneme-y').forEach(i => i.value = '');
+        document.getElementById('inpDenemeAd').value = '';
+        
+    } catch (e) {
+        console.error("Deneme kayıt hatası:", e);
+        alert("Kaydedilirken bir hata oluştu.");
+    }
 };
 
 const modalSoru = document.getElementById('modalSoruEkle');

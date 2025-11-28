@@ -15,10 +15,9 @@
         #notificationDropdown { transform-origin: top right; transition: all 0.2s ease-out; }
         #notificationDropdown.hidden { transform: scale(0.95); opacity: 0; pointer-events: none; }
         
-        /* Kartlar için yatay kaydırma */
         .stats-scroller {
             display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 5 Kart için */
+            grid-template-columns: repeat(5, 1fr);
             gap: 0.75rem;
             overflow-x: auto;
             padding-bottom: 0.5rem;
@@ -145,12 +144,12 @@
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
                     <div class="px-4 py-3 border-b border-gray-50 flex justify-between items-center bg-gray-50">
                         <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-day text-purple-500"></i> Yaklaşan Randevular
+                            <i class="fa-solid fa-calendar-day text-purple-500"></i> Yaklaşan Seanslar
                         </h3>
-                        <button onclick="document.getElementById('nav-ajandam').click()" class="text-xs text-purple-600 hover:text-purple-800 font-medium">Tümü</button>
+                        <button onclick="document.querySelector('[data-target=\'tab-ajanda\']').click()" class="text-xs text-purple-600 hover:text-purple-800 font-bold bg-purple-50 px-2 py-1 rounded border border-purple-100">Ajandam</button>
                     </div>
                     <div id="upcomingAppointmentsList" class="divide-y divide-gray-50 flex-1">
-                        <p class="text-center text-gray-400 text-xs py-6">Planlanmış randevu yok.</p>
+                        <p class="text-center text-gray-400 text-xs py-6">Planlanmış seans yok.</p>
                     </div>
                 </div>
 
@@ -258,6 +257,7 @@
         
         <div id="tab-ajanda" class="tab-content hidden space-y-4">
              <h2 class="text-lg font-bold text-gray-800">Ajandam</h2>
+             
              <div class="bg-white rounded-lg shadow border border-gray-200">
                 <div class="flex justify-between items-center p-3 border-b border-gray-200">
                     <button id="prevMonth" class="p-2 text-gray-500 hover:text-indigo-600 rounded-full"><i class="fa-solid fa-chevron-left"></i></button>
@@ -269,9 +269,12 @@
                 </div>
                 <div id="calendarGrid" class="relative p-1"></div>
             </div>
+             
              <div class="mt-4">
-                <h3 class="text-sm font-semibold text-gray-700 mb-2">Bu Hafta</h3>
-                <div id="appointmentListContainer" class="space-y-2"></div>
+                <h3 class="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2"><i class="fa-solid fa-list text-indigo-500"></i> Yaklaşan Seanslar</h3>
+                <div id="appointmentListContainer" class="space-y-2 pb-20">
+                    <p class="text-center text-gray-400 text-xs py-4">Planlanmış seans yok.</p>
+                </div>
             </div>
         </div>
 
@@ -302,7 +305,6 @@
                         <i class="fa-solid fa-camera"></i>
                     </button>
                 </div>
-
                 <div>
                     <h3 id="profileName" class="text-xl font-bold text-gray-900">Yükleniyor...</h3>
                     <span id="profileClass" class="inline-block bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-bold tracking-wide mt-1 border border-purple-100">...</span>
@@ -342,97 +344,34 @@
 
     <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full pb-safe z-40 overflow-visible shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
         <div class="flex justify-between items-end h-16 px-4 relative">
-            
             <button class="nav-btn active flex flex-col items-center justify-center w-1/5 h-full text-indigo-600 pb-1" data-target="tab-home">
-                <i class="fa-solid fa-house text-xl mb-1"></i>
-                <span class="text-[10px] font-medium">Ana Sayfa</span>
+                <i class="fa-solid fa-house text-xl mb-1"></i><span class="text-[10px] font-medium">Ana Sayfa</span>
             </button>
-            
             <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-homework">
-                <i class="fa-solid fa-list-check text-xl mb-1"></i>
-                <span class="text-[10px] font-medium">Ödevler</span>
+                <i class="fa-solid fa-list-check text-xl mb-1"></i><span class="text-[10px] font-medium">Ödevler</span>
             </button>
-            
             <div class="relative w-1/5 h-full flex justify-center z-50">
                 <button class="nav-btn flex flex-col items-center justify-center w-16 absolute bottom-0" data-target="tab-tracking">
-                    <div class="w-14 h-14 bg-white text-indigo-600 rounded-full flex items-center justify-center bottom-nav-center-btn transition-all duration-300 border-4 border-gray-50 shadow-lg">
+                    <div class="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center bottom-nav-center-btn transition-all duration-300 border-4 border-gray-50 shadow-lg text-white">
                         <i class="fa-solid fa-pen-to-square text-2xl"></i>
                     </div>
                     <span class="text-[10px] font-medium mt-8 text-gray-500">Takip</span>
                 </button>
             </div>
-            
             <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-goals">
-                <i class="fa-solid fa-bullseye text-xl mb-1"></i>
-                <span class="text-[10px] font-medium">Hedef</span>
+                <i class="fa-solid fa-bullseye text-xl mb-1"></i><span class="text-[10px] font-medium">Hedef</span>
             </button>
-            
             <button class="nav-btn flex flex-col items-center justify-center w-1/5 h-full text-gray-400 hover:text-indigo-500 pb-1" data-target="tab-profile">
-                <i class="fa-regular fa-user text-xl mb-1"></i>
-                <span class="text-[10px] font-medium">Profilim</span>
+                <i class="fa-regular fa-user text-xl mb-1"></i><span class="text-[10px] font-medium">Profilim</span>
             </button>
         </div>
     </nav>
 
-    <div id="modalAvatarSelect" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-5 animate-slide-up shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-800">Avatar Seç</h3>
-                <button class="close-modal text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <div class="grid grid-cols-4 gap-4" id="avatarGrid">
-                </div>
-        </div>
-    </div>
-
-    <div id="modalSoruEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center">
-        <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up">
-            <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Hızlı Soru Gir</h3><button class="close-modal text-gray-400 p-2"><i class="fa-solid fa-xmark"></i></button></div>
-            <div class="space-y-3">
-                <input type="date" id="inpModalSoruTarih" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                <select id="inpSoruDers" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500">
-                    <option value="" disabled selected>Ders veya Rutin Seç</option>
-                </select>
-                <input type="number" id="inpSoruAdet" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-center text-indigo-600 text-lg" placeholder="0">
-                <button id="btnSaveModalSoru" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg">Kaydet</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modalDenemeEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center">
-        <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Deneme Sonucu Gir</h3><button class="close-modal text-gray-400 p-2"><i class="fa-solid fa-xmark"></i></button></div>
-            <div class="space-y-3">
-                <select id="inpDenemeTur" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl"><option value="TYT">TYT</option><option value="AYT">AYT</option><option value="LGS">LGS</option><option value="Diger">Diğer</option></select>
-                <input type="text" id="inpDenemeAd" placeholder="Yayın Adı" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                <input type="date" id="inpDenemeTarih" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                <div id="denemeDersContainer" class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-100"></div>
-                <button id="btnSaveDeneme" class="w-full bg-purple-600 text-white py-3 rounded-xl font-bold">Kaydet</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="modalMatchProfile" class="hidden fixed inset-0 bg-indigo-900 z-50 flex flex-col items-center justify-center p-6 text-center">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-link"></i></div><h2 class="text-xl font-bold text-gray-900 mb-2">Profilini Bulalım</h2><p class="text-sm text-gray-500 mb-6">Koçunun senin için oluşturduğu profili bulmak için adını ve soyadını tam olarak yaz.</p><input type="text" id="matchName" placeholder="Adın" class="w-full p-3 mb-3 border border-gray-300 rounded-xl"><input type="text" id="matchSurname" placeholder="Soyadın" class="w-full p-3 mb-4 border border-gray-300 rounded-xl"><button id="btnMatchProfile" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">Profili Eşleştir</button><p id="matchError" class="text-red-500 text-xs mt-3 hidden">Profil bulunamadı.</p></div>
-    </div>
-
-    <div id="modalYasal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-[100] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl h-[85vh] flex flex-col animate-slide-up">
-            <div class="p-5 border-b flex justify-between items-center">
-                <h3 class="text-xl font-bold text-gray-800">Kullanım & Gizlilik</h3>
-                <button onclick="document.getElementById('modalYasal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-6 text-sm text-gray-600 space-y-6">
-                <section>
-                    <h4 class="text-lg font-bold text-gray-900 mb-2">Kullanım Koşulları</h4>
-                    <p>Bu platform, öğrenci ve koç arasındaki akademik takibi dijitalleştirmek amacıyla sunulmaktadır.</p>
-                </section>
-            </div>
-            <div class="p-4 border-t bg-gray-50 flex justify-end rounded-b-2xl">
-                <button onclick="document.getElementById('modalYasal').classList.add('hidden')" class="px-6 py-2 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700">Anladım</button>
-            </div>
-        </div>
-    </div>
+    <div id="modalAvatarSelect" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4"><div class="bg-white w-full max-w-sm rounded-2xl p-5 animate-slide-up shadow-2xl"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-800">Avatar Seç</h3><button class="close-modal text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button></div><div class="grid grid-cols-4 gap-4" id="avatarGrid"></div></div></div>
+    <div id="modalSoruEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center"><div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Hızlı Soru Gir</h3><button class="close-modal text-gray-400 p-2"><i class="fa-solid fa-xmark"></i></button></div><div class="space-y-3"><input type="date" id="inpModalSoruTarih" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl"><select id="inpSoruDers" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"><option value="" disabled selected>Ders veya Rutin Seç</option></select><input type="number" id="inpSoruAdet" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-center text-indigo-600 text-lg" placeholder="0"><button id="btnSaveModalSoru" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg">Kaydet</button></div></div></div>
+    <div id="modalDenemeEkle" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center"><div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up max-h-[90vh] overflow-y-auto"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Deneme Sonucu Gir</h3><button class="close-modal text-gray-400 p-2"><i class="fa-solid fa-xmark"></i></button></div><div class="space-y-3"><select id="inpDenemeTur" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl"><option value="TYT">TYT</option><option value="AYT">AYT</option><option value="LGS">LGS</option><option value="Diger">Diğer</option></select><input type="text" id="inpDenemeAd" placeholder="Yayın Adı" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl"><input type="date" id="inpDenemeTarih" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl"><div id="denemeDersContainer" class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-100"></div><button id="btnSaveDeneme" class="w-full bg-purple-600 text-white py-3 rounded-xl font-bold">Kaydet</button></div></div></div>
+    <div id="modalMatchProfile" class="hidden fixed inset-0 bg-indigo-900 z-50 flex flex-col items-center justify-center p-6 text-center"><div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl"><div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-link"></i></div><h2 class="text-xl font-bold text-gray-900 mb-2">Profilini Bulalım</h2><p class="text-sm text-gray-500 mb-6">Koçunun senin için oluşturduğu profili bulmak için adını ve soyadını tam olarak yaz.</p><input type="text" id="matchName" placeholder="Adın" class="w-full p-3 mb-3 border border-gray-300 rounded-xl"><input type="text" id="matchSurname" placeholder="Soyadın" class="w-full p-3 mb-4 border border-gray-300 rounded-xl"><button id="btnMatchProfile" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">Profili Eşleştir</button><p id="matchError" class="text-red-500 text-xs mt-3 hidden">Profil bulunamadı.</p></div></div>
+    <div id="modalYasal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-[100] flex items-center justify-center p-4"><div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl h-[85vh] flex flex-col animate-slide-up"><div class="p-5 border-b flex justify-between items-center"><h3 class="text-xl font-bold text-gray-800">Kullanım & Gizlilik</h3><button onclick="document.getElementById('modalYasal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button></div><div class="flex-1 overflow-y-auto p-6 text-sm text-gray-600 space-y-6"><section><h4 class="text-lg font-bold text-gray-900 mb-2">Kullanım Koşulları</h4><p>Bu platform, öğrenci ve koç arasındaki akademik takibi dijitalleştirmek amacıyla sunulmaktadır.</p></section></div><div class="p-4 border-t bg-gray-50 flex justify-end rounded-b-2xl"><button onclick="document.getElementById('modalYasal').classList.add('hidden')" class="px-6 py-2 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700">Anladım</button></div></div></div>
 
     <script type="module" src="student-app.js"></script>
 </body>

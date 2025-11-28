@@ -201,20 +201,110 @@ window.selectAvatar = async (icon) => {
     } catch (e) { console.error(e); }
 };
 
-function loadNotifications() {
-    const list = document.getElementById('notificationList'); if(!list) return;
-    listeners.notifications = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), orderBy("olusturmaTarihi", "desc"), limit(5)), (snap) => {
-        let html = '';
-        snap.forEach(d => html += `<div class="p-2 border-b hover:bg-gray-50"><p class="text-xs font-bold">Yeni Hedef</p><p class="text-xs text-gray-600">${d.data().title}</p></div>`);
-        list.innerHTML = html || '<p class="text-center text-xs py-4">Bildirim yok.</p>';
-        if(!snap.empty) document.getElementById('headerNotificationDot').classList.remove('hidden');
-    });
-}
+function initNotifications(uid) {
+    // ... (element seçimleri aynı) ...
+    const list = document.getElementById('coachNotificationList');
+    const dot = document.getElementById('coachNotificationDot');
+    const dropdown = document.getElementById('coachNotificationDropdown');
+    const btn = document.getElementById('btnHeaderNotifications');
+    
+    if(!btn || !dropdown) return;
 
-function listenUnreadMessages() {
-    listeners.unreadMsg = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), where("gonderen", "==", "koc"), where("okundu", "==", false)), (snap) => {
-        const b = document.getElementById('headerUnreadMsgCount');
-        if(snap.size>0) { b.textContent=snap.size; b.classList.remove('hidden'); } else b.classList.add('hidden');
+    // ... (event listenerlar aynı) ...
+    btn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); dot.classList.add('hidden'); };
+    document.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.add('hidden'); });
+    document.getElementById('btnCloseCoachNotifications').onclick = (e) => { e.stopPropagation(); dropdown.classList.add('hidden'); };
+
+    let notifications = { appointments: [], pendingQuestions: [], pendingExams: [], pendingHomeworks: [] };
+
+    const renderNotifications = () => {
+        const all = [...notifications.appointments, ...notifications.pendingHomeworks, ...notifications.pendingExams, ...notifications.pendingQuestions];
+
+        if (all.length > 0) {
+            dot.classList.remove('hidden');
+            let html = '';
+            all.forEach(item => {
+                // DÜZELTME: action kısmında ID yerine data-target selector kullanılıyor
+                html += `
+                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors" onclick="${item.action}">
+                    <div class="flex justify-between items-start">
+                        <div><p class="text-xs font-bold text-gray-800">${item.title}</p><p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p></div>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${item.badgeClass}">${item.badgeText}</span>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        } else {
+            dot.classList.add('hidden');
+            list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Yeni bildirim yok.</p></div>`;
+        }
+    };
+
+    // 1. Seanslar (Ajanda Sekmesine Git)
+    // HEDEF: id="btnNavAjanda" (HTML'de ekledik)
+    const today = new Date().toISOString().split('T')[0];
+    onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(3)), (snap) => {
+        notifications.appointments = [];
+        snap.forEach(d => {
+            const data = d.data();
+            const isToday = data.tarih === today;
+            notifications.appointments.push({ 
+                title: isToday ? 'Bugünkü Seans' : 'Yaklaşan Seans', 
+                desc: `${formatDateTR(data.tarih)} ${data.baslangic} - ${data.ogrenciAd}`, 
+                badgeText: 'Seans', 
+                badgeClass: 'bg-blue-100 text-blue-700', 
+                action: "document.getElementById('btnNavAjanda').click()" // ID ile güvenli seçim
+            });
+        });
+        renderNotifications();
+    });
+
+    // 2. Sorular (Takip Sekmesine Git - data-target ile)
+    onSnapshot(query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+        notifications.pendingQuestions = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.pendingQuestions.push({ 
+                title: 'Soru Onayı', 
+                desc: `${formatDateTR(data.tarih)} - ${data.ders}`, 
+                badgeText: 'Onay', 
+                badgeClass: 'bg-yellow-100 text-yellow-700', 
+                action: "document.querySelector('[data-target=\"tab-tracking\"]').click()" 
+            });
+        });
+        renderNotifications();
+    });
+
+    // 3. Denemeler (Denemeler Sekmesine Git - data-target ile)
+    onSnapshot(query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+        notifications.pendingExams = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.pendingExams.push({ 
+                title: 'Deneme Onayı', 
+                desc: `${data.studentAd || 'Öğrenci'} - ${data.tur}`, 
+                badgeText: 'Onay', 
+                badgeClass: 'bg-purple-100 text-purple-700', 
+                action: "document.querySelector('[data-target=\"tab-denemeler\"]').click()" 
+            });
+        });
+        renderNotifications();
+    });
+
+    // 4. Ödevler (Ödevler Sekmesine Git - data-target ile)
+    onSnapshot(query(collectionGroup(db, 'odevler'), where('kocId', '==', uid), where('durum', '==', 'tamamlandi'), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+        notifications.pendingHomeworks = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.pendingHomeworks.push({ 
+                title: 'Ödev Onayı', 
+                desc: `${data.title}`, 
+                badgeText: 'Ödev', 
+                badgeClass: 'bg-orange-100 text-orange-700', 
+                action: "document.querySelector('[data-target=\"tab-homework\"]').click()" 
+            });
+        });
+        renderNotifications();
     });
 }
 

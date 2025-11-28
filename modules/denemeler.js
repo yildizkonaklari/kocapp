@@ -13,10 +13,65 @@ import {
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
+import { activeListeners, formatDateTR } from './helpers.js';
 
 let currentStudentId = null;
 let denemeBarChart = null;
+
+// Sınav Kuralları ve Ders Dağılımları
+const EXAM_CONFIG = {
+    'LGS': {
+        wrongRatio: 3, // 3 yanlış 1 doğruyu götürür
+        subjects: [
+            { name: 'Türkçe', max: 20 },
+            { name: 'Matematik', max: 20 },
+            { name: 'Fen Bilimleri', max: 20 },
+            { name: 'T.C. İnkılap Tarihi', max: 10 },
+            { name: 'Din Kültürü', max: 10 },
+            { name: 'Yabancı Dil', max: 10 }
+        ]
+    },
+    'TYT': {
+        wrongRatio: 4,
+        subjects: [
+            { name: 'Türkçe', max: 40 },
+            { name: 'Matematik', max: 40 },
+            { name: 'Tarih', max: 5 },
+            { name: 'Coğrafya', max: 5 },
+            { name: 'Felsefe', max: 5 },
+            { name: 'Din Kültürü', max: 5 },
+            { name: 'Fizik', max: 7 },
+            { name: 'Kimya', max: 7 },
+            { name: 'Biyoloji', max: 6 }
+        ]
+    },
+    'AYT': {
+        wrongRatio: 4,
+        subjects: [
+            { name: 'Türk Dili ve Edebiyatı', max: 24 },
+            { name: 'Tarih-1', max: 10 },
+            { name: 'Coğrafya-1', max: 6 },
+            { name: 'Tarih-2', max: 11 },
+            { name: 'Coğrafya-2', max: 11 },
+            { name: 'Felsefe Grubu', max: 12 },
+            { name: 'Din Kültürü', max: 6 },
+            { name: 'Matematik', max: 40 },
+            { name: 'Fizik', max: 14 },
+            { name: 'Kimya', max: 13 },
+            { name: 'Biyoloji', max: 13 }
+        ]
+    },
+    'YDS': {
+        wrongRatio: 0,
+        subjects: [
+            { name: 'Yabancı Dil', max: 80 }
+        ]
+    },
+    'Diger': {
+        wrongRatio: 4,
+        subjects: [{ name: 'Genel', max: 100 }]
+    }
+};
 
 export async function renderDenemelerSayfasi(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
@@ -45,30 +100,26 @@ export async function renderDenemelerSayfasi(db, currentUserId, appId) {
         <div id="denemeContentArea" class="hidden space-y-6">
              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Ortalama Net</p>
+                    <p class="text-sm text-gray-500 font-medium">Ortalama Net</p>
                     <h3 id="kpiAvgNet" class="text-2xl font-bold text-gray-800">0.00</h3>
                  </div>
                  <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">En Yüksek Net</p>
-                    <h3 id="kpiMaxNet" class="text-2xl font-bold text-gray-800">0.00</h3>
+                    <p class="text-sm text-gray-500 font-medium">En Yüksek Net</p>
+                    <h3 id="kpiMaxNet" class="text-2xl font-bold text-green-600">0.00</h3>
                  </div>
                  <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <p class="text-sm text-gray-500">Toplam Deneme</p>
-                    <h3 id="kpiTotalCount" class="text-2xl font-bold text-gray-800">0</h3>
+                    <p class="text-sm text-gray-500 font-medium">Toplam Deneme</p>
+                    <h3 id="kpiTotalCount" class="text-2xl font-bold text-indigo-600">0</h3>
                  </div>
             </div>
 
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <h3 class="font-semibold mb-4">Net Gelişimi</h3>
-                <div class="h-64"><canvas id="denemeBarChart"></canvas></div>
+                <h3 class="font-semibold mb-4 text-gray-700">Net Gelişimi</h3>
+                <div class="h-64 w-full"><canvas id="denemeBarChart"></canvas></div>
             </div>
 
-            <div class="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
-                <div class="px-6 py-4 border-b bg-gray-50">
-                    <h3 class="font-semibold text-gray-800">Deneme Geçmişi</h3>
+            <div class="space-y-3 pb-12" id="denemelerListContainer">
                 </div>
-                <div id="denemelerListContainer"></div>
-            </div>
         </div>
     `;
 
@@ -78,30 +129,41 @@ export async function renderDenemelerSayfasi(db, currentUserId, appId) {
     // Event Listeners
     document.getElementById('filterStudentSelect').addEventListener('change', (e) => {
         currentStudentId = e.target.value;
-        
-        // UI Güncelle
         document.getElementById('denemeEmptyState').classList.add('hidden');
         document.getElementById('denemeContentArea').classList.remove('hidden');
         document.getElementById('btnAddNewDeneme').classList.remove('hidden');
-        
-        // Veri Çek
         startDenemeListener(db, currentUserId, appId, currentStudentId);
     });
 
     document.getElementById('btnAddNewDeneme').addEventListener('click', () => {
-         const modal = document.getElementById('addDenemeModal');
-         
+        const modal = document.getElementById('addDenemeModal');
         document.getElementById('denemeAdi').value = '';
         document.getElementById('denemeTarih').value = new Date().toISOString().split('T')[0];
-        
-        // Gizli inputa ID ata
         document.getElementById('currentStudentIdForDeneme').value = currentStudentId;
-        
-        // Öğrenci seçim alanını gizle (Zaten seçili)
         document.getElementById('denemeStudentSelectContainer').classList.add('hidden');
         
-        // Varsayılan inputları çiz
+        // Varsayılan olarak TYT getir
         renderDenemeNetInputs('TYT');
+        
+        // Tür değişimi dinleyicisi (Daha önce yoksa ekle)
+        const typeSelect = document.getElementById('denemeTuru');
+        // Temizleyip yeniden ekleyelim ki üst üste binmesin
+        const newTypeSelect = typeSelect.cloneNode(true);
+        typeSelect.parentNode.replaceChild(newTypeSelect, typeSelect);
+        
+        // Seçenekleri EXAM_CONFIG'den doldur
+        newTypeSelect.innerHTML = '';
+        Object.keys(EXAM_CONFIG).forEach(key => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = key === 'Diger' ? 'Diğer' : key;
+            if(key === 'TYT') opt.selected = true;
+            newTypeSelect.appendChild(opt);
+        });
+
+        newTypeSelect.addEventListener('change', (e) => {
+            renderDenemeNetInputs(e.target.value);
+        });
 
         modal.style.display = 'block';
     });
@@ -140,7 +202,6 @@ function startDenemeListener(db, uid, appId, sid) {
 }
 
 function updateStatsAndChart(data) {
-    // KPI Hesapla
     let max = 0;
     let totalNet = 0;
     
@@ -156,11 +217,9 @@ function updateStatsAndChart(data) {
     document.getElementById('kpiMaxNet').textContent = max.toFixed(2);
     document.getElementById('kpiTotalCount').textContent = data.length;
 
-    // Grafik Çiz
     const ctx = document.getElementById('denemeBarChart');
     if (denemeBarChart) denemeBarChart.destroy();
 
-    // Tarihe göre artan sıralama (Grafik için)
     const chartData = [...data].sort((a, b) => a.tarih.localeCompare(b.tarih));
     
     denemeBarChart = new Chart(ctx, {
@@ -193,117 +252,157 @@ function renderList(data, db) {
         return;
     }
 
-    container.innerHTML = `
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sınav</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Durum</th>
-                    <th class="px-6 py-3"></th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                ${data.map(d => `
-                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="document.getElementById('detail-${d.id}').classList.toggle('hidden')">
-                        <td class="px-6 py-4 text-sm text-gray-600">${formatDateTR(d.tarih)}</td>
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${d.ad} <span class="text-xs text-gray-500">(${d.tur})</span></td>
-                        <td class="px-6 py-4 text-sm font-bold text-indigo-600">${parseFloat(d.toplamNet).toFixed(2)}</td>
-                        <td class="px-6 py-4 text-center">
-                            ${d.onayDurumu === 'bekliyor' 
-                                ? '<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Bekliyor</span>' 
-                                : '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Onaylı</span>'}
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            ${d.onayDurumu === 'bekliyor' ? `<button class="text-green-600 font-bold mr-3 btn-approve" data-path="${d.path}" onclick="event.stopPropagation()">Onayla</button>` : ''}
-                            <button class="text-red-400 hover:text-red-600 btn-delete" data-path="${d.path}" onclick="event.stopPropagation()"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                    <tr id="detail-${d.id}" class="hidden bg-gray-50">
-                        <td colspan="5" class="px-6 py-4">
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                ${Object.entries(d.netler || {}).map(([ders, stat]) => `
-                                    <div class="text-xs bg-white p-2 rounded border">
-                                        <span class="font-bold block">${ders}</span>
-                                        <span class="text-gray-500">D:${stat.d} Y:${stat.y} N:${stat.net}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
+    // AKORDİYON YAPISI (Mobil Uyumlu)
+    container.innerHTML = data.map(d => {
+        const pending = d.onayDurumu === 'bekliyor'; 
+        const net = parseFloat(d.toplamNet)||0;
+        
+        // Detay Grid'i
+        let detailsHtml = '';
+        if (d.netler) {
+            detailsHtml = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-100">';
+            for (const [ders, stats] of Object.entries(d.netler)) {
+                if (stats.d > 0 || stats.y > 0) {
+                    detailsHtml += `
+                        <div class="flex justify-between items-center text-xs bg-gray-50 p-2 rounded border border-gray-100">
+                            <span class="font-bold text-gray-700 truncate mr-2" title="${ders}">${ders}</span>
+                            <span class="text-gray-500 flex gap-1.5">
+                                <span class="text-green-600 font-bold">D:${stats.d}</span>
+                                <span class="text-red-500 font-bold">Y:${stats.y}</span>
+                                <span class="text-indigo-600 font-bold">N:${stats.net}</span>
+                            </span>
+                        </div>
+                    `;
+                }
+            }
+            detailsHtml += '</div>';
+        }
+
+        return `
+        <div class="bg-white rounded-xl border ${pending?'border-yellow-200 bg-yellow-50':'border-gray-200'} shadow-sm overflow-hidden transition-all">
+            <div class="p-4 cursor-pointer" onclick="this.nextElementSibling.classList.toggle('hidden');">
+                <div class="flex justify-between items-center mb-2">
+                    <div>
+                        <h4 class="font-bold text-gray-800 text-sm md:text-base">${d.ad}</h4>
+                        <p class="text-xs text-gray-500 font-mono mt-0.5">${d.tur} • ${formatDateTR(d.tarih)}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-xl font-bold text-indigo-600 leading-none">${net.toFixed(2)}</span>
+                        <span class="text-[10px] text-gray-400 uppercase font-bold">NET</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] px-2 py-1 rounded-full ${pending?'bg-yellow-200 text-yellow-800':'bg-green-100 text-green-800'} font-bold uppercase tracking-wide">
+                        ${pending ? 'Onay Bekliyor' : 'Onaylandı'}
+                    </span>
+                    <i class="fa-solid fa-chevron-down text-gray-300 text-xs"></i>
+                </div>
+            </div>
+
+            <div class="hidden px-4 pb-4 bg-white animate-fade-in">
+                ${detailsHtml || '<p class="text-xs text-gray-400 text-center py-2">Detay bulunamadı.</p>'}
+                
+                <div class="flex justify-end gap-2 mt-4 pt-2 border-t border-gray-50">
+                    ${pending ? `<button class="btn-approve text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded hover:bg-green-200 font-bold transition-colors" data-path="${d.path}">Onayla</button>` : ''}
+                    <button class="btn-delete text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded hover:bg-red-100 font-medium transition-colors" data-path="${d.path}">Sil</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
 
     // Buton Listenerları
     container.querySelectorAll('.btn-approve').forEach(b => {
         b.addEventListener('click', async () => {
-            await updateDoc(doc(db, b.dataset.path), { onayDurumu: 'onaylandi' });
+            if(confirm('Bu deneme sonucunu onaylıyor musunuz?'))
+                await updateDoc(doc(db, b.dataset.path), { onayDurumu: 'onaylandi' });
         });
     });
     container.querySelectorAll('.btn-delete').forEach(b => {
         b.addEventListener('click', async () => {
-            if(confirm('Silinsin mi?')) await deleteDoc(doc(db, b.dataset.path));
+            if(confirm('Bu deneme kaydı silinecek. Emin misiniz?')) 
+                await deleteDoc(doc(db, b.dataset.path));
         });
     });
 }
 
+// Dinamik Input Oluşturucu
 export function renderDenemeNetInputs(tur) {
     const container = document.getElementById('denemeNetGirisAlani');
     if(!container) return;
     
     container.innerHTML = '';
-    const dersListeleri = {
-        'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'],
-        'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1'],
-        'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'],
-        'Diger': ['Genel']
-    };
+    const config = EXAM_CONFIG[tur] || EXAM_CONFIG['Diger'];
+    
+    // Bilgi metni
+    const infoText = config.wrongRatio > 0 
+        ? `<div class="col-span-full text-xs text-orange-600 bg-orange-50 p-2 rounded border border-orange-100 mb-2 text-center"><i class="fa-solid fa-circle-info"></i> ${config.wrongRatio} yanlış 1 doğruyu götürür.</div>`
+        : `<div class="col-span-full text-xs text-green-600 bg-green-50 p-2 rounded border border-green-100 mb-2 text-center"><i class="fa-solid fa-circle-check"></i> Yanlışlar doğruyu götürmez.</div>`;
 
-    const dersler = dersListeleri[tur] || dersListeleri['Diger'];
+    container.innerHTML = infoText;
 
-    dersler.forEach(ders => {
+    config.subjects.forEach(sub => {
         container.innerHTML += `
-            <div class="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-                <span class="text-sm font-medium text-gray-700 w-24 truncate">${ders}</span>
-                <div class="flex gap-2">
-                    <input type="number" placeholder="D" class="inp-deneme-d w-14 px-2 py-1 border border-green-200 rounded bg-green-50 text-center text-sm outline-none" data-ders="${ders}">
-                    <input type="number" placeholder="Y" class="inp-deneme-y w-14 px-2 py-1 border border-red-200 rounded bg-red-50 text-center text-sm outline-none" data-ders="${ders}">
-                    <input type="number" placeholder="B" class="inp-deneme-b w-14 px-2 py-1 border border-gray-200 rounded bg-gray-50 text-center text-sm outline-none" data-ders="${ders}">
+            <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div class="w-1/3">
+                    <span class="text-sm font-bold text-gray-700 block truncate" title="${sub.name}">${sub.name}</span>
+                    <span class="text-[10px] text-gray-400">Max: ${sub.max}</span>
+                </div>
+                <div class="flex gap-2 w-2/3 justify-end">
+                    <div class="flex flex-col items-center">
+                        <input type="number" placeholder="0" class="inp-deneme-d w-14 px-1 py-1.5 border border-green-200 rounded bg-green-50 text-center text-sm font-bold text-green-700 outline-none focus:ring-2 focus:ring-green-500" data-ders="${sub.name}" max="${sub.max}">
+                        <span class="text-[9px] text-green-600 font-bold mt-0.5">D</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <input type="number" placeholder="0" class="inp-deneme-y w-14 px-1 py-1.5 border border-red-200 rounded bg-red-50 text-center text-sm font-bold text-red-700 outline-none focus:ring-2 focus:ring-red-500" data-ders="${sub.name}" max="${sub.max}">
+                        <span class="text-[9px] text-red-500 font-bold mt-0.5">Y</span>
+                    </div>
                 </div>
             </div>
         `;
     });
 }
 
+// Kaydetme Fonksiyonu
 export async function saveGlobalDeneme(db, currentUserId, appId) {
     const studentId = document.getElementById('currentStudentIdForDeneme').value;
     
     if (!studentId) { alert("Lütfen bir öğrenci seçin."); return; }
 
-    const ad = document.getElementById('denemeAdi').value;
+    const ad = document.getElementById('denemeAdi').value || "Deneme";
     const tur = document.getElementById('denemeTuru').value;
     const tarih = document.getElementById('denemeTarih').value;
     
+    if(!tarih) { alert('Tarih seçiniz.'); return; }
+
+    const config = EXAM_CONFIG[tur] || EXAM_CONFIG['Diger'];
+    const ratio = config.wrongRatio;
+
     let totalNet = 0;
-    const netler = {};
-    const katsayi = tur === 'LGS' ? 3 : 4;
-    
+    let netler = {};
+    let hasData = false;
+
     document.querySelectorAll('.inp-deneme-d').forEach(inp => {
         const ders = inp.dataset.ders;
         const d = parseInt(inp.value) || 0;
-        const y = parseInt(inp.parentElement.querySelector('.inp-deneme-y').value) || 0;
-        const b = parseInt(inp.parentElement.querySelector('.inp-deneme-b').value) || 0;
-        const net = d - (y / katsayi);
+        const yInp = inp.parentElement.nextElementSibling.querySelector('.inp-deneme-y');
+        const y = parseInt(yInp.value) || 0;
+        
+        if(d > 0 || y > 0) hasData = true;
+
+        let net = d;
+        if (ratio > 0) net = d - (y / ratio);
+        
         totalNet += net;
-        netler[ders] = { d, y, b, net: net.toFixed(2) };
+        netler[ders] = { d, y, net: net.toFixed(2) };
     });
 
+    if(!hasData) { alert('Lütfen en az bir ders sonucu girin.'); return; }
+
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "denemeler"), {
-        ad, tur, tarih, toplamNet: totalNet, netler, 
-        onayDurumu: 'onaylandi',
+        ad, tur, tarih, 
+        toplamNet: totalNet.toFixed(2), 
+        netler, 
+        onayDurumu: 'onaylandi', // Koç girdiği için direkt onaylı
         kocId: currentUserId, 
         studentId: studentId,
         eklenmeTarihi: serverTimestamp()

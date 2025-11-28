@@ -84,7 +84,6 @@ function updateUIForLoggedInUser(user) {
     const displayName = user.displayName || "Koç";
     const initials = displayName.substring(0, 2).toUpperCase();
 
-    // Profil Bilgileri
     if(document.getElementById("userName")) document.getElementById("userName").textContent = displayName;
     if(document.getElementById("userEmail")) document.getElementById("userEmail").textContent = user.email;
     if(document.getElementById("userAvatar")) document.getElementById("userAvatar").textContent = initials;
@@ -93,7 +92,6 @@ function updateUIForLoggedInUser(user) {
     if(document.getElementById("drawerUserEmail")) document.getElementById("drawerUserEmail").textContent = user.email;
     if(document.getElementById("drawerUserAvatar")) document.getElementById("drawerUserAvatar").textContent = initials;
 
-    // Profil Tıklama
     const openProfileHandler = (e) => {
         e.preventDefault();
         const drawer = document.getElementById('mobileMenuDrawer');
@@ -117,12 +115,10 @@ function updateUIForLoggedInUser(user) {
     const btnMobileProfileList = document.getElementById("btnMobileProfile");
     if (btnMobileProfileList) btnMobileProfileList.onclick = openProfileHandler;
     
-    // Çıkış
     const handleLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
     if(document.getElementById("logoutButton")) document.getElementById("logoutButton").onclick = handleLogout;
     if(document.getElementById("btnMobileLogout")) document.getElementById("btnMobileLogout").onclick = handleLogout;
 
-    // Navigasyon
     document.querySelectorAll('.nav-link, .bottom-nav-btn, .mobile-drawer-link').forEach(link => {
         link.addEventListener('click', (e) => {
             if (link.id !== 'mobileMenuBtn' && link.id !== 'btnToggleMobileMenu') {
@@ -137,7 +133,6 @@ function updateUIForLoggedInUser(user) {
     });
 }
 
-// --- MOBİL MENÜ KONTROLÜ ---
 const mobileDrawer = document.getElementById('mobileMenuDrawer');
 const overlay = document.getElementById('mobileOverlay');
 const headerMenuBtn = document.getElementById('mobileMenuBtn'); 
@@ -159,8 +154,6 @@ if(bottomMenuBtn) bottomMenuBtn.onclick = openMobileMenu;
 if(closeDrawerBtn) closeDrawerBtn.onclick = closeMobileMenu;
 if(overlay) overlay.onclick = closeMobileMenu;
 
-
-// Sayfa Yönlendirme
 function navigateToPage(pageId) {
     cleanUpListeners(); 
     
@@ -198,15 +191,14 @@ function navigateToPage(pageId) {
 }
 
 // =================================================================
-// BİLDİRİMLER VE MESAJLAR
+// BİLDİRİMLER VE MESAJLAR (GÜNCELLENDİ)
 // =================================================================
 
-// 1. Header Mesaj Sayacı (Koç için)
+// 1. Header Mesaj Sayacı
 function listenUnreadMessages(uid) {
-    const badge = document.getElementById('headerUnreadMsgCount');
-    if(!badge) return;
+    const btnMsg = document.getElementById('btnHeaderMessages');
+    if(!btnMsg) return;
 
-    // Tüm öğrencilerden (gonderen: ogrenci) gelen, bana ait ve okunmamış mesajlar
     const q = query(
         collectionGroup(db, 'mesajlar'), 
         where('kocId', '==', uid), 
@@ -216,26 +208,20 @@ function listenUnreadMessages(uid) {
 
     onSnapshot(q, (snapshot) => {
         const count = snapshot.size;
-        // Mevcut header yapısında badge'i güncelle
-        // Eğer HTML'de badge yoksa, butonun içine dinamik ekleyebiliriz ama şimdilik ID'yi kontrol ediyoruz
-        const btnMsg = document.getElementById('btnHeaderMessages');
+        let badgeSpan = btnMsg.querySelector('.msg-badge');
         
-        if(btnMsg) {
-             let badgeSpan = btnMsg.querySelector('.msg-badge');
-             if(!badgeSpan) {
-                 // Badge yoksa oluştur
-                 badgeSpan = document.createElement('span');
-                 badgeSpan.className = 'msg-badge absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white hidden';
-                 btnMsg.style.position = 'relative';
-                 btnMsg.appendChild(badgeSpan);
-             }
-             
-             if (count > 0) {
-                 badgeSpan.textContent = count > 99 ? '99+' : count;
-                 badgeSpan.classList.remove('hidden');
-             } else {
-                 badgeSpan.classList.add('hidden');
-             }
+        if(!badgeSpan) {
+            badgeSpan = document.createElement('span');
+            badgeSpan.className = 'msg-badge absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white hidden';
+            btnMsg.style.position = 'relative';
+            btnMsg.appendChild(badgeSpan);
+        }
+        
+        if (count > 0) {
+            badgeSpan.textContent = count > 99 ? '99+' : count;
+            badgeSpan.classList.remove('hidden');
+        } else {
+            badgeSpan.classList.add('hidden');
         }
     });
 }
@@ -244,7 +230,7 @@ if(document.getElementById('btnHeaderMessages')) {
     document.getElementById('btnHeaderMessages').onclick = () => navigateToPage('mesajlar');
 }
 
-// 2. Koç Bildirim Sistemi (Yönlendirmeli)
+// 2. KOÇ BİLDİRİM SİSTEMİ (GÜNCELLENDİ)
 function initNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
     const dot = document.getElementById('coachNotificationDot');
@@ -253,6 +239,7 @@ function initNotifications(uid) {
     
     if(!btn || !dropdown) return;
 
+    // Toggle Mantığı
     btn.onclick = (e) => { 
         e.stopPropagation(); 
         dropdown.classList.toggle('hidden'); 
@@ -279,8 +266,8 @@ function initNotifications(uid) {
     let notifications = { 
         appointments: [], 
         pendingQuestions: [], 
-        pendingExams: [],
-        pendingHomeworks: [] // Onay bekleyen ödevler
+        pendingExams: [], 
+        pendingHomeworks: [] 
     };
 
     const renderNotifications = () => {
@@ -306,6 +293,8 @@ function initNotifications(uid) {
         }
     };
 
+    // --- DİNLEYİCİLER ---
+
     // 1. Yaklaşan Seanslar (Bugün ve Yarın)
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -315,7 +304,6 @@ function initNotifications(uid) {
         notifications.appointments = [];
         snap.forEach(d => {
             const data = d.data();
-            // Sadece bugün ve yarın
             if (data.tarih <= tomorrowStr) {
                 const isToday = data.tarih === today;
                 notifications.appointments.push({ 
@@ -330,8 +318,9 @@ function initNotifications(uid) {
         renderNotifications();
     });
 
-    // 2. Onay Bekleyen Sorular
-    onSnapshot(query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+    // 2. Onay Bekleyen Sorular (Hata yakalamalı)
+    const qSoru = query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5));
+    onSnapshot(qSoru, (snap) => {
         notifications.pendingQuestions = [];
         snap.forEach(d => {
             const data = d.data();
@@ -344,10 +333,13 @@ function initNotifications(uid) {
             });
         });
         renderNotifications();
+    }, (error) => {
+        console.warn("Bildirim Hatası (Soru): İndeks eksik olabilir.", error);
     });
 
     // 3. Onay Bekleyen Denemeler
-    onSnapshot(query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+    const qDeneme = query(collectionGroup(db, 'denemeler'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5));
+    onSnapshot(qDeneme, (snap) => {
         notifications.pendingExams = [];
         snap.forEach(d => {
             const data = d.data();
@@ -360,10 +352,13 @@ function initNotifications(uid) {
             });
         });
         renderNotifications();
+    }, (error) => {
+        console.warn("Bildirim Hatası (Deneme): İndeks eksik olabilir.", error);
     });
-    
+
     // 4. Onay Bekleyen Ödevler
-    onSnapshot(query(collectionGroup(db, 'odevler'), where('kocId', '==', uid), where('durum', '==', 'tamamlandi'), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
+    const qOdev = query(collectionGroup(db, 'odevler'), where('kocId', '==', uid), where('durum', '==', 'tamamlandi'), where('onayDurumu', '==', 'bekliyor'), limit(5));
+    onSnapshot(qOdev, (snap) => {
         notifications.pendingHomeworks = [];
         snap.forEach(d => {
             const data = d.data();
@@ -376,11 +371,13 @@ function initNotifications(uid) {
             });
         });
         renderNotifications();
+    }, (error) => {
+        console.warn("Bildirim Hatası (Ödev): İndeks eksik olabilir.", error);
     });
 }
 
 // =================================================================
-// 4. MODAL KONTROLLERİ (DÜZELTİLDİ)
+// 4. MODAL KONTROLLERİ
 // =================================================================
 
 function addListener(id, event, handler) {
@@ -389,7 +386,6 @@ function addListener(id, event, handler) {
 }
 
 // KAPATMA BUTONLARI (Tüm X ve İptal butonları için genel çözüm)
-// 1. ID Listesi
 const closeButtonIds = [
     '#closeModalButton', '#cancelModalButton', 
     '#closeEditModalButton', '#cancelEditModalButton', 
@@ -404,13 +400,12 @@ const closeButtonIds = [
     '#closeProfileModalButton'
 ];
 
-// 2. Hem ID'lere Hem de Genel Class'a Event Ekle
 const allCloseSelectors = closeButtonIds.join(', ') + ', .close-modal-btn';
 
 document.querySelectorAll(allCloseSelectors).forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.preventDefault();
-        const modal = e.target.closest('.fixed'); // Modal kapsayıcısını bul
+        const modal = e.target.closest('.fixed'); 
         if(modal) {
             modal.classList.add('hidden');
             modal.style.display = 'none'; // Zorla gizle

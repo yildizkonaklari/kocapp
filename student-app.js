@@ -36,24 +36,99 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "kocluk-sistemi";
 
-// ... (Global Değişkenler ve Auth Aynı) ...
+// =================================================================
+// 2. GLOBAL DEĞİŞKENLER VE SABİTLER
+// =================================================================
 let currentUser = null;
 let coachId = null;     
 let studentDocId = null; 
 let studentDersler = []; 
 let homeworkChart = null; 
 
-const AVATAR_LIBRARY = ["👨‍🎓", "👩‍🎓", "🚀", "🦁", "⚡", "🌟", "🎯", "📚", "🦊", "🐱", "🐶", "🐼", "🐯", "⚽", "🏀", "🎮"];
+const AVATAR_LIBRARY = [
+    "👨‍🎓", "👩‍🎓", "🚀", "🦁", "⚡", "🌟", "🎯", "📚",
+    "🦊", "🐱", "🐶", "🐼", "🐯", "⚽", "🏀", "🎮"
+];
+
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
-const DERS_HAVUZU = { 'ORTAOKUL': ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "T.C. İnkılap", "Din Kültürü", "İngilizce"], 'LISE': ["Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"] };
-const SINAV_DERSLERI = { 'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu'], 'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'] };
+
+// --- YENİ SINAV KONFİGÜRASYONU ---
+const EXAM_CONFIG = {
+    'LGS': {
+        wrongRatio: 3, // 3 yanlış 1 doğruyu götürür
+        subjects: [
+            { name: 'Türkçe', max: 20 },
+            { name: 'Matematik', max: 20 },
+            { name: 'Fen Bilimleri', max: 20 },
+            { name: 'T.C. İnkılap Tarihi', max: 10 },
+            { name: 'Din Kültürü', max: 10 },
+            { name: 'Yabancı Dil', max: 10 }
+        ]
+    },
+    'TYT': {
+        wrongRatio: 4, // 4 yanlış 1 doğruyu götürür
+        subjects: [
+            { name: 'Türkçe', max: 40 },
+            { name: 'Matematik', max: 40 },
+            { name: 'Tarih', max: 5 },
+            { name: 'Coğrafya', max: 5 },
+            { name: 'Felsefe', max: 5 },
+            { name: 'Din Kültürü', max: 5 },
+            { name: 'Fizik', max: 7 },
+            { name: 'Kimya', max: 7 },
+            { name: 'Biyoloji', max: 6 }
+        ]
+    },
+    'AYT': {
+        wrongRatio: 4,
+        subjects: [
+            { name: 'Türk Dili ve Edebiyatı', max: 24 },
+            { name: 'Tarih-1', max: 10 },
+            { name: 'Coğrafya-1', max: 6 },
+            { name: 'Tarih-2', max: 11 },
+            { name: 'Coğrafya-2', max: 11 },
+            { name: 'Felsefe Grubu', max: 12 },
+            { name: 'Din Kültürü', max: 6 },
+            { name: 'Matematik', max: 40 },
+            { name: 'Fizik', max: 14 },
+            { name: 'Kimya', max: 13 },
+            { name: 'Biyoloji', max: 13 }
+        ]
+    },
+    'YDS': {
+        wrongRatio: 0, // Yanlış doğruyu götürmez
+        subjects: [
+            { name: 'Yabancı Dil', max: 80 }
+        ]
+    },
+    'Diger': {
+        wrongRatio: 4,
+        subjects: [{ name: 'Genel', max: 100 }]
+    }
+};
+
+// Normal Ders Havuzları (Soru Takibi İçin)
+const DERS_HAVUZU = { 
+    'ORTAOKUL': [
+        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
+        "T.C. İnkılap", "Din Kültürü", "İngilizce"
+    ], 
+    'LISE': [
+        "Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji",
+        "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"
+    ] 
+};
 
 let denemeChartInstance = null;
 let currentCalDate = new Date();
 let currentWeekOffset = 0;
 let odevWeekOffset = 0;
+
 let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null };
 
+// =================================================================
+// 3. KİMLİK DOĞRULAMA
+// =================================================================
 onAuthStateChanged(auth, async (user) => {
     if (user) { currentUser = user; await initializeStudentApp(user.uid); } 
     else { window.location.href = "student-login.html"; }
@@ -77,6 +152,9 @@ async function initializeStudentApp(uid) {
         } else signOut(auth);
     } catch (e) { console.error(e); }
 }
+
+// ... (btnMatch, enableHeaderIcons, window.selectAvatar, loadNotifications, listenUnreadMessages aynı kalacak) ...
+// (Kod bütünlüğü için bu kısımları atlamadan kullanın, önceki kod bloklarından alabilirsiniz veya aşağıya ekleyeyim)
 
 const btnMatch = document.getElementById('btnMatchProfile');
 if (btnMatch) {
@@ -872,82 +950,31 @@ async function markMessagesAsRead() {
     const b = writeBatch(db); snap.forEach(d => b.update(d.ref, { okundu: true })); await b.commit();
 }
 
-// --- AJANDA (GÜNCELLENMİŞ RENKLİ TAKVİM VE LİSTE) ---
+// --- AJANDA ---
 function loadCalendarDataAndDraw(date) {
     const m = date.getMonth(), y = date.getFullYear();
     document.getElementById('currentMonthYear').textContent = date.toLocaleString('tr-TR', {month:'long', year:'numeric'});
     const s = new Date(y, m, 1).toISOString().split('T')[0];
     const e = new Date(y, m+1, 0).toISOString().split('T')[0];
-    
-    // Takvim verilerini çek
     listeners.ajanda = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), where("studentId", "==", studentDocId), where("tarih", ">=", s), where("tarih", "<=", e)), (snap) => {
-        const appts = []; snap.forEach(d => appts.push({id: d.id, ...d.data()}));
-        
-        // Takvimi Çiz
+        const appts = []; snap.forEach(d => appts.push(d.data()));
         const grid = document.getElementById('calendarGrid'); grid.innerHTML='';
         const days = new Date(y, m+1, 0).getDate(); const offset = new Date(y, m, 1).getDay() || 7;
-        const todayStr = new Date().toISOString().split('T')[0];
-
         for(let i=1; i<offset; i++) grid.innerHTML += `<div class="bg-gray-50 min-h-[60px]"></div>`;
-        
         for(let d=1; d<=days; d++) {
             const dateStr = `${y}-${(m+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-            const dailyAppts = appts.filter(a => a.tarih === dateStr);
-            
-            let dots = '';
-            dailyAppts.forEach(a => {
-                let color = 'bg-blue-500'; // Gelecek
-                if (a.durum === 'tamamlandi') color = 'bg-green-500'; // Yapıldı
-                else if (a.tarih < todayStr) color = 'bg-red-500'; // Yapılmadı (Geçmiş)
-                
-                dots += `<div class="w-1.5 h-1.5 rounded-full ${color} mx-auto mt-1"></div>`;
-            });
-
-            grid.innerHTML += `
-                <div class="bg-white min-h-[60px] border p-1 flex flex-col items-center ${dateStr === todayStr ? 'bg-indigo-50 font-bold' : ''}">
-                    <span class="text-sm text-gray-700">${d}</span>
-                    <div class="flex flex-wrap gap-1 justify-center w-full">${dots}</div>
-                </div>`;
+            const has = appts.some(a => a.tarih === dateStr);
+            grid.innerHTML += `<div class="bg-white min-h-[60px] border p-1 ${has?'bg-blue-50':''}"><span class="text-sm text-gray-700">${d}</span>${has?'<div class="w-2 h-2 bg-blue-500 rounded-full mx-auto"></div>':''}</div>`;
         }
-        
-        // Alt Liste: Tüm Yaklaşan Seanslar
-        const listContainer = document.getElementById('appointmentListContainer');
-        // Sorguyu burada tekrar yapıyoruz çünkü yukarıdaki sadece o ayı kapsıyordu.
-        // Listede gelecek tüm seansları görmek istiyoruz.
-        loadAllUpcomingAppointments(listContainer, todayStr);
+        const list = document.getElementById('appointmentListContainer');
+        const today = new Date().toISOString().split('T')[0];
+        const up = appts.filter(a => a.tarih >= today).sort((a,b) => a.tarih.localeCompare(b.tarih));
+        list.innerHTML = up.length ? up.map(a => `<div class="bg-white p-3 rounded border-l-4 border-blue-500 shadow-sm mb-2"><p class="font-bold text-sm">${a.tarih}</p><p class="text-xs">${a.baslangic} - ${a.baslik}</p></div>`).join('') : '<p class="text-center text-xs text-gray-400">Randevu yok.</p>';
     });
 }
-
-async function loadAllUpcomingAppointments(container, todayStr) {
-    const q = query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), 
-        where("studentId", "==", studentDocId), 
-        where("tarih", ">=", todayStr), 
-        orderBy("tarih", "asc")
-    );
-    
-    const snap = await getDocs(q);
-    
-    if (snap.empty) {
-        container.innerHTML = '<p class="text-center text-xs text-gray-400 py-4">Planlanmış seans yok.</p>';
-    } else {
-        container.innerHTML = snap.docs.map(doc => {
-            const a = doc.data();
-            const isToday = a.tarih === todayStr;
-            return `
-            <div class="bg-white p-3 rounded-xl border-l-4 ${isToday ? 'border-green-500 shadow-md' : 'border-indigo-500 shadow-sm'} mb-2 flex justify-between items-center">
-                <div>
-                    <p class="font-bold text-sm text-gray-800">${a.baslik || 'Seans'}</p>
-                    <p class="text-xs text-gray-500 flex items-center gap-1"><i class="fa-regular fa-calendar"></i> ${formatDateTR(a.tarih)} <i class="fa-regular fa-clock ml-1"></i> ${a.baslangic}</p>
-                    ${a.not ? `<p class="text-[10px] text-gray-400 mt-1 italic">"${a.not}"</p>` : ''}
-                </div>
-                ${isToday ? '<span class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold">BUGÜN</span>' : ''}
-            </div>`;
-        }).join('');
-    }
-}
-
 document.getElementById('prevMonth').onclick = () => { currentCalDate.setMonth(currentCalDate.getMonth()-1); loadCalendarDataAndDraw(currentCalDate); };
 document.getElementById('nextMonth').onclick = () => { currentCalDate.setMonth(currentCalDate.getMonth()+1); loadCalendarDataAndDraw(currentCalDate); };
+
 // =================================================================
 // 8. MODALLAR VE HELPERLAR
 // =================================================================

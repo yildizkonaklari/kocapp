@@ -333,11 +333,31 @@
                 <div class="w-full md:w-1/3 bg-gray-50 border-r p-4"><nav class="space-y-1"><button data-tab="hesap" class="profile-tab-button active w-full flex items-center px-3 py-2 bg-purple-100 text-purple-700 rounded font-medium">Hesap</button><button data-tab="yasal" class="profile-tab-button w-full flex items-center px-3 py-2 hover:bg-gray-200 rounded font-medium">Yasal</button></nav></div>
                 <div class="w-full md:w-2/3 p-6 overflow-y-auto">
                      <div id="tab-hesap" class="profile-tab-content space-y-4">
-                        <div><label class="block text-sm font-bold mb-1">Kod</label><div class="flex"><input id="kocDavetKodu" class="flex-1 border p-2 rounded-l bg-gray-50" readonly><button id="btnKopyala" class="bg-gray-200 px-4 rounded-r">Kopyala</button></div></div>
-                        <div><label class="block text-sm font-bold mb-1">Ad</label><input id="profileDisplayName" class="w-full border p-2 rounded"><button id="btnSaveName" class="mt-2 bg-purple-600 text-white px-4 py-2 rounded">Kaydet</button></div>
-                        <div class="border-t pt-4"><button id="btnResetPassword" class="px-4 py-2 bg-gray-200 rounded text-sm">Şifre Sıfırla</button></div>
-                        <div class="border-t pt-4"><button id="btnDeleteAccount" class="px-4 py-2 bg-red-600 text-white rounded text-sm">Hesabı Sil</button><input id="deleteConfirmPassword" class="border p-2 rounded mt-2 w-full hidden" placeholder="Şifre"></div>
-                     </div>
+    
+    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+        <div class="flex justify-between items-center mb-2">
+            <h4 class="font-bold text-indigo-900 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-crown text-indigo-500"></i> Üyelik Paketi
+            </h4>
+            <span id="profilePaketAdi" class="bg-indigo-200 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">...</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4 text-xs text-indigo-800">
+            <div>
+                <p class="opacity-60">Bitiş Tarihi</p>
+                <p class="font-bold text-sm" id="profilePaketBitis">...</p>
+            </div>
+            <div>
+                <p class="opacity-60">Öğrenci Hakkı</p>
+                <p class="font-bold text-sm" id="profilePaketLimit">...</p>
+            </div>
+        </div>
+    </div>
+
+    <div><label class="block text-sm font-bold mb-1">Kod</label><div class="flex"><input id="kocDavetKodu" class="flex-1 border p-2 rounded-l bg-gray-50" readonly><button id="btnKopyala" class="bg-gray-200 px-4 rounded-r">Kopyala</button></div></div>
+    <div><label class="block text-sm font-bold mb-1">Ad</label><input id="profileDisplayName" class="w-full border p-2 rounded"><button id="btnSaveName" class="mt-2 bg-purple-600 text-white px-4 py-2 rounded">Kaydet</button></div>
+    <div class="border-t pt-4"><button id="btnResetPassword" class="px-4 py-2 bg-gray-200 rounded text-sm">Şifre Sıfırla</button></div>
+    <div class="border-t pt-4"><button id="btnDeleteAccount" class="px-4 py-2 bg-red-600 text-white rounded text-sm">Hesabı Sil</button><input id="deleteConfirmPassword" class="border p-2 rounded mt-2 w-full hidden" placeholder="Şifre"></div>
+</div>
                      <div id="tab-yasal" class="profile-tab-content hidden space-y-4 h-64 overflow-y-auto text-sm text-gray-600">
                         <h4 class="font-bold text-black">Kullanım Koşulları</h4>
                         <p><strong>Son Güncelleme:</strong> 24 Kasım 2025</p>

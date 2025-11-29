@@ -42,20 +42,21 @@ if (loginButton) {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             
-            // YENİ: Son Giriş Tarihini Güncelle
+            // Son Giriş Tarihini Güncelle
             const userRef = doc(db, "artifacts", appId, "users", userCredential.user.uid, "settings", "profile");
-            // Belge var mı kontrol et, yoksa oluştur (Eski kullanıcılar için)
             const docSnap = await getDoc(userRef);
             
             if (docSnap.exists()) {
                 await updateDoc(userRef, { sonGirisTarihi: serverTimestamp() });
             } else {
+                // Eski kullanıcıların eksik dökümanını tamamla
                 await setDoc(userRef, {
                     email: email,
                     rol: 'koc',
                     kayitTarihi: serverTimestamp(),
                     sonGirisTarihi: serverTimestamp(),
-                    maxOgrenci: 10 // Varsayılan kota
+                    paketAdi: 'Standart',
+                    maxOgrenci: 10
                 });
             }
 
@@ -68,7 +69,7 @@ if (loginButton) {
     });
 }
 
-// --- KAYIT OL ---
+// --- KAYIT OL (GÜNCELLENDİ) ---
 if (signupButton) {
     signupButton.addEventListener("click", async () => {
         const email = document.getElementById("email").value;
@@ -82,22 +83,32 @@ if (signupButton) {
         signupButton.textContent = "Hesap Oluşturuluyor...";
 
         try {
+            // 1. Kullanıcı Oluştur
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user; 
             
-            // Profil Adı
             const defaultDisplayName = email.split('@')[0];
             await updateProfile(user, { displayName: defaultDisplayName });
             
-            // YENİ: Firestore'a Koç Profili Oluştur
+            // 2. Tarihleri Hesapla (Bugün ve 15 Gün Sonrası)
+            const today = new Date();
+            const next15Days = new Date();
+            next15Days.setDate(today.getDate() + 15);
+
+            const formatDate = (d) => d.toISOString().split('T')[0];
+
+            // 3. Firestore Profilini Oluştur (DENEME PAKETİ İLE)
             await setDoc(doc(db, "artifacts", appId, "users", user.uid, "settings", "profile"), {
                 email: email,
                 rol: 'koc',
                 kayitTarihi: serverTimestamp(),
                 sonGirisTarihi: serverTimestamp(),
-                uyelikBaslangic: null,
-                uyelikBitis: null,
-                maxOgrenci: 10 // Varsayılan
+                
+                // YENİ: Paket Bilgileri
+                paketAdi: 'Deneme',
+                uyelikBaslangic: formatDate(today),
+                uyelikBitis: formatDate(next15Days),
+                maxOgrenci: 1 
             });
             
             window.location.href = "index.html";

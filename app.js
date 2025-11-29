@@ -441,13 +441,29 @@ window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, c
 // --- PROFİL MODALI ---
 const profileModal = document.getElementById("profileModal");
 
-function showProfileModal(user) {
+// YENİ: Async yapıldı ve veritabanı sorgusu eklendi
+async function showProfileModal(user) {
     if (!profileModal) return;
     document.getElementById('profileDisplayName').value = user.displayName || '';
     document.getElementById('kocDavetKodu').value = user.uid;
     document.getElementById('deleteConfirmPassword').value = '';
     const err = document.getElementById('profileError');
     if(err) err.classList.add('hidden');
+
+    // Paket Bilgilerini Çek
+    try {
+        const docRef = doc(db, "artifacts", appId, "users", user.uid, "settings", "profile");
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            document.getElementById('profilePaketAdi').textContent = d.paketAdi || "Standart";
+            document.getElementById('profilePaketBitis').textContent = d.uyelikBitis ? formatDateTR(d.uyelikBitis) : "-";
+            document.getElementById('profilePaketLimit').textContent = (d.maxOgrenci || 0) + " Öğrenci";
+        }
+    } catch (e) {
+        console.error("Profil detayları alınamadı:", e);
+    }
 
     const tabBtn = document.querySelector('.profile-tab-button[data-tab="hesap"]');
     if(tabBtn) tabBtn.click();

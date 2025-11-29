@@ -102,7 +102,7 @@ async function loadCoaches() {
             // Input Değerleri (Yoksa boş veya varsayılan)
             const startDateVal = data.uyelikBaslangic || "";
             const endDateVal = data.uyelikBitis || "";
-            const maxStudentVal = data.maxOgrenci || 10;
+            const maxStudentVal = data.maxOgrenci || 1;
 
             return `
                 <tr>

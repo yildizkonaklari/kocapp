@@ -32,6 +32,7 @@ import { renderDenemelerSayfasi, saveGlobalDeneme, renderDenemeNetInputs } from 
 import { renderSoruTakibiSayfasi, saveGlobalSoru } from './modules/sorutakibi.js';
 import { renderHedeflerSayfasi, saveGlobalHedef } from './modules/hedefler.js';
 import { renderOdevlerSayfasi, saveGlobalOdev } from './modules/odevler.js';
+import { renderPaketSayfasi } from './modules/paket.js';
 
 // --- CONFIG ---
 const firebaseConfig = {
@@ -182,7 +183,9 @@ function navigateToPage(pageId) {
             case 'sorutakibi': renderSoruTakibiSayfasi(db, currentUserId, appId); break;
             case 'hedefler': renderHedeflerSayfasi(db, currentUserId, appId); break;
             case 'odevler': renderOdevlerSayfasi(db, currentUserId, appId); break;
+            case 'paketyukselt': renderPaketSayfasi(db, currentUserId, appId); break;
             default: renderPlaceholderSayfasi("Sayfa Bulunamadı"); break;
+                
         }
     } catch (err) {
         console.error("Sayfa yüklenirken hata:", err);

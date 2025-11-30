@@ -99,6 +99,10 @@
                 <div class="w-8 h-8 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center mr-3"><i class="fa-solid fa-comment-dots"></i></div>
                 <span class="font-medium text-gray-700">Mesajlar</span>
             </a>
+            <a href="#" data-page="paketyukselt" class="mobile-drawer-link flex items-center p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl shadow-sm active:scale-95 transition-transform text-indigo-700 mt-2">
+    <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-rocket text-indigo-600"></i></div>
+    <span class="font-bold">Paket Yükselt</span>
+            </a>
         </div>
 
         <!-- 3. DRAWER FOOTER: ÇIKIŞ -->
@@ -131,6 +135,11 @@
                 <a href="#" id="nav-muhasebe" class="nav-link flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-all"><i class="fa-solid fa-turkish-lira-sign w-6 text-center"></i><span class="ml-3 font-medium">Muhasebe</span></a>
                 <a href="#" id="nav-mesajlar" class="nav-link flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-all"><i class="fa-solid fa-comment-dots w-6 text-center"></i><span class="ml-3 font-medium">Mesajlar</span></a>
             </div>
+            <div class="my-2 border-t border-gray-100 mx-2"></div>
+<a href="#" id="nav-paketyukselt" class="nav-link flex items-center px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-purple-600 hover:text-white transition-all group">
+    <i class="fa-solid fa-rocket w-6 text-center text-indigo-500 group-hover:text-white"></i>
+    <span class="ml-3 font-bold">Paket Yükselt</span>
+</a>
             <div class="p-4 border-t border-gray-100">
                 <button id="logoutButton" class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-bold text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-colors border border-red-100">
                     <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Çıkış Yap
@@ -378,7 +387,30 @@
             </div>
         </div>
     </div>
-
+<div id="upgradeContactModal" class="hidden fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-slide-up relative overflow-hidden text-center">
+        <button onclick="document.getElementById('upgradeContactModal').style.display='none'" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl transition-colors">&times;</button>
+        
+        <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+            <i class="fa-brands fa-whatsapp"></i>
+        </div>
+        
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">Hemen Bize Ulaşın!</h3>
+        <p class="text-gray-500 mb-8 text-sm">Paketinizi yükseltmek ve ödeme işlemlerini tamamlamak için müşteri temsilcimizle görüşün.</p>
+        
+        <div class="space-y-3">
+            <a href="https://wa.me/905555555555" target="_blank" class="flex items-center justify-center w-full py-3.5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold text-lg shadow-lg shadow-green-100 transition-all transform hover:-translate-y-1">
+                <i class="fa-brands fa-whatsapp text-2xl mr-3"></i> WhatsApp ile Yaz
+            </a>
+            
+            <a href="https://instagram.com/kocapp" target="_blank" class="flex items-center justify-center w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-pink-100 transition-all transform hover:-translate-y-1">
+                <i class="fa-brands fa-instagram text-2xl mr-3"></i> Instagram'dan Ulaş
+            </a>
+        </div>
+        
+        <p class="text-xs text-gray-400 mt-6">Çalışma Saatleri: 09:00 - 18:00</p>
+    </div>
+</div>
     <script type="module" src="app.js"></script>
 </body>
 </html>

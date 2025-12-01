@@ -63,12 +63,8 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
     document.getElementById('btnEditStudent').addEventListener('click', () => showEditStudentModal(db, currentUserId, appId, studentId));
     document.getElementById('btnMsgStudent').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
     
-    // Rapor Butonu (import edilen fonksiyon için kontrol)
     const btnReport = document.getElementById('btnCreateReport');
     if(btnReport) {
-        // Dinamik import ile döngüsel bağımlılığı önleyebiliriz veya global erişim varsa kullanabiliriz.
-        // Şimdilik basitçe import ettiğimiz varsayılıyor. 
-        // NOT: Rapor modülünü import etmeyi unutmayın.
         import('./rapor.js').then(module => {
              btnReport.addEventListener('click', () => module.openReportModal(db, currentUserId, studentId, studentName));
         });
@@ -94,8 +90,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
     renderOzetTab(db, currentUserId, appId, studentId);
 }
 
-// ... (renderOzetTab, loadStats, renderKpiCard, loadOverdueHomeworks kodları AYNI KALACAK - Önceki kopyanızdan buraya ekleyin) ...
-
+// --- SEKME 1: ÖZET & ANALİZ ---
 async function renderOzetTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
     if (!area) return; 
@@ -120,6 +115,7 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
                 <option value="week">Bu Hafta</option>
             </select>
         </div>
+
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             ${renderKpiCard('Tamamlanan Hedef', '0', 'bg-green-100 text-green-600', 'fa-bullseye', 'kpi-goal')}
             ${renderKpiCard('Tamamlanan Ödev', '0', 'bg-blue-100 text-blue-600', 'fa-list-check', 'kpi-homework')}
@@ -127,20 +123,71 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
             ${renderKpiCard('Çözülen Soru', '0', 'bg-orange-100 text-orange-600', 'fa-pen', 'kpi-question')}
             ${renderKpiCard('Tamamlanan Seans', '0', 'bg-pink-100 text-pink-600', 'fa-calendar-check', 'kpi-session')}
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center"><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Ortalama Net</p><h3 id="stat-avg-net" class="text-3xl font-bold text-indigo-600 tracking-tight">-</h3><p class="text-[10px] text-gray-400 mt-1">Tüm denemeler</p></div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center"><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Okuma (Sayfa)</p><h3 id="stat-reading" class="text-3xl font-bold text-teal-600 tracking-tight">-</h3><p class="text-[10px] text-gray-400 mt-1">Rutin takibi</p></div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center"><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">En Başarılı Ders</p><h3 id="stat-best-lesson" class="text-lg font-bold text-green-600 mb-2">-</h3><div class="w-full bg-green-50 h-1.5 rounded-full overflow-hidden"><div class="bg-green-500 h-full rounded-full" style="width: 80%"></div></div></div>
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center"><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Geliştirilecek Ders</p><h3 id="stat-worst-lesson" class="text-lg font-bold text-red-500 mb-2">-</h3><div class="w-full bg-red-50 h-1.5 rounded-full overflow-hidden"><div class="bg-red-500 h-full rounded-full" style="width: 40%"></div></div></div>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="space-y-6">
-                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm"><h4 class="font-bold text-gray-800 mb-4 text-sm flex items-center"><i class="fa-solid fa-wallet mr-2 text-gray-400"></i> Finansal Durum</h4><div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl"><span class="text-sm text-gray-500">Güncel Bakiye</span><span class="font-bold text-lg ${((studentData.toplamBorc||0)-(studentData.toplamOdenen||0)) > 0 ? 'text-red-600':'text-green-600'}">${formatCurrency((studentData.toplamBorc||0)-(studentData.toplamOdenen||0))}</span></div></div>
-                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm"><h4 class="font-bold text-gray-800 mb-4 text-sm flex items-center"><i class="fa-solid fa-book-open mr-2 text-gray-400"></i> Takip Edilen Dersler</h4><div class="flex flex-wrap gap-2">${(studentData.takipDersleri || []).map(d => `<span class="px-2.5 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-semibold border border-gray-200">${d}</span>`).join('')}</div></div>
+
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100 mb-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-white rounded-full opacity-50 blur-xl"></div>
+            <h4 class="text-indigo-800 font-bold flex items-center gap-2 mb-3">
+                <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i> Yapay Zeka Performans Asistanı
+            </h4>
+            <div id="aiAssistantContent" class="text-sm text-gray-700 leading-relaxed space-y-2">
+                <div class="flex items-center gap-2 text-gray-500">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Veriler analiz ediliyor...
+                </div>
             </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Ortalama Net</p>
+                <h3 id="stat-avg-net" class="text-3xl font-bold text-indigo-600 tracking-tight">-</h3>
+                <p class="text-[10px] text-gray-400 mt-1">Tüm denemeler</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Okuma (Sayfa)</p>
+                <h3 id="stat-reading" class="text-3xl font-bold text-teal-600 tracking-tight">-</h3>
+                <p class="text-[10px] text-gray-400 mt-1">Rutin takibi</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">En Başarılı Ders</p>
+                <h3 id="stat-best-lesson" class="text-lg font-bold text-green-600 mb-2">-</h3>
+                <div class="w-full bg-green-50 h-1.5 rounded-full overflow-hidden"><div class="bg-green-500 h-full rounded-full" style="width: 80%"></div></div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Geliştirilecek Ders</p>
+                <h3 id="stat-worst-lesson" class="text-lg font-bold text-red-500 mb-2">-</h3>
+                <div class="w-full bg-red-50 h-1.5 rounded-full overflow-hidden"><div class="bg-red-500 h-full rounded-full" style="width: 40%"></div></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="space-y-6">
+                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                    <h4 class="font-bold text-gray-800 mb-4 text-sm flex items-center"><i class="fa-solid fa-wallet mr-2 text-gray-400"></i> Finansal Durum</h4>
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
+                        <span class="text-sm text-gray-500">Güncel Bakiye</span>
+                        <span class="font-bold text-lg ${((studentData.toplamBorc||0)-(studentData.toplamOdenen||0)) > 0 ? 'text-red-600':'text-green-600'}">
+                            ${formatCurrency((studentData.toplamBorc||0)-(studentData.toplamOdenen||0))}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                    <h4 class="font-bold text-gray-800 mb-4 text-sm flex items-center"><i class="fa-solid fa-book-open mr-2 text-gray-400"></i> Takip Edilen Dersler</h4>
+                    <div class="flex flex-wrap gap-2">
+                        ${(studentData.takipDersleri || []).map(d => `<span class="px-2.5 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-semibold border border-gray-200">${d}</span>`).join('')}
+                    </div>
+                </div>
+            </div>
+
             <div class="lg:col-span-2 bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden flex flex-col h-full">
-                <div class="bg-red-50 px-5 py-4 border-b border-red-100 flex justify-between items-center"><h4 class="font-bold text-red-800 flex items-center gap-2 text-sm"><i class="fa-solid fa-triangle-exclamation"></i> Gecikmiş / Tamamlanmamış Ödevler</h4><span id="overdue-count" class="bg-white text-red-600 text-xs px-2.5 py-1 rounded-lg font-bold shadow-sm border border-red-100">0</span></div>
-                <div id="overdue-list" class="p-3 flex-1 overflow-y-auto max-h-80 space-y-2"><p class="text-center text-gray-400 text-sm py-10">Yükleniyor...</p></div>
+                <div class="bg-red-50 px-5 py-4 border-b border-red-100 flex justify-between items-center">
+                    <h4 class="font-bold text-red-800 flex items-center gap-2 text-sm"><i class="fa-solid fa-triangle-exclamation"></i> Gecikmiş / Tamamlanmamış Ödevler</h4>
+                    <span id="overdue-count" class="bg-white text-red-600 text-xs px-2.5 py-1 rounded-lg font-bold shadow-sm border border-red-100">0</span>
+                </div>
+                <div id="overdue-list" class="p-3 flex-1 overflow-y-auto max-h-80 space-y-2">
+                    <p class="text-center text-gray-400 text-sm py-10">Yükleniyor...</p>
+                </div>
             </div>
         </div>
     `;
@@ -152,16 +199,172 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
     loadOverdueHomeworks(db, currentUserId, appId, studentId);
 }
 
-// Helper ve Load Stats fonksiyonları (Öncekiyle aynı)
-function renderKpiCard(title, valueId, colorClass, icon, id) { return `<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center h-32 transition-transform hover:-translate-y-1"><div class="w-10 h-10 rounded-full ${colorClass} bg-opacity-20 flex items-center justify-center mb-3 text-lg"><i class="fa-solid ${icon}"></i></div><h4 class="text-2xl font-bold text-gray-800 leading-none mb-1.5" id="${id}">0</h4><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">${title}</p></div>`; }
-async function loadStats(db, uid, appId, sid, period) { const now = new Date(); let startDate = null; if (period === 'week') { const day = now.getDay() || 7; if(day !== 1) now.setHours(-24 * (day - 1)); startDate = now.toISOString().split('T')[0]; } else if (period === 'month') { startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]; } else { startDate = '2000-01-01'; } const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([ getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("durum", "==", "tamamlandi"), where("bitisTarihi", ">=", startDate))), getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("durum", "==", "tamamlandi"), where("bitisTarihi", ">=", startDate))), getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"), where("tarih", ">=", startDate))), getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate))), getDocs(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid), where("tarih", ">=", startDate), where("durum", "==", "tamamlandi"))) ]); document.getElementById('kpi-goal').textContent = snapGoals.size; document.getElementById('kpi-homework').textContent = snapHomework.size; document.getElementById('kpi-exam-count').textContent = snapExams.size; document.getElementById('kpi-session').textContent = snapSessions.size; let totalQuestions = 0; let totalReading = 0; snapQuestions.forEach(doc => { const d = doc.data(); const adet = parseInt(d.adet) || 0; if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += adet; else totalQuestions += adet; }); document.getElementById('kpi-question').textContent = totalQuestions; document.getElementById('stat-reading').textContent = totalReading; let totalNet = 0; let subjectStats = {}; snapExams.forEach(doc => { const d = doc.data(); totalNet += (parseFloat(d.toplamNet) || 0); if(d.netler) { for (const [ders, stats] of Object.entries(d.netler)) { if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 }; subjectStats[ders].total += (parseFloat(stats.net) || 0); subjectStats[ders].count += 1; } } }); const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-'; document.getElementById('stat-avg-net').textContent = avgNet; let bestLesson = { name: '-', avg: -Infinity }; let worstLesson = { name: '-', avg: Infinity }; for (const [name, stat] of Object.entries(subjectStats)) { const avg = stat.total / stat.count; if (avg > bestLesson.avg) bestLesson = { name, avg }; if (avg < worstLesson.avg) worstLesson = { name, avg }; } if (bestLesson.name !== '-') { document.getElementById('stat-best-lesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`; document.getElementById('stat-worst-lesson').textContent = `${worstLesson.name} (${worstLesson.avg.toFixed(1)})`; } else { document.getElementById('stat-best-lesson').textContent = '-'; document.getElementById('stat-worst-lesson').textContent = '-'; } }
-async function loadOverdueHomeworks(db, uid, appId, sid) { const today = new Date().toISOString().split('T')[0]; const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("durum", "!=", "tamamlandi"), where("bitisTarihi", "<", today), orderBy("bitisTarihi", "asc")); const snap = await getDocs(q); document.getElementById('overdue-count').textContent = snap.size; const container = document.getElementById('overdue-list'); if (!container) return; if (snap.empty) { container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-300 py-10"><i class="fa-regular fa-circle-check text-4xl mb-3 text-green-100"></i><p class="text-sm">Gecikmiş ödev bulunmuyor.</p></div>'; } else { container.innerHTML = snap.docs.map(doc => { const d = doc.data(); return ` <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm hover:border-red-300 transition-colors group"> <div class="flex justify-between items-start"> <h5 class="font-bold text-gray-800 text-sm line-clamp-1">${d.title}</h5> <span class="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded font-medium whitespace-nowrap">Gecikti</span> </div> <div class="flex justify-between items-center mt-2"> <span class="text-xs text-gray-500 flex items-center"><i class="fa-regular fa-calendar mr-1.5"></i> ${formatDateTR(d.bitisTarihi)}</span> <button class="text-xs font-bold text-indigo-600 hover:text-indigo-800 opacity-0 group-hover:opacity-100 transition-opacity" onclick="document.getElementById('nav-odevler').click()">Görüntüle <i class="fa-solid fa-arrow-right ml-1"></i></button> </div> </div>`; }).join(''); } }
+// Helper: KPI Kartı HTML
+function renderKpiCard(title, valueId, colorClass, icon, id) {
+    return `
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center h-32 transition-transform hover:-translate-y-1">
+        <div class="w-10 h-10 rounded-full ${colorClass} bg-opacity-20 flex items-center justify-center mb-3 text-lg"><i class="fa-solid ${icon}"></i></div>
+        <h4 class="text-2xl font-bold text-gray-800 leading-none mb-1.5" id="${id}">0</h4>
+        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">${title}</p>
+    </div>`;
+}
 
-// --- SEKME 2: KOÇLUK NOTLARI (DÜZELTİLDİ) ---
+// --- YENİ: AI ANALİZ MOTORU ---
+function generateAIAnalysis(stats) {
+    let advice = [];
+    
+    // 1. Ödev Analizi
+    const hwRate = stats.totalHomework > 0 ? (stats.completedHomework / stats.totalHomework) : 0;
+    if (hwRate === 0) advice.push("⚠️ Henüz tamamlanan ödev görünmüyor. Başlangıç için küçük adımlar atabiliriz.");
+    else if (hwRate < 0.5) advice.push("📉 Ödev tamamlama oranımız düşük. Zaman yönetimi konusunda bir seans planlayalım mı?");
+    else if (hwRate > 0.9) advice.push("🌟 Ödev disiplini harika! Bu tempoyu korursan hedeflerimize hızla ulaşacağız.");
+    else advice.push("👍 Ödev takibi istikrarlı ilerliyor.");
+
+    // 2. Soru Çözümü
+    if (stats.totalQuestions > 500) advice.push("🔥 Soru çözüm sayın muazzam! Pratik yaparak hız kazanıyorsun.");
+    else if (stats.totalQuestions < 100) advice.push("💡 Günlük soru çözüm hedefini biraz artırmayı deneyebiliriz.");
+
+    // 3. Deneme ve Ders
+    if (stats.bestLesson && stats.bestLesson !== '-') advice.push(`✅ <strong>${stats.bestLesson}</strong> dersinde çok iyisin! Bu güçlü yanını koru.`);
+    if (stats.worstLesson && stats.worstLesson !== '-') advice.push(`🎯 <strong>${stats.worstLesson}</strong> dersine biraz daha odaklanmamız gerekebilir. Özel bir çalışma planı yapalım.`);
+
+    if(advice.length === 0) advice.push("Veri girişi yaptıkça sana özel analizler sunacağım.");
+
+    return advice.map(a => `<p>${a}</p>`).join('');
+}
+
+// --- VERİ YÜKLEME & HESAPLAMA ---
+async function loadStats(db, uid, appId, sid, period) {
+    const now = new Date();
+    let startDate = null;
+    
+    if (period === 'week') {
+        const day = now.getDay() || 7; 
+        if(day !== 1) now.setHours(-24 * (day - 1)); 
+        startDate = now.toISOString().split('T')[0];
+    } else if (period === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    } else {
+        startDate = '2000-01-01'; 
+    }
+
+    const qGoals = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("bitisTarihi", ">=", startDate));
+    const qHomework = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("bitisTarihi", ">=", startDate));
+    const qExams = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"), where("tarih", ">=", startDate));
+    const qQuestions = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate));
+    const qSessions = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid), where("tarih", ">=", startDate), where("durum", "==", "tamamlandi"));
+
+    try {
+        const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
+            getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions), getDocs(qSessions)
+        ]);
+
+        // Verileri İşle
+        let completedGoals = 0; snapGoals.forEach(doc => { if (doc.data().durum === 'tamamlandi') completedGoals++; });
+        
+        let completedHomework = 0; snapHomework.forEach(doc => { if (doc.data().durum === 'tamamlandi') completedHomework++; });
+        
+        let totalQuestions = 0;
+        let totalReading = 0;
+        snapQuestions.forEach(doc => {
+            const d = doc.data();
+            const adet = parseInt(d.adet) || 0;
+            if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalReading += adet;
+            else totalQuestions += adet;
+        });
+
+        let totalNet = 0;
+        let subjectStats = {}; 
+        snapExams.forEach(doc => {
+            const d = doc.data();
+            totalNet += (parseFloat(d.toplamNet) || 0);
+            if (d.netler) {
+                for (const [ders, stats] of Object.entries(d.netler)) {
+                    if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 };
+                    subjectStats[ders].total += (parseFloat(stats.net) || 0);
+                    subjectStats[ders].count += 1;
+                }
+            }
+        });
+
+        // UI Güncelleme
+        document.getElementById('kpi-goal').textContent = completedGoals;
+        document.getElementById('kpi-homework').textContent = completedHomework;
+        document.getElementById('kpi-exam-count').textContent = snapExams.size;
+        document.getElementById('kpi-session').textContent = snapSessions.size;
+        document.getElementById('kpi-question').textContent = totalQuestions;
+        document.getElementById('stat-reading').textContent = totalReading;
+
+        const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-';
+        document.getElementById('stat-avg-net').textContent = avgNet;
+
+        let bestLesson = { name: '-', avg: -Infinity };
+        let worstLesson = { name: '-', avg: Infinity };
+
+        for (const [name, stat] of Object.entries(subjectStats)) {
+            const avg = stat.total / stat.count;
+            if (avg > bestLesson.avg) bestLesson = { name, avg };
+            if (avg < worstLesson.avg) worstLesson = { name, avg };
+        }
+
+        if (bestLesson.name !== '-') {
+            document.getElementById('stat-best-lesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`;
+            document.getElementById('stat-worst-lesson').textContent = `${worstLesson.name} (${worstLesson.avg.toFixed(1)})`;
+        } else {
+            document.getElementById('stat-best-lesson').textContent = '-';
+            document.getElementById('stat-worst-lesson').textContent = '-';
+        }
+
+        // YENİ: AI Asistanını Tetikle
+        const aiAnalysis = generateAIAnalysis({
+            completedHomework: completedHomework,
+            totalHomework: snapHomework.size,
+            totalQuestions: totalQuestions,
+            bestLesson: bestLesson.name,
+            worstLesson: worstLesson.name
+        });
+        document.getElementById('aiAssistantContent').innerHTML = aiAnalysis;
+
+    } catch (err) {
+        console.error("Dashboard istatistik hatası:", err);
+    }
+}
+
+async function loadOverdueHomeworks(db, uid, appId, sid) {
+    const today = new Date().toISOString().split('T')[0];
+    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"),
+        where("durum", "!=", "tamamlandi"),
+        where("bitisTarihi", "<", today),
+        orderBy("bitisTarihi", "asc")
+    );
+
+    const snap = await getDocs(q);
+    document.getElementById('overdue-count').textContent = snap.size;
+    const container = document.getElementById('overdue-list');
+    
+    if (snap.empty) {
+        container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-300 py-10"><i class="fa-regular fa-circle-check text-4xl mb-3 text-green-100"></i><p class="text-sm">Gecikmiş ödev bulunmuyor.</p></div>';
+    } else {
+        container.innerHTML = snap.docs.map(doc => {
+            const d = doc.data();
+            return `
+            <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm hover:border-red-300 transition-colors group">
+                <div class="flex justify-between items-start">
+                    <h5 class="font-bold text-gray-800 text-sm line-clamp-1">${d.title}</h5>
+                    <span class="text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded font-medium whitespace-nowrap">Gecikti</span>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <span class="text-xs text-gray-500 flex items-center"><i class="fa-regular fa-calendar mr-1.5"></i> ${formatDateTR(d.bitisTarihi)}</span>
+                    <button class="text-xs font-bold text-indigo-600 hover:text-indigo-800 opacity-0 group-hover:opacity-100 transition-opacity" onclick="document.getElementById('nav-odevler').click()">Görüntüle <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+}
+
+// --- SEKME 2: KOÇLUK NOTLARI ---
 function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
-    if(!area) return; // Güvenlik
-
     area.innerHTML = `
         <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <h3 class="font-bold text-gray-800 mb-3 text-sm">Yeni Not Ekle</h3>
@@ -192,12 +395,9 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
         const container = document.getElementById('noteList');
         if(snap.empty) { container.innerHTML = '<div class="text-center text-gray-400 py-10 flex flex-col items-center"><i class="fa-regular fa-note-sticky text-3xl mb-2 opacity-20"></i><p class="text-sm">Henüz not eklenmemiş.</p></div>'; return; }
         
-        container.innerHTML = ''; // Temizle
-
+        container.innerHTML = ''; 
         snap.forEach(doc => {
             const d = doc.data();
-            
-            // HTML Elementi Oluştur (String yerine createElement kullanarak event listener ekleyeceğiz)
             const noteDiv = document.createElement('div');
             noteDiv.className = 'p-4 bg-yellow-50 border border-yellow-100 rounded-xl relative group hover:shadow-md transition-all';
             noteDiv.innerHTML = `
@@ -213,22 +413,17 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
                 </button>
             `;
             
-            // Silme Butonuna Listener Ekle (Hata kaynağı burasıydı)
-            const btnDelete = noteDiv.querySelector('.delete-note-btn');
-            btnDelete.addEventListener('click', async () => {
-                if(confirm('Notu silmek istediğinize emin misiniz?')) {
-                    await deleteDoc(doc.ref);
-                }
+            noteDiv.querySelector('.delete-note-btn').addEventListener('click', async () => {
+                if(confirm('Silinsin mi?')) await deleteDoc(doc.ref);
             });
-
             container.appendChild(noteDiv);
         });
     });
 }
 
-// =================================================================
-// 2. ÖĞRENCİ LİSTESİ (SAYFA)
-// =================================================================
+// ... (renderOgrenciSayfasi, showEditStudentModal, saveNewStudent vb. kodları ÖNCEKİ CEVAPTAKİ GİBİ KORUYUN)
+// (Kod tekrarı yapmamak için bu kısımları eklemiyorum, son verdiğim tam dosyayı kullanın)
+
 export function renderOgrenciSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Öğrencilerim";
     document.getElementById("mainContentArea").innerHTML = `
@@ -267,27 +462,16 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
     activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
         const container = document.getElementById('studentListContainer');
         if(snapshot.empty) { container.innerHTML = '<div class="text-center py-12"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl text-gray-400"><i class="fa-solid fa-users-slash"></i></div><p class="text-gray-500 font-medium">Henüz öğrenci eklenmemiş.</p></div>'; return; }
-        
         let html = `<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-100"><thead class="bg-gray-50"><tr><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ad Soyad</th><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sınıf</th><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bakiye</th><th class="relative px-6 py-4"><span class="sr-only">Eylemler</span></th></tr></thead><tbody class="bg-white divide-y divide-gray-100">`;
-        
         snapshot.forEach(doc => {
             const s = doc.data();
             const bakiye = (s.toplamBorc || 0) - (s.toplamOdenen || 0);
-            html += `
-                <tr class="hover:bg-purple-50 cursor-pointer transition-colors group" onclick="window.renderOgrenciDetaySayfasi('${doc.id}', '${s.ad} ${s.soyad}')">
-                    <td class="px-6 py-4 whitespace-nowrap"><div class="flex items-center"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 flex items-center justify-center font-bold mr-3 border border-white shadow-sm group-hover:scale-110 transition-transform">${s.ad[0]}${s.soyad[0]}</div><div class="text-sm font-bold text-gray-800">${s.ad} ${s.soyad}</div></div></td>
-                    <td class="px-6 py-4 whitespace-nowrap"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">${s.sinif}</span></td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${bakiye > 0 ? 'text-red-500' : 'text-green-600'}">${formatCurrency(bakiye)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-600 transition-colors"></i></td>
-                </tr>`;
+            html += `<tr class="hover:bg-purple-50 cursor-pointer transition-colors group" onclick="window.renderOgrenciDetaySayfasi('${doc.id}', '${s.ad} ${s.soyad}')"><td class="px-6 py-4 whitespace-nowrap"><div class="flex items-center"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 flex items-center justify-center font-bold mr-3 border border-white shadow-sm group-hover:scale-110 transition-transform">${s.ad[0]}${s.soyad[0]}</div><div class="text-sm font-bold text-gray-800">${s.ad} ${s.soyad}</div></div></td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">${s.sinif}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${bakiye > 0 ? 'text-red-500' : 'text-green-600'}">${formatCurrency(bakiye)}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-600 transition-colors"></i></td></tr>`;
         });
         html += `</tbody></table></div>`;
         container.innerHTML = html;
     });
 }
-
-// ... (showEditStudentModal, saveNewStudent, saveStudentChanges, deleteStudentFull - Bu fonksiyonları önceki cevaptan alabilirsiniz, değişmedi) ...
-// (Kod bütünlüğü için tekrar yazmıyorum, önceki cevaptaki hali geçerlidir)
 
 function showEditStudentModal(db, currentUserId, appId, studentId) {
     const modal = document.getElementById('editStudentModal');
@@ -308,6 +492,7 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
         }
     });
 }
+
 export async function saveNewStudent(db, currentUserId, appId) {
     const ad = document.getElementById('studentName').value.trim();
     const soyad = document.getElementById('studentSurname').value.trim();
@@ -331,9 +516,12 @@ export async function saveNewStudent(db, currentUserId, appId) {
             return; 
         }
     } catch (e) { console.error("Limit kontrol hatası:", e); return; }
-    await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), { ad, soyad, sinif, alan: alan, takipDersleri: dersler, olusturmaTarihi: serverTimestamp(), toplamBorc: 0, toplamOdenen: 0 });
+    await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
+        ad, soyad, sinif, alan: alan, takipDersleri: dersler, olusturmaTarihi: serverTimestamp(), toplamBorc: 0, toplamOdenen: 0
+    });
     document.getElementById('addStudentModal').style.display = 'none';
 }
+
 export async function saveStudentChanges(db, currentUserId, appId) {
     const id = document.getElementById('editStudentId').value;
     const ad = document.getElementById('editStudentName').value.trim();
@@ -345,6 +533,7 @@ export async function saveStudentChanges(db, currentUserId, appId) {
     await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), { ad, soyad, sinif, alan: alan, takipDersleri: dersler });
     document.getElementById('editStudentModal').style.display = 'none';
 }
+
 export async function deleteStudentFull(db, currentUserId, appId) {
     const studentId = document.getElementById('editStudentId').value;
     if (!studentId) return;

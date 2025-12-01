@@ -60,37 +60,42 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             if (activeListeners.notlarUnsubscribe) activeListeners.notlarUnsubscribe();
+            
             tabBtns.forEach(b => { b.classList.remove('active', 'text-purple-600', 'border-purple-600'); b.classList.add('text-gray-500'); });
             e.currentTarget.classList.add('active', 'text-purple-600', 'border-purple-600');
             e.currentTarget.classList.remove('text-gray-500');
+            
             const tab = e.currentTarget.dataset.tab;
-            if(tab === 'ozet') renderOzetTab(db, currentUserId, appId, studentId);
-            else if(tab === 'notlar') renderKoclukNotlariTab(db, currentUserId, appId, studentId);
+            const contentArea = document.getElementById('tabContentArea');
+            
+            // Güvenlik Kontrolü: Alan var mı?
+            if (contentArea) {
+                if(tab === 'ozet') renderOzetTab(db, currentUserId, appId, studentId);
+                else if(tab === 'notlar') renderKoclukNotlariTab(db, currentUserId, appId, studentId);
+            }
         });
     });
-    
+
+    // İlk açılışta Özet sekmesini yükle
     renderOzetTab(db, currentUserId, appId, studentId);
 }
 
 // --- SEKME 1: ÖZET & ANALİZ ---
 async function renderOzetTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
-    
+    if (!area) return; // Eğer alan yoksa dur
+
     const studentSnap = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId));
     const studentData = studentSnap.exists() ? studentSnap.data() : {};
     
+    // Header bilgilerini güncelle (Elementler hala sayfadaysa)
     if(document.getElementById('studentDetailClass')) document.getElementById('studentDetailClass').textContent = studentData.sinif || 'Sınıf Yok';
-    
     if(document.getElementById('studentDetailJoinDate') && studentData.olusturmaTarihi) {
         document.getElementById('studentDetailJoinDate').textContent = `Kayıt: ${formatDateTR(studentData.olusturmaTarihi.toDate().toISOString().split('T')[0])}`;
     }
-
     if(studentData.alan) {
         const areaEl = document.getElementById('studentDetailArea');
-        if(areaEl) {
-            areaEl.textContent = studentData.alan;
-            areaEl.classList.remove('hidden');
-        }
+        if(areaEl) { areaEl.textContent = studentData.alan; areaEl.classList.remove('hidden'); }
     }
 
     area.innerHTML = `
@@ -166,11 +171,11 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
         </div>
     `;
 
-    // Filtre Listener
     const filterSelect = document.getElementById('summaryTimeFilter');
-    filterSelect.addEventListener('change', () => loadStats(db, currentUserId, appId, studentId, filterSelect.value));
+    if(filterSelect) {
+        filterSelect.addEventListener('change', () => loadStats(db, currentUserId, appId, studentId, filterSelect.value));
+    }
 
-    // Verileri Yükle
     loadStats(db, currentUserId, appId, studentId, 'month'); 
     loadOverdueHomeworks(db, currentUserId, appId, studentId);
 }
@@ -189,6 +194,7 @@ function renderKpiCard(title, valueId, colorClass, icon, id) {
 async function loadStats(db, uid, appId, sid, period) {
     const now = new Date();
     let startDate = null;
+    
     if (period === 'week') {
         const day = now.getDay() || 7; 
         if(day !== 1) now.setHours(-24 * (day - 1)); 
@@ -205,59 +211,64 @@ async function loadStats(db, uid, appId, sid, period) {
     const qQuestions = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate));
     const qSessions = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid), where("tarih", ">=", startDate), where("durum", "==", "tamamlandi"));
 
-    const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
-        getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions), getDocs(qSessions)
-    ]);
+    try {
+        const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
+            getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions), getDocs(qSessions)
+        ]);
 
-    document.getElementById('kpi-goal').textContent = snapGoals.size;
-    document.getElementById('kpi-homework').textContent = snapHomework.size;
-    document.getElementById('kpi-exam-count').textContent = snapExams.size;
-    document.getElementById('kpi-session').textContent = snapSessions.size;
+        if(document.getElementById('kpi-goal')) document.getElementById('kpi-goal').textContent = snapGoals.size;
+        if(document.getElementById('kpi-homework')) document.getElementById('kpi-homework').textContent = snapHomework.size;
+        if(document.getElementById('kpi-exam-count')) document.getElementById('kpi-exam-count').textContent = snapExams.size;
+        if(document.getElementById('kpi-session')) document.getElementById('kpi-session').textContent = snapSessions.size;
 
-    let totalQuestions = 0;
-    let totalReading = 0;
-    snapQuestions.forEach(doc => {
-        const d = doc.data();
-        const adet = parseInt(d.adet) || 0;
-        if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalReading += adet;
-        else totalQuestions += adet;
-    });
-    document.getElementById('kpi-question').textContent = totalQuestions;
-    document.getElementById('stat-reading').textContent = totalReading;
+        let totalQuestions = 0;
+        let totalReading = 0;
+        snapQuestions.forEach(doc => {
+            const d = doc.data();
+            const adet = parseInt(d.adet) || 0;
+            if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalReading += adet;
+            else totalQuestions += adet;
+        });
+        if(document.getElementById('kpi-question')) document.getElementById('kpi-question').textContent = totalQuestions;
+        if(document.getElementById('stat-reading')) document.getElementById('stat-reading').textContent = totalReading;
 
-    let totalNet = 0;
-    let subjectStats = {}; 
+        let totalNet = 0;
+        let subjectStats = {}; 
 
-    snapExams.forEach(doc => {
-        const d = doc.data();
-        totalNet += (parseFloat(d.toplamNet) || 0);
-        if (d.netler) {
-            for (const [ders, stats] of Object.entries(d.netler)) {
-                if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 };
-                subjectStats[ders].total += (parseFloat(stats.net) || 0);
-                subjectStats[ders].count += 1;
+        snapExams.forEach(doc => {
+            const d = doc.data();
+            totalNet += (parseFloat(d.toplamNet) || 0);
+            if (d.netler) {
+                for (const [ders, stats] of Object.entries(d.netler)) {
+                    if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 };
+                    subjectStats[ders].total += (parseFloat(stats.net) || 0);
+                    subjectStats[ders].count += 1;
+                }
             }
+        });
+
+        const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-';
+        if(document.getElementById('stat-avg-net')) document.getElementById('stat-avg-net').textContent = avgNet;
+
+        let bestLesson = { name: '-', avg: -Infinity };
+        let worstLesson = { name: '-', avg: Infinity };
+
+        for (const [name, stat] of Object.entries(subjectStats)) {
+            const avg = stat.total / stat.count;
+            if (avg > bestLesson.avg) bestLesson = { name, avg };
+            if (avg < worstLesson.avg) worstLesson = { name, avg };
         }
-    });
 
-    const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-';
-    document.getElementById('stat-avg-net').textContent = avgNet;
+        if (bestLesson.name !== '-') {
+            if(document.getElementById('stat-best-lesson')) document.getElementById('stat-best-lesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`;
+            if(document.getElementById('stat-worst-lesson')) document.getElementById('stat-worst-lesson').textContent = `${worstLesson.name} (${worstLesson.avg.toFixed(1)})`;
+        } else {
+            if(document.getElementById('stat-best-lesson')) document.getElementById('stat-best-lesson').textContent = '-';
+            if(document.getElementById('stat-worst-lesson')) document.getElementById('stat-worst-lesson').textContent = '-';
+        }
 
-    let bestLesson = { name: '-', avg: -Infinity };
-    let worstLesson = { name: '-', avg: Infinity };
-
-    for (const [name, stat] of Object.entries(subjectStats)) {
-        const avg = stat.total / stat.count;
-        if (avg > bestLesson.avg) bestLesson = { name, avg };
-        if (avg < worstLesson.avg) worstLesson = { name, avg };
-    }
-
-    if (bestLesson.name !== '-') {
-        document.getElementById('stat-best-lesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`;
-        document.getElementById('stat-worst-lesson').textContent = `${worstLesson.name} (${worstLesson.avg.toFixed(1)})`;
-    } else {
-        document.getElementById('stat-best-lesson').textContent = '-';
-        document.getElementById('stat-worst-lesson').textContent = '-';
+    } catch (err) {
+        console.error("Dashboard istatistik hatası:", err);
     }
 }
 
@@ -270,9 +281,11 @@ async function loadOverdueHomeworks(db, uid, appId, sid) {
     );
 
     const snap = await getDocs(q);
-    document.getElementById('overdue-count').textContent = snap.size;
+    if(document.getElementById('overdue-count')) document.getElementById('overdue-count').textContent = snap.size;
     const container = document.getElementById('overdue-list');
     
+    if (!container) return;
+
     if (snap.empty) {
         container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-300 py-10"><i class="fa-regular fa-circle-check text-4xl mb-3 text-green-100"></i><p class="text-sm">Gecikmiş ödev bulunmuyor.</p></div>';
     } else {
@@ -296,6 +309,8 @@ async function loadOverdueHomeworks(db, uid, appId, sid) {
 // --- SEKME 2: KOÇLUK NOTLARI ---
 function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
+    if(!area) return;
+
     area.innerHTML = `
         <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <h3 class="font-bold text-gray-800 mb-3 text-sm">Yeni Not Ekle</h3>
@@ -433,7 +448,6 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
             classSelect.dispatchEvent(new Event('change'));
 
             setTimeout(() => {
-                // Checkboxları işaretle
                 renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
                 if (s.alan) {
                     const alanSelect = document.querySelector('#editStudentOptionsContainer select');
@@ -455,7 +469,7 @@ export async function saveNewStudent(db, currentUserId, appId) {
     const alan = alanSelect ? alanSelect.value : null;
     
     if(!ad || !soyad || !sinif) { alert('Lütfen Ad, Soyad ve Sınıf bilgilerini girin.'); return; }
-
+    
     // Limit Kontrolü
     try {
         const profileRef = doc(db, "artifacts", appId, "users", currentUserId, "settings", "profile");
@@ -499,12 +513,12 @@ export async function saveStudentChanges(db, currentUserId, appId) {
     document.getElementById('editStudentModal').style.display = 'none';
 }
 
-// --- YENİ: ÖĞRENCİ VE TÜM VERİLERİNİ SİLME ---
+// --- ÖĞRENCİ SİLME ---
 export async function deleteStudentFull(db, currentUserId, appId) {
     const studentId = document.getElementById('editStudentId').value;
     if (!studentId) return;
 
-    if (!confirm("DİKKAT! Bu öğrenci ve ona ait TÜM VERİLER (Ödevler, Denemeler, Hedefler, Mesajlar vb.) kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Onaylıyor musunuz?")) {
+    if (!confirm("DİKKAT! Bu öğrenci ve ona ait TÜM VERİLER kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Onaylıyor musunuz?")) {
         return;
     }
 
@@ -515,14 +529,11 @@ export async function deleteStudentFull(db, currentUserId, appId) {
 
     try {
         const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
-        
-        // 1. Alt Koleksiyonları Temizle (Batch ile)
         const subCollections = ['odevler', 'denemeler', 'hedefler', 'soruTakibi', 'koclukNotlari', 'mesajlar'];
         
         for (const subColName of subCollections) {
             const subColRef = collection(studentRef, subColName);
             const snapshot = await getDocs(subColRef);
-            
             if (!snapshot.empty) {
                 const batch = writeBatch(db);
                 snapshot.docs.forEach(doc => batch.delete(doc.ref));
@@ -530,19 +541,13 @@ export async function deleteStudentFull(db, currentUserId, appId) {
             }
         }
 
-        // 2. Öğrenci Dokümanını Sil
         await deleteDoc(studentRef);
-
-        // 3. Modalı Kapat ve Bilgi Ver
         document.getElementById('editStudentModal').style.display = 'none';
-        alert("Öğrenci ve tüm verileri başarıyla silindi.");
-        
-        // Ana sayfaya veya listeye dön (Opsiyonel)
-        // document.getElementById('nav-ogrencilerim').click();
-
+        alert("Öğrenci silindi.");
+        document.getElementById('nav-ogrencilerim').click(); // Listeye dön
     } catch (error) {
         console.error("Silme hatası:", error);
-        alert("Silme sırasında bir hata oluştu: " + error.message);
+        alert("Hata oluştu.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;

@@ -52,11 +52,41 @@ const appId = "kocluk-sistemi";
 let currentUserId = null;
 
 // =================================================================
-// 2. BAŞLATMA
+// 2. BAŞLATMA (GÜVENLİK KONTROLÜ EKLENDİ)
 // =================================================================
 async function main() {
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
+            // --- GÜVENLİK KONTROLÜ BAŞLANGIÇ ---
+            // Giren kişinin gerçekten 'KOÇ' olup olmadığını kontrol et.
+            try {
+                const userProfileRef = doc(db, "artifacts", appId, "users", user.uid, "settings", "profile");
+                const userProfileSnap = await getDoc(userProfileRef);
+
+                if (userProfileSnap.exists()) {
+                    const userData = userProfileSnap.data();
+                    // Eğer rol 'koc' değilse (örn: 'ogrenci'), içeri alma!
+                    if (userData.rol !== 'koc') {
+                        await signOut(auth); // Oturumu kapat
+                        alert("Bu panele sadece Koç hesapları erişebilir. Öğrenci girişi için yönlendiriliyorsunuz.");
+                        window.location.href = 'student-login.html'; // Öğrenci girişine at
+                        return; // Fonksiyonu durdur
+                    }
+                } else {
+                    // Profil yoksa güvenli değil, çıkar.
+                    await signOut(auth);
+                    window.location.href = 'login.html';
+                    return;
+                }
+            } catch (error) {
+                console.error("Yetki kontrolü hatası:", error);
+                // Hata durumunda güvenlik için çıkar
+                await signOut(auth);
+                window.location.href = 'login.html';
+                return;
+            }
+            // --- GÜVENLİK KONTROLÜ BİTİŞ ---
+
             currentUserId = user.uid;
             
             const spinner = document.getElementById('loadingSpinner');
@@ -237,15 +267,16 @@ if(document.getElementById('btnHeaderMessages')) {
     document.getElementById('btnHeaderMessages').onclick = () => navigateToPage('mesajlar');
 }
 
-// 2. Koç Bildirim Sistemi (DÜZELTİLDİ: headerNotificationDot kullanıldı)
+// 2. Koç Bildirim Sistemi
 function initNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
-    const dot = document.getElementById('headerNotificationDot'); // DÜZELTME: index.html'deki ID
+    const dot = document.getElementById('headerNotificationDot'); // DÜZELTİLMİŞ ID
     const dropdown = document.getElementById('coachNotificationDropdown');
     const btn = document.getElementById('btnHeaderNotifications');
     
     if(!btn || !dropdown) return;
 
+    // Toggle Mantığı
     btn.onclick = (e) => { 
         e.stopPropagation(); 
         dropdown.classList.toggle('hidden'); 
@@ -299,7 +330,7 @@ function initNotifications(uid) {
         }
     };
 
-    // 1. Yaklaşan Seanslar
+    // 1. Yaklaşan Seanslar (Bugün ve Yarın)
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
@@ -430,7 +461,6 @@ addListener('saveRandevuButton', 'click', () => saveNewRandevu(db, currentUserId
 
 addListener('saveTahsilatButton', 'click', () => saveNewTahsilat(db, currentUserId, appId));
 addListener('saveBorcButton', 'click', () => saveNewBorc(db, currentUserId, appId));
-addListener('btnDeleteStudent', 'click', () => deleteStudentFull(db, currentUserId, appId));
 
 window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
 
@@ -445,7 +475,6 @@ async function showProfileModal(user) {
     const err = document.getElementById('profileError');
     if(err) err.classList.add('hidden');
 
-    // Paket Bilgilerini Çek ve Göster
     try {
         const docRef = doc(db, "artifacts", appId, "users", user.uid, "settings", "profile");
         const docSnap = await getDoc(docRef);
@@ -456,6 +485,7 @@ async function showProfileModal(user) {
             document.getElementById('profilePaketBitis').textContent = d.uyelikBitis ? formatDateTR(d.uyelikBitis) : "-";
             document.getElementById('profilePaketLimit').textContent = (d.maxOgrenci || 0) + " Öğrenci";
         } else {
+            // Profil yoksa varsayılan
             document.getElementById('profilePaketAdi').textContent = "Standart";
             document.getElementById('profilePaketLimit').textContent = "10 Öğrenci";
         }
@@ -468,6 +498,16 @@ async function showProfileModal(user) {
     
     profileModal.classList.remove('hidden');
     profileModal.style.display = ''; 
+}
+window.showProfileModal = showProfileModal;
+
+if(profileModal) {
+    profileModal.addEventListener('click', (e) => {
+        if(e.target === profileModal) {
+            profileModal.classList.add('hidden');
+            profileModal.style.display = 'none';
+        }
+    });
 }
 
 document.querySelectorAll('.profile-tab-button').forEach(btn => {
@@ -514,6 +554,9 @@ addListener('btnKopyala', 'click', () => {
     input.select();
     navigator.clipboard.writeText(input.value).then(() => alert("Kopyalandı!"));
 });
+
+// Buton Listenerlarına Ekle
+addListener('btnDeleteStudent', 'click', () => deleteStudentFull(db, currentUserId, appId));
 
 // BAŞLAT
 main();

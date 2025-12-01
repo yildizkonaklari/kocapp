@@ -27,32 +27,28 @@ const db = getFirestore(app);
 const appId = "kocluk-sistemi";
 
 // --- ADMIN AYARLARI ---
-// Buraya kendi e-posta adresinizi yazın. Sadece bu kişi verileri görebilir.
-// Eğer herkesin (tüm koçların) görmesini istiyorsanız bu kontrolü kaldırabilirsiniz.
-const ADMIN_EMAIL = "koc99@gmail.com"; // Örnek: Kendi emailinizle değiştirin
+// GÜVENLİK: Buraya kendi admin e-posta adresinizi yazın.
+const ADMIN_EMAIL = "admin@kocluk.com"; 
 
-// --- 1. GİRİŞ KONTROLÜ ---
+// --- 1. GİRİŞ VE YETKİ KONTROLÜ ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        // Kullanıcı giriş yapmış
-        console.log("Admin paneli oturumu:", user.email);
+        // Yetki Kontrolü
+        if (user.email !== ADMIN_EMAIL) {
+            alert("Bu sayfaya erişim yetkiniz yok! Ana sayfaya yönlendiriliyorsunuz.");
+            window.location.href = "index.html";
+            return;
+        }
         
-        // Opsiyonel: Sadece belirli bir email girebilsin
-        // if (user.email !== ADMIN_EMAIL) {
-        //     alert("Bu sayfaya erişim yetkiniz yok!");
-        //     window.location.href = "index.html";
-        //     return;
-        // }
-
-        // Verileri Yükle
+        console.log("Admin oturumu açıldı:", user.email);
         loadCoaches();
     } else {
-        // Giriş yapılmamış, Login sayfasına at
         alert("Lütfen önce giriş yapın.");
         window.location.href = "login.html";
     }
 });
 
+// --- 2. KOÇLARI YÜKLEME ---
 async function loadCoaches() {
     const tableBody = document.getElementById('coachTableBody');
     tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Veriler yükleniyor...</td></tr>';
@@ -79,10 +75,18 @@ async function loadCoaches() {
                 studentCount = snapshot.data().count;
             } catch (err) { console.warn(err); }
 
+            const formatDate = (timestamp) => {
+                if (!timestamp) return "-";
+                return new Date(timestamp.toDate()).toLocaleDateString('tr-TR');
+            };
+
+            const regDate = formatDate(data.kayitTarihi);
+            const loginDate = formatDate(data.sonGirisTarihi);
+            
             const startDateVal = data.uyelikBaslangic || "";
             const endDateVal = data.uyelikBitis || "";
-            const maxStudentVal = data.maxOgrenci || 1; // Varsayılan 1
-            const paketAdiVal = data.paketAdi || "Deneme"; // Varsayılan Deneme
+            const maxStudentVal = data.maxOgrenci || 1;
+            const paketAdiVal = data.paketAdi || "Deneme";
 
             return `
                 <tr>
@@ -94,40 +98,32 @@ async function loadCoaches() {
                             <div class="ml-4">
                                 <div class="text-sm font-medium text-gray-900">${data.displayName || 'İsimsiz'}</div>
                                 <div class="text-sm text-gray-500">${data.email}</div>
+                                <div class="text-xs text-gray-400 font-mono select-all cursor-pointer" title="ID">${coachUid}</div>
                             </div>
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex flex-col gap-2">
-                            <input type="text" id="paket-${coachUid}" value="${paketAdiVal}" class="text-xs border rounded p-1 w-32 focus:ring-indigo-500" placeholder="Paket Adı">
+                            <input type="text" id="paket-${coachUid}" value="${paketAdiVal}" class="text-xs border rounded p-1 w-24 focus:ring-indigo-500" placeholder="Paket">
                             <div class="flex items-center gap-1">
                                 <span class="text-xs text-gray-500">Limit:</span>
-                                <input type="number" id="max-${coachUid}" value="${maxStudentVal}" class="text-xs border rounded p-1 w-16 text-center focus:ring-indigo-500">
+                                <input type="number" id="max-${coachUid}" value="${maxStudentVal}" class="text-xs border rounded p-1 w-12 text-center focus:ring-indigo-500">
                             </div>
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex flex-col gap-2">
-                            <div class="flex items-center gap-1">
-                                <span class="text-xs text-gray-400 w-8">Baş:</span>
-                                <input type="date" id="start-${coachUid}" value="${startDateVal}" class="text-xs border rounded p-1 w-28 focus:ring-indigo-500">
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <span class="text-xs text-gray-400 w-8">Bit:</span>
-                                <input type="date" id="end-${coachUid}" value="${endDateVal}" class="text-xs border rounded p-1 w-28 focus:ring-indigo-500">
-                            </div>
+                            <div class="flex items-center gap-1"><span class="text-xs text-gray-400 w-6">Baş:</span><input type="date" id="start-${coachUid}" value="${startDateVal}" class="text-xs border rounded p-1 w-28"></div>
+                            <div class="flex items-center gap-1"><span class="text-xs text-gray-400 w-6">Bit:</span><input type="date" id="end-${coachUid}" value="${endDateVal}" class="text-xs border rounded p-1 w-28"></div>
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-bold text-gray-900">${studentCount} Kayıtlı</div>
-                        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                            <div class="bg-${studentCount > maxStudentVal ? 'red' : 'green'}-500 h-1.5 rounded-full" style="width: ${Math.min((studentCount/maxStudentVal)*100, 100)}%"></div>
-                        </div>
+                        <div class="text-sm font-bold text-gray-900">${studentCount} / ${maxStudentVal}</div>
+                        <div class="text-xs text-gray-500">Kayıt: ${regDate}</div>
+                        <div class="text-xs text-gray-500">Son: ${loginDate}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="saveCoach('${coachUid}')" class="text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm">
-                            Kaydet
-                        </button>
+                        <button onclick="saveCoach('${coachUid}')" class="text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm">Kaydet</button>
                     </td>
                 </tr>
             `;
@@ -142,6 +138,7 @@ async function loadCoaches() {
     }
 }
 
+// --- 3. KAYDETME İŞLEMİ ---
 window.saveCoach = async (uid) => {
     const start = document.getElementById(`start-${uid}`).value;
     const end = document.getElementById(`end-${uid}`).value;
@@ -152,15 +149,9 @@ window.saveCoach = async (uid) => {
 
     try {
         const ref = doc(db, "artifacts", appId, "users", uid, "settings", "profile");
-        
-        await updateDoc(ref, {
-            paketAdi: paket,
-            uyelikBaslangic: start,
-            uyelikBitis: end,
-            maxOgrenci: max
-        });
-        
-        alert("Paket bilgileri güncellendi!");
+        await updateDoc(ref, { uyelikBaslangic: start, uyelikBitis: end, maxOgrenci: max, paketAdi: paket });
+        alert("Bilgiler güncellendi!");
+        loadCoaches(); // Tabloyu yenile
     } catch (error) {
         console.error("Güncelleme hatası:", error);
         alert("Hata: " + error.message);

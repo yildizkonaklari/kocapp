@@ -26,10 +26,29 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "kocluk-sistemi";
 
+// --- ADMIN AYARLARI ---
+// Buraya kendi e-posta adresinizi yazın. Sadece bu kişi verileri görebilir.
+// Eğer herkesin (tüm koçların) görmesini istiyorsanız bu kontrolü kaldırabilirsiniz.
+const ADMIN_EMAIL = "koc99@gmail.com"; // Örnek: Kendi emailinizle değiştirin
+
+// --- 1. GİRİŞ KONTROLÜ ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
+        // Kullanıcı giriş yapmış
+        console.log("Admin paneli oturumu:", user.email);
+        
+        // Opsiyonel: Sadece belirli bir email girebilsin
+        // if (user.email !== ADMIN_EMAIL) {
+        //     alert("Bu sayfaya erişim yetkiniz yok!");
+        //     window.location.href = "index.html";
+        //     return;
+        // }
+
+        // Verileri Yükle
         loadCoaches();
     } else {
+        // Giriş yapılmamış, Login sayfasına at
+        alert("Lütfen önce giriş yapın.");
         window.location.href = "login.html";
     }
 });

@@ -436,33 +436,37 @@ window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, c
 // --- PROFİL MODALI ---
 const profileModal = document.getElementById("profileModal");
 
-function showProfileModal(user) {
+async function showProfileModal(user) {
     if (!profileModal) return;
     document.getElementById('profileDisplayName').value = user.displayName || '';
     document.getElementById('kocDavetKodu').value = user.uid;
     document.getElementById('deleteConfirmPassword').value = '';
     const err = document.getElementById('profileError');
     if(err) err.classList.add('hidden');
-    
-    // Paket bilgilerini çekmek için showProfileModal asenkron olmalı 
-    // ancak app.js yapısında direkt çağırdığımız için burada basit tutuyoruz.
-    // Eğer paket bilgisini göstermek istiyorsanız bu fonksiyonu async yapıp getDoc eklemelisiniz (önceki cevabımda var).
-    
+
+    // Paket Bilgilerini Çek ve Göster
+    try {
+        const docRef = doc(db, "artifacts", appId, "users", user.uid, "settings", "profile");
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const d = docSnap.data();
+            document.getElementById('profilePaketAdi').textContent = d.paketAdi || "Standart";
+            document.getElementById('profilePaketBitis').textContent = d.uyelikBitis ? formatDateTR(d.uyelikBitis) : "-";
+            document.getElementById('profilePaketLimit').textContent = (d.maxOgrenci || 0) + " Öğrenci";
+        } else {
+            document.getElementById('profilePaketAdi').textContent = "Standart";
+            document.getElementById('profilePaketLimit').textContent = "10 Öğrenci";
+        }
+    } catch (e) {
+        console.error("Profil detayları alınamadı:", e);
+    }
+
     const tabBtn = document.querySelector('.profile-tab-button[data-tab="hesap"]');
     if(tabBtn) tabBtn.click();
     
     profileModal.classList.remove('hidden');
     profileModal.style.display = ''; 
-}
-window.showProfileModal = showProfileModal;
-
-if(profileModal) {
-    profileModal.addEventListener('click', (e) => {
-        if(e.target === profileModal) {
-            profileModal.classList.add('hidden');
-            profileModal.style.display = 'none';
-        }
-    });
 }
 
 document.querySelectorAll('.profile-tab-button').forEach(btn => {

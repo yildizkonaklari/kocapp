@@ -1,5 +1,5 @@
 import { 
-    doc, getDoc, addDoc, updateDoc, deleteDoc, getDocs,
+    doc, getDoc, addDoc, updateDoc, deleteDoc, getDocs, getCountFromServer, // EKLENDİ: getCountFromServer
     collection, query, orderBy, onSnapshot, serverTimestamp, where 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -174,13 +174,16 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
         </div>
     `;
 
+    // Filtre Listener
     const filterSelect = document.getElementById('summaryTimeFilter');
     filterSelect.addEventListener('change', () => loadStats(db, currentUserId, appId, studentId, filterSelect.value));
 
+    // Verileri Yükle
     loadStats(db, currentUserId, appId, studentId, 'month'); 
     loadOverdueHomeworks(db, currentUserId, appId, studentId);
 }
 
+// Helper: KPI Kartı HTML
 function renderKpiCard(title, valueId, colorClass, icon, id) {
     return `
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center h-32 transition-transform hover:-translate-y-1">
@@ -190,10 +193,10 @@ function renderKpiCard(title, valueId, colorClass, icon, id) {
     </div>`;
 }
 
+// --- VERİ YÜKLEME & HESAPLAMA ---
 async function loadStats(db, uid, appId, sid, period) {
     const now = new Date();
     let startDate = null;
-    
     if (period === 'week') {
         const day = now.getDay() || 7; 
         if(day !== 1) now.setHours(-24 * (day - 1)); 
@@ -298,6 +301,7 @@ async function loadOverdueHomeworks(db, uid, appId, sid) {
     }
 }
 
+// --- SEKME 2: KOÇLUK NOTLARI ---
 function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
     area.innerHTML = `
@@ -420,6 +424,7 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
     });
 }
 
+// --- YARDIMCI: DÜZENLEME MODALI AÇ ---
 function showEditStudentModal(db, currentUserId, appId, studentId) {
     const modal = document.getElementById('editStudentModal');
     
@@ -433,44 +438,37 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
             const classSelect = document.getElementById('editStudentClass');
             classSelect.value = s.sinif;
             
-            classSelect.dispatchEvent(new Event('change'));
+            // Seçenekleri Render Et
+            renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
 
+            // Eğer "Alan" bilgisi varsa ve select kutusu oluşturulmuşsa, onu seç
             setTimeout(() => {
-                // helpers.js içindeki fonksiyonu globalden (veya importtan) çağırıyoruz
-                // Burada renderStudentOptions fonksiyonunun doğru import edildiğinden emin olunmalıdır.
-                // Eğer hata verirse: Bu dosyaya renderStudentOptions import edilmelidir.
-                // Şimdilik varsayılan olarak import edildiğini varsayıyoruz.
-                
-                // NOT: Modüler yapıda 'renderDersSecimi' alias olarak kullanılabilir veya 
-                // doğrudan renderStudentOptions import edilmelidir. 
-                // Güvenli olması için helpers.js'den import edilen renderDersSecimi'ni kullanabiliriz
-                // ancak yeni mantık renderStudentOptions adıyla helpers.js'de tanımlandıysa onu import etmeliyiz.
-                
-                // Eğer import edilen renderDersSecimi aslında renderStudentOptions ise:
-                renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
-                
                 if (s.alan) {
                     const alanSelect = document.querySelector('#editStudentOptionsContainer select');
-                    if (alanSelect) alanSelect.value = s.alan;
+                    if (alanSelect) {
+                        alanSelect.value = s.alan;
+                    }
                 }
-                
-                modal.style.display = 'block';
             }, 100);
+            
+            modal.style.display = 'block';
         }
     });
 }
 
-// --- KAYIT FONKSİYONLARI (GÜNCELLENDİ) ---
+// --- KAYIT FONKSİYONLARI ---
 export async function saveNewStudent(db, currentUserId, appId) {
     const ad = document.getElementById('studentName').value.trim();
     const soyad = document.getElementById('studentSurname').value.trim();
     const sinif = document.getElementById('studentClass').value;
     const dersler = Array.from(document.querySelectorAll('#studentDersSecimiContainer input:checked')).map(cb => cb.value);
+    
+    // ALAN BİLGİSİNİ AL (Varsa)
     const alanSelect = document.querySelector('#studentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
     
     if(!ad || !soyad || !sinif) { alert('Lütfen Ad, Soyad ve Sınıf bilgilerini girin.'); return; }
-
+    
     // --- LİMİT KONTROLÜ BAŞLANGIÇ ---
     try {
         // 1. Koçun limitini öğren
@@ -510,11 +508,10 @@ export async function saveNewStudent(db, currentUserId, appId) {
         return;
     }
     // --- LİMİT KONTROLÜ BİTİŞ ---
-    
-    // Kayıt İşlemi
+
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
         ad, soyad, sinif, 
-        alan: alan, 
+        alan: alan, // Alanı kaydet
         takipDersleri: dersler, 
         olusturmaTarihi: serverTimestamp(), 
         toplamBorc: 0, 
@@ -530,12 +527,13 @@ export async function saveStudentChanges(db, currentUserId, appId) {
     const sinif = document.getElementById('editStudentClass').value;
     const dersler = Array.from(document.querySelectorAll('#editStudentDersSecimiContainer input:checked')).map(cb => cb.value);
     
+    // ALAN BİLGİSİNİ AL (Varsa)
     const alanSelect = document.querySelector('#editStudentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
     
     await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), {
         ad, soyad, sinif, 
-        alan: alan, 
+        alan: alan, // Alanı güncelle
         takipDersleri: dersler
     });
     document.getElementById('editStudentModal').style.display = 'none';

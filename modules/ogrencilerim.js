@@ -127,7 +127,7 @@ async function renderOzetTab(db, currentUserId, appId, studentId) {
         <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100 mb-6 shadow-sm relative overflow-hidden">
             <div class="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-white rounded-full opacity-50 blur-xl"></div>
             <h4 class="text-indigo-800 font-bold flex items-center gap-2 mb-3">
-                <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i> Yapay Zeka Performans Asistanı
+                <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i> Yapay Zeka Koçluk Asistanı
             </h4>
             <div id="aiAssistantContent" class="text-sm text-gray-700 leading-relaxed space-y-2">
                 <div class="flex items-center gap-2 text-gray-500">
@@ -209,28 +209,47 @@ function renderKpiCard(title, valueId, colorClass, icon, id) {
     </div>`;
 }
 
-// --- YENİ: AI ANALİZ MOTORU ---
+// --- YENİ: AI ANALİZ MOTORU (KOÇ İÇİN ÖNERİLER) ---
 function generateAIAnalysis(stats) {
     let advice = [];
     
     // 1. Ödev Analizi
     const hwRate = stats.totalHomework > 0 ? (stats.completedHomework / stats.totalHomework) : 0;
-    if (hwRate === 0) advice.push("⚠️ Henüz tamamlanan ödev görünmüyor. Başlangıç için küçük adımlar atabiliriz.");
-    else if (hwRate < 0.5) advice.push("📉 Ödev tamamlama oranımız düşük. Zaman yönetimi konusunda bir seans planlayalım mı?");
-    else if (hwRate > 0.9) advice.push("🌟 Ödev disiplini harika! Bu tempoyu korursan hedeflerimize hızla ulaşacağız.");
-    else advice.push("👍 Ödev takibi istikrarlı ilerliyor.");
+    const hwPercent = Math.round(hwRate * 100);
+    
+    if (stats.totalHomework === 0) {
+        advice.push("⚠️ <strong>Ödev Durumu:</strong> Henüz sistemde kayıtlı veya tamamlanmış ödev bulunmuyor. Öğrenciye ilk görevlerini atayarak süreci başlatmanızı öneririm.");
+    } else if (hwRate < 0.5) {
+        advice.push(`📉 <strong>Ödev Takibi:</strong> Tamamlama oranı düşük (%${hwPercent}). Öğrenciyle zaman yönetimi veya motivasyon eksikliği üzerine bir görüşme planlamanız faydalı olabilir.`);
+    } else if (hwRate > 0.9) {
+        advice.push(`🌟 <strong>Ödev Disiplini:</strong> Tamamlama oranı harika (%${hwPercent}). Öğrencinin bu istikrarını koruması için onu takdir edebilir, daha zorlu hedefler verebilirsiniz.`);
+    } else {
+        advice.push(`👍 <strong>Ödev Takibi:</strong> Ödev ilerleyişi istikrarlı (%${hwPercent}). Rutini bozmadan devam etmesi için teşvik edici geri bildirimlerde bulunabilirsiniz.`);
+    }
 
     // 2. Soru Çözümü
-    if (stats.totalQuestions > 500) advice.push("🔥 Soru çözüm sayın muazzam! Pratik yaparak hız kazanıyorsun.");
-    else if (stats.totalQuestions < 100) advice.push("💡 Günlük soru çözüm hedefini biraz artırmayı deneyebiliriz.");
+    if (stats.totalQuestions > 500) {
+        advice.push(`🔥 <strong>Soru Çözümü:</strong> Toplam ${stats.totalQuestions} soru ile performansı çok yüksek. Soru çeşitliliğini artırmak veya deneme sıklığını yükseltmek gelişimi hızlandırabilir.`);
+    } else if (stats.totalQuestions < 100 && stats.totalQuestions > 0) {
+        advice.push(`💡 <strong>Soru Çözümü:</strong> Toplam ${stats.totalQuestions} soru çözülmüş. Günlük soru hedeflerini artırarak pratik yapma alışkanlığını güçlendirmenizi öneririm.`);
+    } else if (stats.totalQuestions === 0) {
+         advice.push(`❓ <strong>Soru Çözümü:</strong> Henüz soru girişi yapılmamış. Öğrenciye soru takip sistemini kullanmayı hatırlatabilirsiniz.`);
+    }
 
-    // 3. Deneme ve Ders
-    if (stats.bestLesson && stats.bestLesson !== '-') advice.push(`✅ <strong>${stats.bestLesson}</strong> dersinde çok iyisin! Bu güçlü yanını koru.`);
-    if (stats.worstLesson && stats.worstLesson !== '-') advice.push(`🎯 <strong>${stats.worstLesson}</strong> dersine biraz daha odaklanmamız gerekebilir. Özel bir çalışma planı yapalım.`);
+    // 3. Deneme ve Ders Analizi
+    if (stats.bestLesson && stats.bestLesson !== '-') {
+        advice.push(`✅ <strong>Güçlü Yön:</strong> Öğrenci <strong>${stats.bestLesson}</strong> dersinde oldukça başarılı. Bu dersteki çalışma stratejisini diğer derslere uyarlaması için rehberlik edebilirsiniz.`);
+    }
+    
+    if (stats.worstLesson && stats.worstLesson !== '-') {
+        advice.push(`🎯 <strong>Gelişim Alanı:</strong> <strong>${stats.worstLesson}</strong> dersinde netler düşük görünüyor. Bu ders için özel bir konu tekrarı veya ek kaynak takviyesi planlamanız gerekebilir.`);
+    }
 
-    if(advice.length === 0) advice.push("Veri girişi yaptıkça sana özel analizler sunacağım.");
+    if(advice.length === 0) {
+        advice.push("Veri girişi arttıkça size daha detaylı, öğrenciye özel koçluk önerileri sunacağım.");
+    }
 
-    return advice.map(a => `<p>${a}</p>`).join('');
+    return advice.map(a => `<p class="mb-2 last:mb-0">${a}</p>`).join('');
 }
 
 // --- VERİ YÜKLEME & HESAPLAMA ---
@@ -315,7 +334,7 @@ async function loadStats(db, uid, appId, sid, period) {
             document.getElementById('stat-worst-lesson').textContent = '-';
         }
 
-        // YENİ: AI Asistanını Tetikle
+        // AI Asistanını Tetikle (KOÇ DİLİNDE)
         const aiAnalysis = generateAIAnalysis({
             completedHomework: completedHomework,
             totalHomework: snapHomework.size,
@@ -395,35 +414,39 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
         const container = document.getElementById('noteList');
         if(snap.empty) { container.innerHTML = '<div class="text-center text-gray-400 py-10 flex flex-col items-center"><i class="fa-regular fa-note-sticky text-3xl mb-2 opacity-20"></i><p class="text-sm">Henüz not eklenmemiş.</p></div>'; return; }
         
-        container.innerHTML = ''; 
-        snap.forEach(doc => {
+        container.innerHTML = snap.docs.map(doc => {
             const d = doc.data();
-            const noteDiv = document.createElement('div');
-            noteDiv.className = 'p-4 bg-yellow-50 border border-yellow-100 rounded-xl relative group hover:shadow-md transition-all';
-            noteDiv.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <div class="mt-1 text-yellow-500"><i class="fa-solid fa-quote-left"></i></div>
-                    <div class="flex-1">
-                        <p class="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">${d.icerik}</p>
-                        <p class="text-[10px] text-gray-400 mt-2 flex items-center gap-1 font-medium"><i class="fa-regular fa-clock"></i> ${d.tarih?.toDate().toLocaleString()}</p>
+            return `
+                <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl relative group hover:shadow-md transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="mt-1 text-yellow-500"><i class="fa-solid fa-quote-left"></i></div>
+                        <div class="flex-1">
+                            <p class="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">${d.icerik}</p>
+                            <p class="text-[10px] text-gray-400 mt-2 flex items-center gap-1 font-medium"><i class="fa-regular fa-clock"></i> ${d.tarih?.toDate().toLocaleString()}</p>
+                        </div>
                     </div>
-                </div>
-                <button class="delete-note-btn absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-sm">
-                    <i class="fa-solid fa-trash text-xs"></i>
-                </button>
-            `;
-            
-            noteDiv.querySelector('.delete-note-btn').addEventListener('click', async () => {
-                if(confirm('Silinsin mi?')) await deleteDoc(doc.ref);
+                    <button class="delete-note-btn absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-sm" 
+                        data-id="${doc.id}">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </div>`;
+        }).join('');
+
+        // Event delegation yerine direkt butonlara listener ekleyelim (HTML string olduğu için)
+        container.querySelectorAll('.delete-note-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if(confirm('Silinsin mi?')) {
+                    const noteId = btn.dataset.id;
+                    await deleteDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "koclukNotlari", noteId));
+                }
             });
-            container.appendChild(noteDiv);
         });
     });
 }
 
-// ... (renderOgrenciSayfasi, showEditStudentModal, saveNewStudent vb. kodları ÖNCEKİ CEVAPTAKİ GİBİ KORUYUN)
-// (Kod tekrarı yapmamak için bu kısımları eklemiyorum, son verdiğim tam dosyayı kullanın)
-
+// =================================================================
+// 2. ÖĞRENCİ LİSTESİ (SAYFA)
+// =================================================================
 export function renderOgrenciSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Öğrencilerim";
     document.getElementById("mainContentArea").innerHTML = `
@@ -461,12 +484,30 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
     activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
         const container = document.getElementById('studentListContainer');
-        if(snapshot.empty) { container.innerHTML = '<div class="text-center py-12"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl text-gray-400"><i class="fa-solid fa-users-slash"></i></div><p class="text-gray-500 font-medium">Henüz öğrenci eklenmemiş.</p></div>'; return; }
+        if(snapshot.empty) { 
+            container.innerHTML = '<div class="text-center py-12"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl text-gray-400"><i class="fa-solid fa-users-slash"></i></div><p class="text-gray-500 font-medium">Henüz öğrenci eklenmemiş.</p></div>'; 
+            return; 
+        }
+        
         let html = `<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-100"><thead class="bg-gray-50"><tr><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ad Soyad</th><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sınıf</th><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bakiye</th><th class="relative px-6 py-4"><span class="sr-only">Eylemler</span></th></tr></thead><tbody class="bg-white divide-y divide-gray-100">`;
+        
         snapshot.forEach(doc => {
             const s = doc.data();
             const bakiye = (s.toplamBorc || 0) - (s.toplamOdenen || 0);
-            html += `<tr class="hover:bg-purple-50 cursor-pointer transition-colors group" onclick="window.renderOgrenciDetaySayfasi('${doc.id}', '${s.ad} ${s.soyad}')"><td class="px-6 py-4 whitespace-nowrap"><div class="flex items-center"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 flex items-center justify-center font-bold mr-3 border border-white shadow-sm group-hover:scale-110 transition-transform">${s.ad[0]}${s.soyad[0]}</div><div class="text-sm font-bold text-gray-800">${s.ad} ${s.soyad}</div></div></td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">${s.sinif}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${bakiye > 0 ? 'text-red-500' : 'text-green-600'}">${formatCurrency(bakiye)}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-600 transition-colors"></i></td></tr>`;
+            html += `
+                <tr class="hover:bg-purple-50 cursor-pointer transition-colors group" onclick="window.renderOgrenciDetaySayfasi('${doc.id}', '${s.ad} ${s.soyad}')">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 flex items-center justify-center font-bold mr-3 border border-white shadow-sm group-hover:scale-110 transition-transform">${s.ad[0]}${s.soyad[0]}</div>
+                            <div class="text-sm font-bold text-gray-800">${s.ad} ${s.soyad}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">${s.sinif}</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${bakiye > 0 ? 'text-red-500' : 'text-green-600'}">${formatCurrency(bakiye)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-600 transition-colors"></i>
+                    </td>
+                </tr>`;
         });
         html += `</tbody></table></div>`;
         container.innerHTML = html;
@@ -475,18 +516,25 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
 
 function showEditStudentModal(db, currentUserId, appId, studentId) {
     const modal = document.getElementById('editStudentModal');
+    
     getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId)).then(snap => {
         if(snap.exists()) {
             const s = snap.data();
             document.getElementById('editStudentId').value = studentId;
             document.getElementById('editStudentName').value = s.ad;
             document.getElementById('editStudentSurname').value = s.soyad;
+            
             const classSelect = document.getElementById('editStudentClass');
             classSelect.value = s.sinif;
+            
             classSelect.dispatchEvent(new Event('change'));
+
             setTimeout(() => {
                 renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
-                if (s.alan) { const alanSelect = document.querySelector('#editStudentOptionsContainer select'); if (alanSelect) alanSelect.value = s.alan; }
+                if (s.alan) {
+                    const alanSelect = document.querySelector('#editStudentOptionsContainer select');
+                    if (alanSelect) alanSelect.value = s.alan;
+                }
                 modal.style.display = 'block';
             }, 100);
         }
@@ -500,24 +548,38 @@ export async function saveNewStudent(db, currentUserId, appId) {
     const dersler = Array.from(document.querySelectorAll('#studentDersSecimiContainer input:checked')).map(cb => cb.value);
     const alanSelect = document.querySelector('#studentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
+    
     if(!ad || !soyad || !sinif) { alert('Lütfen Ad, Soyad ve Sınıf bilgilerini girin.'); return; }
+    
     try {
         const profileRef = doc(db, "artifacts", appId, "users", currentUserId, "settings", "profile");
         const profileSnap = await getDoc(profileRef);
         let maxOgrenci = 10; 
-        if (profileSnap.exists() && profileSnap.data().maxOgrenci !== undefined) { maxOgrenci = profileSnap.data().maxOgrenci; }
+        if (profileSnap.exists() && profileSnap.data().maxOgrenci !== undefined) {
+            maxOgrenci = profileSnap.data().maxOgrenci;
+        }
         const studentsColl = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim");
         const snapshot = await getCountFromServer(studentsColl);
         const currentCount = snapshot.data().count;
+
         if (currentCount >= maxOgrenci) {
             document.getElementById('addStudentModal').style.display = 'none'; 
             const msg = "Paket limitiniz doldu! En fazla " + maxOgrenci + " öğrenci kaydedebilirsiniz.\n\nPaketinizi yükseltmek ister misiniz?";
-            if(confirm(msg)) { const upgradeBtn = document.getElementById('nav-paketyukselt'); if(upgradeBtn) upgradeBtn.click(); }
+            if(confirm(msg)) {
+                const upgradeBtn = document.getElementById('nav-paketyukselt');
+                if(upgradeBtn) upgradeBtn.click();
+            }
             return; 
         }
     } catch (e) { console.error("Limit kontrol hatası:", e); return; }
+
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
-        ad, soyad, sinif, alan: alan, takipDersleri: dersler, olusturmaTarihi: serverTimestamp(), toplamBorc: 0, toplamOdenen: 0
+        ad, soyad, sinif, 
+        alan: alan, 
+        takipDersleri: dersler, 
+        olusturmaTarihi: serverTimestamp(), 
+        toplamBorc: 0, 
+        toplamOdenen: 0
     });
     document.getElementById('addStudentModal').style.display = 'none';
 }
@@ -530,20 +592,32 @@ export async function saveStudentChanges(db, currentUserId, appId) {
     const dersler = Array.from(document.querySelectorAll('#editStudentDersSecimiContainer input:checked')).map(cb => cb.value);
     const alanSelect = document.querySelector('#editStudentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
-    await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), { ad, soyad, sinif, alan: alan, takipDersleri: dersler });
+    
+    await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), {
+        ad, soyad, sinif, 
+        alan: alan, 
+        takipDersleri: dersler
+    });
     document.getElementById('editStudentModal').style.display = 'none';
 }
 
 export async function deleteStudentFull(db, currentUserId, appId) {
     const studentId = document.getElementById('editStudentId').value;
     if (!studentId) return;
-    if (!confirm("DİKKAT! Bu öğrenci ve ona ait TÜM VERİLER kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Onaylıyor musunuz?")) return;
+
+    if (!confirm("DİKKAT! Bu öğrenci ve ona ait TÜM VERİLER kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Onaylıyor musunuz?")) {
+        return;
+    }
+
     const btn = document.getElementById('btnDeleteStudent');
     const originalText = btn.innerHTML;
-    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Siliniyor...';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Siliniyor...';
+
     try {
         const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
         const subCollections = ['odevler', 'denemeler', 'hedefler', 'soruTakibi', 'koclukNotlari', 'mesajlar'];
+        
         for (const subColName of subCollections) {
             const subColRef = collection(studentRef, subColName);
             const snapshot = await getDocs(subColRef);
@@ -553,10 +627,16 @@ export async function deleteStudentFull(db, currentUserId, appId) {
                 await batch.commit();
             }
         }
+
         await deleteDoc(studentRef);
         document.getElementById('editStudentModal').style.display = 'none';
         alert("Öğrenci silindi.");
         document.getElementById('nav-ogrencilerim').click(); 
-    } catch (error) { console.error("Silme hatası:", error); alert("Hata oluştu."); } 
-    finally { btn.disabled = false; btn.innerHTML = originalText; }
+    } catch (error) {
+        console.error("Silme hatası:", error);
+        alert("Hata oluştu.");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }

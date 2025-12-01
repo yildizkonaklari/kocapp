@@ -69,7 +69,11 @@ if (loginButton) {
     });
 }
 
-// --- KAYIT OL (GÜNCELLENDİ) ---
+// ... (Importlar aynı) ...
+
+// ... (Giriş Yap kısmı aynı) ...
+
+// --- KAYIT OL ---
 if (signupButton) {
     signupButton.addEventListener("click", async () => {
         const email = document.getElementById("email").value;
@@ -83,32 +87,28 @@ if (signupButton) {
         signupButton.textContent = "Hesap Oluşturuluyor...";
 
         try {
-            // 1. Kullanıcı Oluştur
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user; 
             
             const defaultDisplayName = email.split('@')[0];
             await updateProfile(user, { displayName: defaultDisplayName });
             
-            // 2. Tarihleri Hesapla (Bugün ve 15 Gün Sonrası)
+            // Tarihleri Hesapla (Bugün ve 15 Gün Sonrası)
             const today = new Date();
             const next15Days = new Date();
             next15Days.setDate(today.getDate() + 15);
-
             const formatDate = (d) => d.toISOString().split('T')[0];
 
-            // 3. Firestore Profilini Oluştur (DENEME PAKETİ İLE)
+            // Profil Oluştur (DENEME PAKETİ: Limit 1)
             await setDoc(doc(db, "artifacts", appId, "users", user.uid, "settings", "profile"), {
                 email: email,
                 rol: 'koc',
                 kayitTarihi: serverTimestamp(),
                 sonGirisTarihi: serverTimestamp(),
-                
-                // YENİ: Paket Bilgileri
                 paketAdi: 'Deneme',
                 uyelikBaslangic: formatDate(today),
                 uyelikBitis: formatDate(next15Days),
-                maxOgrenci: 1 
+                maxOgrenci: 1 // LİMİT 1 OLARAK AYARLANDI
             });
             
             window.location.href = "index.html";

@@ -1,14 +1,13 @@
 import { 
-    collection, query, onSnapshot, updateDoc, deleteDoc, 
+    collection, collectionGroup, query, onSnapshot, updateDoc, deleteDoc, 
     where, orderBy, getDocs, doc, addDoc, serverTimestamp, writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
 
-// Modül Değişkenleri
 let currentStudentId = null;
-let currentWeekOffset = 0; // 0: Bu hafta, -1: Geçen hafta, +1: Gelecek hafta
+let currentWeekOffset = 0; 
 let allOdevs = [];
-let unsubscribeOdevler = null;
+let pendingHomeworkIds = []; // Onay bekleyenlerin ID listesi
 
 export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Ödev Takibi";
@@ -22,9 +21,14 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
                     <option value="" disabled selected>Öğrenci Seçiniz...</option>
                 </select>
             </div>
-            <button id="btnAddNewOdev" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 shadow-sm flex items-center hidden">
-                <i class="fa-solid fa-plus mr-2"></i> Yeni Ödev Ata
-            </button>
+            <div class="flex gap-2">
+                <button id="btnApproveAllHomework" class="hidden bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow-sm flex items-center">
+                    <i class="fa-solid fa-check-double mr-2"></i> Tümünü Onayla
+                </button>
+                <button id="btnAddNewOdev" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 shadow-sm flex items-center hidden">
+                    <i class="fa-solid fa-plus mr-2"></i> Yeni Ödev Ata
+                </button>
+            </div>
         </div>
 
         <div id="calendarControls" class="hidden flex justify-between items-center mb-4 bg-white p-3 rounded-xl shadow-sm border border-gray-200">
@@ -33,8 +37,7 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
             <button id="btnNextWeek" class="p-2 hover:bg-gray-100 rounded-full text-gray-600"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
 
-        <div id="weeklyCalendarGrid" class="hidden grid grid-cols-1 md:grid-cols-7 gap-4 mb-8">
-            </div>
+        <div id="weeklyCalendarGrid" class="hidden grid grid-cols-1 md:grid-cols-7 gap-4 mb-8"></div>
 
         <div id="odevEmptyState" class="text-center text-gray-400 py-12">
             <i class="fa-solid fa-user-graduate text-4xl mb-3 opacity-20"></i>
@@ -42,72 +45,90 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
         </div>
     `;
 
-    // Öğrenci Listesini Doldur
     await loadStudentSelect(db, currentUserId, appId);
 
     // Event Listeners
     const selectEl = document.getElementById('filterOdevStudent');
     selectEl.addEventListener('change', (e) => {
         currentStudentId = e.target.value;
-        currentWeekOffset = 0; // Öğrenci değişince bu haftaya dön
+        currentWeekOffset = 0; 
         
-        // UI Güncelleme
         document.getElementById('btnAddNewOdev').classList.remove('hidden');
         document.getElementById('calendarControls').classList.remove('hidden');
         document.getElementById('weeklyCalendarGrid').classList.remove('hidden');
         document.getElementById('odevEmptyState').classList.add('hidden');
         
-        // Verileri Çek
         startOdevListener(db, currentUserId, currentStudentId);
     });
 
-    document.getElementById('btnPrevWeek').addEventListener('click', () => {
-        currentWeekOffset--;
-        renderWeeklyCalendar(db);
-    });
+    // Toplu Onay Butonu Listener
+    document.getElementById('btnApproveAllHomework').addEventListener('click', () => approveAllHomeworks(db));
 
-    document.getElementById('btnNextWeek').addEventListener('click', () => {
-        currentWeekOffset++;
-        renderWeeklyCalendar(db);
-    });
+    document.getElementById('btnPrevWeek').addEventListener('click', () => { currentWeekOffset--; renderWeeklyCalendar(db); });
+    document.getElementById('btnNextWeek').addEventListener('click', () => { currentWeekOffset++; renderWeeklyCalendar(db); });
 
-    // Yeni Ödev Ekleme Butonu
     document.getElementById('btnAddNewOdev').addEventListener('click', () => {
         if (!currentStudentId) { alert("Lütfen öğrenci seçin."); return; }
-        
-        // Formu Temizle
         document.getElementById('odevTitle').value = '';
         document.getElementById('odevAciklama').value = '';
         document.getElementById('odevLink').value = '';
         document.getElementById('odevBaslangicTarihi').value = new Date().toISOString().split('T')[0];
         document.getElementById('odevBitisTarihi').value = new Date().toISOString().split('T')[0];
-        
         document.getElementById('currentStudentIdForOdev').value = currentStudentId;
         document.getElementById('odevStudentSelectContainer').classList.add('hidden'); 
-        
         updateModalContent();
-        
         document.getElementById('addOdevModal').style.display = 'block';
     });
 }
 
-// --- VERİ DİNLEME ---
 function startOdevListener(db, uid, studentId) {
-    if (unsubscribeOdevler) unsubscribeOdevler();
-
-    const q = query(
-        collection(db, "artifacts", "kocluk-sistemi", "users", uid, "ogrencilerim", studentId, "odevler")
-    );
+    const q = query(collection(db, "artifacts", "kocluk-sistemi", "users", uid, "ogrencilerim", studentId, "odevler"));
     
-    unsubscribeOdevler = onSnapshot(q, (snapshot) => {
+    onSnapshot(q, (snapshot) => {
         allOdevs = [];
+        pendingHomeworkIds = []; // Sıfırla
+
         snapshot.forEach(doc => {
-            allOdevs.push({ id: doc.id, path: doc.ref.path, ...doc.data() });
+            const data = doc.data();
+            const item = { id: doc.id, path: doc.ref.path, ...data };
+            allOdevs.push(item);
+            
+            // Onay bekleyenleri topla
+            if (data.durum === 'tamamlandi' && data.onayDurumu === 'bekliyor') {
+                pendingHomeworkIds.push(item.path);
+            }
         });
+
+        // Butonu Göster/Gizle
+        const btnApprove = document.getElementById('btnApproveAllHomework');
+        if (pendingHomeworkIds.length > 0) {
+            btnApprove.classList.remove('hidden');
+            btnApprove.innerHTML = `<i class="fa-solid fa-check-double mr-2"></i> ${pendingHomeworkIds.length} Ödevi Onayla`;
+        } else {
+            btnApprove.classList.add('hidden');
+        }
+
         renderWeeklyCalendar(db);
-    }, (error) => {
-        console.error("Ödevler yüklenirken hata:", error);
+    }, (error) => console.error(error));
+}
+
+// YENİ: Toplu Onay Fonksiyonu
+async function approveAllHomeworks(db) {
+    if (pendingHomeworkIds.length === 0) return;
+    if (!confirm(`${pendingHomeworkIds.length} adet ödevi onaylamak istiyor musunuz?`)) return;
+
+    const batch = writeBatch(db);
+    pendingHomeworkIds.forEach(path => {
+        batch.update(doc(db, path), { onayDurumu: 'onaylandi' });
     });
+
+    try {
+        await batch.commit();
+        // alert("Ödevler onaylandı!"); // İsteğe bağlı
+    } catch (error) {
+        console.error("Toplu onay hatası:", error);
+        alert("Hata oluştu.");
+    }
 }
 
 // --- TAKVİM RENDER ---

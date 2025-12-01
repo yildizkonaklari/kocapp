@@ -1,18 +1,17 @@
 import { 
-    doc, getDoc, addDoc, updateDoc, deleteDoc, getDocs, getCountFromServer, // EKLENDİ: getCountFromServer
+    doc, getDoc, addDoc, updateDoc, deleteDoc, getDocs, getCountFromServer, writeBatch,
     collection, query, orderBy, onSnapshot, serverTimestamp, where 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { activeListeners, formatDateTR, formatCurrency, renderDersSecimi } from './helpers.js';
 
 // =================================================================
-// 1. ÖĞRENCİ DETAY SAYFASI (DASHBOARD GÖRÜNÜMÜ)
+// 1. ÖĞRENCİ DETAY SAYFASI
 // =================================================================
 export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, studentName) {
     document.getElementById("mainContentTitle").textContent = `${studentName} - Detay`;
     const area = document.getElementById("mainContentArea");
     
-    // Header ve Profil Kartı
     area.innerHTML = `
         <div class="mb-6 flex justify-between items-center">
             <button onclick="document.getElementById('nav-ogrencilerim').click()" class="flex items-center text-sm text-gray-600 hover:text-purple-600 font-medium">
@@ -22,11 +21,9 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center mb-6 gap-6 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full -mr-10 -mt-10 blur-2xl"></div>
-            
             <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-3xl shadow-lg relative z-10">
                 ${studentName.split(' ').map(n=>n[0]).join('')}
             </div>
-            
             <div class="flex-1 text-center md:text-left z-10">
                 <h2 class="text-2xl font-bold text-gray-800">${studentName}</h2>
                 <div class="flex flex-col md:items-start items-center mt-1 gap-1">
@@ -37,7 +34,6 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
                     <p id="studentDetailArea" class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded hidden"></p>
                 </div>
             </div>
-            
             <div class="flex gap-3 z-10">
                 <button id="btnEditStudent" class="bg-white text-gray-600 border border-gray-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 hover:text-purple-600 transition-colors shadow-sm">
                     <i class="fa-solid fa-pen mr-2"></i> Düzenle
@@ -57,26 +53,22 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         <div class="h-24"></div>
     `;
 
-    // Event Listeners
     document.getElementById('btnEditStudent').addEventListener('click', () => showEditStudentModal(db, currentUserId, appId, studentId));
     document.getElementById('btnMsgStudent').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
 
-    // Tab Geçişleri
     const tabBtns = document.querySelectorAll('.tab-button');
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             if (activeListeners.notlarUnsubscribe) activeListeners.notlarUnsubscribe();
-            
             tabBtns.forEach(b => { b.classList.remove('active', 'text-purple-600', 'border-purple-600'); b.classList.add('text-gray-500'); });
             e.currentTarget.classList.add('active', 'text-purple-600', 'border-purple-600');
             e.currentTarget.classList.remove('text-gray-500');
-            
             const tab = e.currentTarget.dataset.tab;
             if(tab === 'ozet') renderOzetTab(db, currentUserId, appId, studentId);
             else if(tab === 'notlar') renderKoclukNotlariTab(db, currentUserId, appId, studentId);
         });
     });
-
+    
     renderOzetTab(db, currentUserId, appId, studentId);
 }
 
@@ -438,20 +430,17 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
             const classSelect = document.getElementById('editStudentClass');
             classSelect.value = s.sinif;
             
-            // Seçenekleri Render Et
-            renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
+            classSelect.dispatchEvent(new Event('change'));
 
-            // Eğer "Alan" bilgisi varsa ve select kutusu oluşturulmuşsa, onu seç
             setTimeout(() => {
+                // Checkboxları işaretle
+                renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
                 if (s.alan) {
                     const alanSelect = document.querySelector('#editStudentOptionsContainer select');
-                    if (alanSelect) {
-                        alanSelect.value = s.alan;
-                    }
+                    if (alanSelect) alanSelect.value = s.alan;
                 }
+                modal.style.display = 'block';
             }, 100);
-            
-            modal.style.display = 'block';
         }
     });
 }
@@ -462,60 +451,35 @@ export async function saveNewStudent(db, currentUserId, appId) {
     const soyad = document.getElementById('studentSurname').value.trim();
     const sinif = document.getElementById('studentClass').value;
     const dersler = Array.from(document.querySelectorAll('#studentDersSecimiContainer input:checked')).map(cb => cb.value);
-    
-    // ALAN BİLGİSİNİ AL (Varsa)
     const alanSelect = document.querySelector('#studentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
     
     if(!ad || !soyad || !sinif) { alert('Lütfen Ad, Soyad ve Sınıf bilgilerini girin.'); return; }
-    
-    // --- LİMİT KONTROLÜ BAŞLANGIÇ ---
+
+    // Limit Kontrolü
     try {
-        // 1. Koçun limitini öğren
         const profileRef = doc(db, "artifacts", appId, "users", currentUserId, "settings", "profile");
         const profileSnap = await getDoc(profileRef);
-        let maxOgrenci = 10; // Varsayılan
+        let maxOgrenci = 10; 
         if (profileSnap.exists() && profileSnap.data().maxOgrenci !== undefined) {
             maxOgrenci = profileSnap.data().maxOgrenci;
         }
-
-        // 2. Mevcut öğrenci sayısını öğren
         const studentsColl = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim");
         const snapshot = await getCountFromServer(studentsColl);
         const currentCount = snapshot.data().count;
 
-        // 3. Kontrol
         if (currentCount >= maxOgrenci) {
-            document.getElementById('addStudentModal').style.display = 'none'; // Modalı kapat
-            
-            // Uyarı Mesajı
-            if(confirm(`Paket limitiniz doldu! En fazla ${maxOgrenci} öğrenci kaydedebilirsiniz.\n\nSınırsız öğrenci eklemek için paketinizi yükseltmek ister misiniz?`)) {
-                // Paket sayfasına yönlendir (Menü butonunu tetikle)
-                const upgradeBtn = document.getElementById('nav-paketyukselt'); // Masaüstü
-                const mobileUpgradeBtn = document.querySelector('[data-page="paketyukselt"]'); // Mobil
-                
-                if(upgradeBtn && upgradeBtn.offsetParent !== null) upgradeBtn.click();
-                else if(mobileUpgradeBtn) mobileUpgradeBtn.click();
-                else alert("Paket Yükselt sayfasına menüden ulaşabilirsiniz.");
+            document.getElementById('addStudentModal').style.display = 'none'; 
+            if(confirm(`Paket limitiniz doldu! En fazla ${maxOgrenci} öğrenci kaydedebilirsiniz.\n\nPaketinizi yükseltmek ister misiniz?`)) {
+                const upgradeBtn = document.getElementById('nav-paketyukselt');
+                if(upgradeBtn) upgradeBtn.click();
             }
-            return; // Kaydı durdur
+            return; 
         }
-
-    } catch (e) {
-        console.error("Limit kontrolü hatası:", e);
-        // Hata olsa bile kayda devam etmesin, güvenli olsun
-        alert("Sistem hatası. Lütfen sayfayı yenileyip tekrar deneyin.");
-        return;
-    }
-    // --- LİMİT KONTROLÜ BİTİŞ ---
+    } catch (e) { console.error(e); return; }
 
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
-        ad, soyad, sinif, 
-        alan: alan, // Alanı kaydet
-        takipDersleri: dersler, 
-        olusturmaTarihi: serverTimestamp(), 
-        toplamBorc: 0, 
-        toplamOdenen: 0
+        ad, soyad, sinif, alan: alan, takipDersleri: dersler, olusturmaTarihi: serverTimestamp(), toplamBorc: 0, toplamOdenen: 0
     });
     document.getElementById('addStudentModal').style.display = 'none';
 }
@@ -526,15 +490,61 @@ export async function saveStudentChanges(db, currentUserId, appId) {
     const soyad = document.getElementById('editStudentSurname').value.trim();
     const sinif = document.getElementById('editStudentClass').value;
     const dersler = Array.from(document.querySelectorAll('#editStudentDersSecimiContainer input:checked')).map(cb => cb.value);
-    
-    // ALAN BİLGİSİNİ AL (Varsa)
     const alanSelect = document.querySelector('#editStudentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
     
     await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), {
-        ad, soyad, sinif, 
-        alan: alan, // Alanı güncelle
-        takipDersleri: dersler
+        ad, soyad, sinif, alan: alan, takipDersleri: dersler
     });
     document.getElementById('editStudentModal').style.display = 'none';
+}
+
+// --- YENİ: ÖĞRENCİ VE TÜM VERİLERİNİ SİLME ---
+export async function deleteStudentFull(db, currentUserId, appId) {
+    const studentId = document.getElementById('editStudentId').value;
+    if (!studentId) return;
+
+    if (!confirm("DİKKAT! Bu öğrenci ve ona ait TÜM VERİLER (Ödevler, Denemeler, Hedefler, Mesajlar vb.) kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Onaylıyor musunuz?")) {
+        return;
+    }
+
+    const btn = document.getElementById('btnDeleteStudent');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Siliniyor...';
+
+    try {
+        const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
+        
+        // 1. Alt Koleksiyonları Temizle (Batch ile)
+        const subCollections = ['odevler', 'denemeler', 'hedefler', 'soruTakibi', 'koclukNotlari', 'mesajlar'];
+        
+        for (const subColName of subCollections) {
+            const subColRef = collection(studentRef, subColName);
+            const snapshot = await getDocs(subColRef);
+            
+            if (!snapshot.empty) {
+                const batch = writeBatch(db);
+                snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+            }
+        }
+
+        // 2. Öğrenci Dokümanını Sil
+        await deleteDoc(studentRef);
+
+        // 3. Modalı Kapat ve Bilgi Ver
+        document.getElementById('editStudentModal').style.display = 'none';
+        alert("Öğrenci ve tüm verileri başarıyla silindi.");
+        
+        // Ana sayfaya veya listeye dön (Opsiyonel)
+        // document.getElementById('nav-ogrencilerim').click();
+
+    } catch (error) {
+        console.error("Silme hatası:", error);
+        alert("Silme sırasında bir hata oluştu: " + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }

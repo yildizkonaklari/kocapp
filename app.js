@@ -24,7 +24,7 @@ import {
 // Modül Importları
 import { cleanUpListeners, populateStudentSelect, renderDersSecimi, renderStudentOptions, renderPlaceholderSayfasi, formatDateTR } from './modules/helpers.js';
 import { renderAnaSayfa } from './modules/anasayfa.js';
-import { renderOgrenciSayfasi, renderOgrenciDetaySayfasi, saveNewStudent, saveStudentChanges } from './modules/ogrencilerim.js';
+import { renderOgrenciSayfasi, renderOgrenciDetaySayfasi, saveNewStudent, saveStudentChanges, deleteStudentFull } from './modules/ogrencilerim.js';
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
 import { renderMuhasebeSayfasi, saveNewBorc, saveNewTahsilat } from './modules/muhasebe.js';
 import { renderMesajlarSayfasi } from './modules/mesajlar.js';
@@ -430,6 +430,7 @@ addListener('saveRandevuButton', 'click', () => saveNewRandevu(db, currentUserId
 
 addListener('saveTahsilatButton', 'click', () => saveNewTahsilat(db, currentUserId, appId));
 addListener('saveBorcButton', 'click', () => saveNewBorc(db, currentUserId, appId));
+addListener('btnDeleteStudent', 'click', () => deleteStudentFull(db, currentUserId, appId));
 
 window.renderOgrenciDetaySayfasi = (id, name) => renderOgrenciDetaySayfasi(db, currentUserId, appId, id, name);
 

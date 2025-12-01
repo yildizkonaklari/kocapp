@@ -28,7 +28,7 @@ const appId = "kocluk-sistemi";
 
 // --- ADMIN AYARLARI ---
 // GÜVENLİK: Buraya kendi admin e-posta adresinizi yazın.
-const ADMIN_EMAIL = "admin@kocluk.com"; 
+const ADMIN_EMAIL = "koc99@gmail.com"; 
 
 // --- 1. GİRİŞ VE YETKİ KONTROLÜ ---
 onAuthStateChanged(auth, (user) => {

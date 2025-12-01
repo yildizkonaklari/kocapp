@@ -460,17 +460,58 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
     });
 }
 
+// --- KAYIT FONKSİYONLARI (GÜNCELLENDİ) ---
 export async function saveNewStudent(db, currentUserId, appId) {
     const ad = document.getElementById('studentName').value.trim();
     const soyad = document.getElementById('studentSurname').value.trim();
     const sinif = document.getElementById('studentClass').value;
     const dersler = Array.from(document.querySelectorAll('#studentDersSecimiContainer input:checked')).map(cb => cb.value);
-    
     const alanSelect = document.querySelector('#studentOptionsContainer select');
     const alan = alanSelect ? alanSelect.value : null;
     
     if(!ad || !soyad || !sinif) { alert('Lütfen Ad, Soyad ve Sınıf bilgilerini girin.'); return; }
+
+    // --- LİMİT KONTROLÜ BAŞLANGIÇ ---
+    try {
+        // 1. Koçun limitini öğren
+        const profileRef = doc(db, "artifacts", appId, "users", currentUserId, "settings", "profile");
+        const profileSnap = await getDoc(profileRef);
+        let maxOgrenci = 10; // Varsayılan
+        if (profileSnap.exists() && profileSnap.data().maxOgrenci !== undefined) {
+            maxOgrenci = profileSnap.data().maxOgrenci;
+        }
+
+        // 2. Mevcut öğrenci sayısını öğren
+        const studentsColl = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim");
+        const snapshot = await getCountFromServer(studentsColl);
+        const currentCount = snapshot.data().count;
+
+        // 3. Kontrol
+        if (currentCount >= maxOgrenci) {
+            document.getElementById('addStudentModal').style.display = 'none'; // Modalı kapat
+            
+            // Uyarı Mesajı
+            if(confirm(`Paket limitiniz doldu! En fazla ${maxOgrenci} öğrenci kaydedebilirsiniz.\n\nSınırsız öğrenci eklemek için paketinizi yükseltmek ister misiniz?`)) {
+                // Paket sayfasına yönlendir (Menü butonunu tetikle)
+                const upgradeBtn = document.getElementById('nav-paketyukselt'); // Masaüstü
+                const mobileUpgradeBtn = document.querySelector('[data-page="paketyukselt"]'); // Mobil
+                
+                if(upgradeBtn && upgradeBtn.offsetParent !== null) upgradeBtn.click();
+                else if(mobileUpgradeBtn) mobileUpgradeBtn.click();
+                else alert("Paket Yükselt sayfasına menüden ulaşabilirsiniz.");
+            }
+            return; // Kaydı durdur
+        }
+
+    } catch (e) {
+        console.error("Limit kontrolü hatası:", e);
+        // Hata olsa bile kayda devam etmesin, güvenli olsun
+        alert("Sistem hatası. Lütfen sayfayı yenileyip tekrar deneyin.");
+        return;
+    }
+    // --- LİMİT KONTROLÜ BİTİŞ ---
     
+    // Kayıt İşlemi
     await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
         ad, soyad, sinif, 
         alan: alan, 

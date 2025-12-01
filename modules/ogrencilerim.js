@@ -4,6 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { activeListeners, formatDateTR, formatCurrency, renderDersSecimi } from './helpers.js';
+import { openReportModal } from './rapor.js';
 
 // =================================================================
 // 1. ÖĞRENCİ DETAY SAYFASI
@@ -16,6 +17,9 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         <div class="mb-6 flex justify-between items-center">
             <button onclick="document.getElementById('nav-ogrencilerim').click()" class="flex items-center text-sm text-gray-600 hover:text-purple-600 font-medium">
                 <i class="fa-solid fa-arrow-left mr-1"></i> Listeye Dön
+            </button>
+            <button id="btnCreateReport" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-200 transition-colors flex items-center">
+                <i class="fa-brands fa-whatsapp mr-2 text-lg"></i> Veli Raporu Oluştur
             </button>
         </div>
         
@@ -389,6 +393,8 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
         document.getElementById('studentOptionsContainer').innerHTML = '';
         document.getElementById('studentDersSecimiContainer').innerHTML = '';
         document.getElementById('addStudentModal').style.display = 'block';
+        document.getElementById('btnCreateReport').addEventListener('click', () => {
+        openReportModal(db, currentUserId, studentId, studentName);
     });
 
     document.getElementById('searchStudentInput').addEventListener('input', (e) => {

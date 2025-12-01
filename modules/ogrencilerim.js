@@ -310,10 +310,10 @@ async function loadOverdueHomeworks(db, uid, appId, sid) {
     }
 }
 
-// --- SEKME 2: KOÇLUK NOTLARI ---
+// --- SEKME 2: KOÇLUK NOTLARI (DÜZELTİLDİ) ---
 function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
-    if(!area) return;
+    if(!area) return; // Güvenlik
 
     area.innerHTML = `
         <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -345,23 +345,37 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
         const container = document.getElementById('noteList');
         if(snap.empty) { container.innerHTML = '<div class="text-center text-gray-400 py-10 flex flex-col items-center"><i class="fa-regular fa-note-sticky text-3xl mb-2 opacity-20"></i><p class="text-sm">Henüz not eklenmemiş.</p></div>'; return; }
         
-        container.innerHTML = snap.docs.map(doc => {
+        container.innerHTML = ''; // Temizle
+
+        snap.forEach(doc => {
             const d = doc.data();
-            return `
-                <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl relative group hover:shadow-md transition-all">
-                    <div class="flex items-start gap-3">
-                        <div class="mt-1 text-yellow-500"><i class="fa-solid fa-quote-left"></i></div>
-                        <div class="flex-1">
-                            <p class="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">${d.icerik}</p>
-                            <p class="text-[10px] text-gray-400 mt-2 flex items-center gap-1 font-medium"><i class="fa-regular fa-clock"></i> ${d.tarih?.toDate().toLocaleString()}</p>
-                        </div>
+            
+            // HTML Elementi Oluştur (String yerine createElement kullanarak event listener ekleyeceğiz)
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'p-4 bg-yellow-50 border border-yellow-100 rounded-xl relative group hover:shadow-md transition-all';
+            noteDiv.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="mt-1 text-yellow-500"><i class="fa-solid fa-quote-left"></i></div>
+                    <div class="flex-1">
+                        <p class="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">${d.icerik}</p>
+                        <p class="text-[10px] text-gray-400 mt-2 flex items-center gap-1 font-medium"><i class="fa-regular fa-clock"></i> ${d.tarih?.toDate().toLocaleString()}</p>
                     </div>
-                    <button class="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-sm" 
-                            onclick="if(confirm('Silinsin mi?')) deleteDoc(doc(db, 'artifacts', '${appId}', 'users', '${currentUserId}', 'ogrencilerim', '${studentId}', 'koclukNotlari', '${doc.id}'))">
-                        <i class="fa-solid fa-trash text-xs"></i>
-                    </button>
-                </div>`;
-        }).join('');
+                </div>
+                <button class="delete-note-btn absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-sm">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+            `;
+            
+            // Silme Butonuna Listener Ekle (Hata kaynağı burasıydı)
+            const btnDelete = noteDiv.querySelector('.delete-note-btn');
+            btnDelete.addEventListener('click', async () => {
+                if(confirm('Notu silmek istediğinize emin misiniz?')) {
+                    await deleteDoc(doc.ref);
+                }
+            });
+
+            container.appendChild(noteDiv);
+        });
     });
 }
 

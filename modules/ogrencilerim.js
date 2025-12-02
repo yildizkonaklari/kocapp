@@ -9,7 +9,6 @@ import { getAuth as getAuth2, createUserWithEmailAndPassword as createUser2, sig
 
 import { activeListeners, formatDateTR, formatCurrency, renderDersSecimi } from './helpers.js';
 
-// Config (Secondary App için tekrar lazım)
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -20,24 +19,87 @@ const firebaseConfig = {
 };
 
 // =================================================================
+// YARDIMCI: KİMLİK BİLGİLERİ MODALI (KOPYALANABİLİR)
+// =================================================================
+function showCredentialsModal(username, password, title = "İşlem Başarılı") {
+    // Varsa eskisi kaldır
+    const oldModal = document.getElementById('credentialModal');
+    if(oldModal) oldModal.remove();
+
+    const modalHtml = `
+    <div id="credentialModal" class="fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl transform transition-all scale-100">
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">${title}</h3>
+            <p class="text-sm text-gray-500 mb-6 text-center">Aşağıdaki bilgileri kopyalayıp öğrenciye iletin.</p>
+            
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 space-y-3">
+                <div>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Kullanıcı Adı</p>
+                    <div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2">
+                        <span class="font-mono text-indigo-600 font-bold select-all text-sm" id="resUser">${username}</span>
+                        <button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" onclick="navigator.clipboard.writeText('${username}')" title="Kopyala">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Şifre</p>
+                    <div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2">
+                        <span class="font-mono text-indigo-600 font-bold select-all text-sm" id="resPass">${password}</span>
+                        <button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" onclick="navigator.clipboard.writeText('${password}')" title="Kopyala">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnCopyAllCreds" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mb-3 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-share-nodes"></i> Tümünü Kopyala
+            </button>
+            <button onclick="document.getElementById('credentialModal').remove()" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2">
+                Kapat
+            </button>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Tümünü Kopyala Butonu İşlevi
+    document.getElementById('btnCopyAllCreds').onclick = () => {
+        const textToCopy = `Merhaba! Koçluk sistemi giriş bilgilerin:\n\n👤 Kullanıcı Adı: ${username}\n🔑 Şifre: ${password}\n\nUygulamayı indirip giriş yapabilirsin. Başarılar!`;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            const btn = document.getElementById('btnCopyAllCreds');
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Kopyalandı!';
+            btn.classList.replace('bg-indigo-600', 'bg-green-600');
+            btn.classList.replace('shadow-indigo-200', 'shadow-green-200');
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Tümünü Kopyala';
+                btn.classList.replace('bg-green-600', 'bg-indigo-600');
+                btn.classList.replace('shadow-green-200', 'shadow-indigo-200');
+            }, 2000);
+        });
+    };
+}
+
+// =================================================================
 // YENİ: ÖĞRENCİ HESABI OLUŞTURUCU (SECONDARY APP)
 // =================================================================
 async function createStudentAccount(username, password) {
-    // Mevcut oturumu bozmamak için geçici bir app başlatıyoruz
     const secondaryApp = initializeApp2(firebaseConfig, "StudentCreator");
     const secondaryAuth = getAuth2(secondaryApp);
     
     try {
-        const email = `${username}@koc.com`; // Sanal E-posta
+        const email = `${username}@koc.com`; 
         const userCredential = await createUser2(secondaryAuth, email, password);
         const uid = userCredential.user.uid;
-        
-        // İşi bitince oturumu kapat (ki koçun oturumu karışmasın)
         await signOut2(secondaryAuth);
         return uid;
     } catch (error) {
         console.error("Hesap oluşturma hatası:", error);
-        throw error; // Hatayı yukarı fırlat
+        throw error; 
     }
 }
 
@@ -54,10 +116,10 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
                 <i class="fa-solid fa-arrow-left mr-1"></i> Listeye Dön
             </button>
             <div class="flex gap-2">
-                <button id="btnResetAccess" class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-200 transition-colors flex items-center">
+                <button id="btnResetAccess" class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-200 transition-colors flex items-center shadow-sm border border-yellow-200">
                     <i class="fa-solid fa-key mr-2"></i> Şifre Yenile
                 </button>
-                <button id="btnCreateReport" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-200 transition-colors flex items-center">
+                <button id="btnCreateReport" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-200 transition-colors flex items-center shadow-sm border border-green-200">
                     <i class="fa-brands fa-whatsapp mr-2 text-lg"></i> Rapor Oluştur
                 </button>
             </div>
@@ -77,7 +139,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
                     </p>
                     <p id="studentDetailArea" class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded hidden"></p>
                     
-                    <p id="studentUsernameDisplay" class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded mt-1 cursor-pointer" title="Tıkla Kopyala">
+                    <p id="studentUsernameDisplay" class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded mt-1 cursor-pointer hover:bg-indigo-100 transition-colors border border-indigo-100" title="Tıkla Kopyala">
                         <i class="fa-solid fa-user-lock mr-1"></i> <span id="uNameText">Yükleniyor...</span>
                     </p>
                 </div>
@@ -101,18 +163,18 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         <div class="h-24"></div>
     `;
 
-    // Listenerlar
+    // Event Listeners
     document.getElementById('btnEditStudent').addEventListener('click', () => showEditStudentModal(db, currentUserId, appId, studentId));
     document.getElementById('btnMsgStudent').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
     
-    // Şifre Yenileme Butonu
     document.getElementById('btnResetAccess').addEventListener('click', () => resetStudentAccess(db, currentUserId, appId, studentId, studentName));
     
-    // Kullanıcı Adı Kopyalama
     document.getElementById('studentUsernameDisplay').addEventListener('click', function() {
         const txt = document.getElementById('uNameText').textContent;
-        navigator.clipboard.writeText(txt);
-        alert("Kullanıcı adı kopyalandı: " + txt);
+        if(txt && txt !== 'Yükleniyor...') {
+            navigator.clipboard.writeText(txt);
+            alert("Kullanıcı adı kopyalandı!");
+        }
     });
 
     const btnReport = document.getElementById('btnCreateReport');
@@ -122,7 +184,6 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         });
     }
 
-    // Tab Geçişleri (Aynı)
     const tabBtns = document.querySelectorAll('.tab-button');
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -130,6 +191,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
             tabBtns.forEach(b => { b.classList.remove('active', 'text-purple-600', 'border-purple-600'); b.classList.add('text-gray-500'); });
             e.currentTarget.classList.add('active', 'text-purple-600', 'border-purple-600');
             e.currentTarget.classList.remove('text-gray-500');
+            
             const tab = e.currentTarget.dataset.tab;
             const contentArea = document.getElementById('tabContentArea');
             if (contentArea) {
@@ -142,6 +204,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
     renderOzetTab(db, currentUserId, appId, studentId);
 }
 
+// --- SEKME 1: ÖZET & ANALİZ ---
 async function renderOzetTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
     if (!area) return; 
@@ -584,12 +647,12 @@ export async function saveNewStudent(db, currentUserId, appId) {
     
     if(!ad || !soyad || !sinif) { alert('Lütfen Ad, Soyad ve Sınıf bilgilerini girin.'); return; }
 
-    // Limit Kontrolü (Önceki gibi)
+    // Limit Kontrolü
     try {
         const profileRef = doc(db, "artifacts", appId, "users", currentUserId, "settings", "profile");
         const profileSnap = await getDoc(profileRef);
         let maxOgrenci = 10; 
-        if (profileSnap.exists() && profileSnap.data().maxOgrenci !== undefined) maxOgrenci = profileSnap.data().maxOgrenci;
+        if (profileSnap.exists() && profileSnap.data().maxOgrenci !== undefined) { maxOgrenci = profileSnap.data().maxOgrenci; }
         const studentsColl = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim");
         const snapshot = await getCountFromServer(studentsColl);
         if (snapshot.data().count >= maxOgrenci) {
@@ -602,124 +665,37 @@ export async function saveNewStudent(db, currentUserId, appId) {
         }
     } catch (e) { console.error("Limit hatası:", e); return; }
 
-    // 1. Kullanıcı Adı ve Şifre Oluştur
+    // Kullanıcı Oluşturma (Secondary App)
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    // Türkçe karakterleri İngilizceye çevir ve küçük harf yap
     const cleanName = ad.toLowerCase().replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c').replace(/\s/g,'');
     const cleanSurname = soyad.toLowerCase().replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c').replace(/\s/g,'');
     const username = `${cleanName}.${cleanSurname}.${randomSuffix}`;
-    const password = Math.random().toString(36).slice(-8); // Rastgele 8 karakter şifre
-
-    try {
-        // Buton durumunu değiştir
-        const btnSave = document.getElementById('saveStudentButton');
-        const originalText = btnSave.textContent;
-        btnSave.disabled = true;
-        btnSave.textContent = "Hesap Oluşturuluyor...";
-
-        // 2. Auth Hesabı Oluştur (Secondary App ile)
-        const studentUid = await createStudentAccount(username, password);
-
-        // 3. Firestore'a Öğrenci Verisini Ekle (Koçun Koleksiyonuna)
-        const studentRef = await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
-            ad, soyad, sinif, 
-            alan: alan, 
-            takipDersleri: dersler, 
-            olusturmaTarihi: serverTimestamp(), 
-            toplamBorc: 0, 
-            toplamOdenen: 0,
-            username: username, // Kullanıcı adını sakla
-            authUid: studentUid // Auth ID'sini sakla (ileride silmek için gerekebilir)
-        });
-
-        // 4. Öğrenci Profilini Oluştur (Bağlantı Kur)
-        await setDoc(doc(db, "artifacts", appId, "users", studentUid, "settings", "profile"), {
-            email: `${username}@koc.com`,
-            kocId: currentUserId,
-            rol: "ogrenci",
-            linkedDocId: studentRef.id, // Koçun oluşturduğu dökümana bağla
-            kayitTarihi: serverTimestamp()
-        });
-
-        document.getElementById('addStudentModal').style.display = 'none';
-        
-        // 5. Bilgileri Göster
-        alert(`✅ Öğrenci Başarıyla Kaydedildi!\n\n👤 Kullanıcı Adı: ${username}\n🔑 Şifre: ${password}\n\nLütfen bu bilgileri öğrenciye iletin.`);
-
-    } catch (error) {
-        console.error("Kayıt hatası:", error);
-        alert("Öğrenci hesabı oluşturulurken hata oluştu: " + error.message);
-    } finally {
-        const btnSave = document.getElementById('saveStudentButton');
-        btnSave.disabled = false;
-        btnSave.textContent = "Kaydet";
-    }
-}
-
-// --- YENİ: ŞİFRE YENİLEME / ERİŞİM KURTARMA ---
-async function resetStudentAccess(db, coachId, appId, studentDocId, studentName) {
-    if(!confirm(`${studentName} için yeni bir giriş şifresi oluşturulacak. Eski şifre geçersiz olacak. Devam edilsin mi?`)) return;
-
-    // Yeni Credential Oluştur
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const baseName = studentName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const username = `${baseName}.${randomSuffix}`; // Yeni kullanıcı adı (çakışmayı önlemek için)
     const password = Math.random().toString(36).slice(-8);
 
     try {
-        // 1. Yeni Auth Hesabı
-        const newUid = await createStudentAccount(username, password);
+        const btnSave = document.getElementById('saveStudentButton');
+        btnSave.disabled = true; btnSave.textContent = "Hesap Oluşturuluyor...";
 
-        // 2. Yeni Profil Bağlantısı
-        await setDoc(doc(db, "artifacts", appId, "users", newUid, "settings", "profile"), {
-            email: `${username}@koc.com`,
-            kocId: coachId,
-            rol: "ogrenci",
-            linkedDocId: studentDocId, // ESKİ VERİLERE BAĞLA
-            kayitTarihi: serverTimestamp()
+        const studentUid = await createStudentAccount(username, password);
+
+        const studentRef = await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
+            ad, soyad, sinif, alan: alan, takipDersleri: dersler, olusturmaTarihi: serverTimestamp(), toplamBorc: 0, toplamOdenen: 0, username: username, authUid: studentUid
         });
 
-        // 3. Öğrenci Kartını Güncelle (Yeni username)
-        await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), {
-            username: username,
-            authUid: newUid
+        await setDoc(doc(db, "artifacts", appId, "users", studentUid, "settings", "profile"), {
+            email: `${username}@koc.com`, kocId: currentUserId, rol: "ogrenci", linkedDocId: studentRef.id, kayitTarihi: serverTimestamp()
         });
 
-        // UI Güncelle
-        document.getElementById('uNameText').textContent = username;
-        
-        alert(`✅ Erişim Yenilendi!\n\n👤 Yeni Kullanıcı Adı: ${username}\n🔑 Yeni Şifre: ${password}\n\nÖğrenci bu bilgilerle eski verilerine erişebilir.`);
+        document.getElementById('addStudentModal').style.display = 'none';
+        showCredentialsModal(username, password, "Öğrenci Başarıyla Kaydedildi");
 
     } catch (error) {
-        console.error("Yenileme hatası:", error);
-        alert("İşlem başarısız: " + error.message);
+        console.error("Kayıt hatası:", error);
+        alert("Hata: " + error.message);
+    } finally {
+        const btnSave = document.getElementById('saveStudentButton');
+        btnSave.disabled = false; btnSave.textContent = "Kaydet";
     }
-}
-function showEditStudentModal(db, currentUserId, appId, studentId) {
-    const modal = document.getElementById('editStudentModal');
-    
-    getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId)).then(snap => {
-        if(snap.exists()) {
-            const s = snap.data();
-            document.getElementById('editStudentId').value = studentId;
-            document.getElementById('editStudentName').value = s.ad;
-            document.getElementById('editStudentSurname').value = s.soyad;
-            
-            const classSelect = document.getElementById('editStudentClass');
-            classSelect.value = s.sinif;
-            
-            classSelect.dispatchEvent(new Event('change'));
-
-            setTimeout(() => {
-                renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
-                if (s.alan) {
-                    const alanSelect = document.querySelector('#editStudentOptionsContainer select');
-                    if (alanSelect) alanSelect.value = s.alan;
-                }
-                modal.style.display = 'block';
-            }, 100);
-        }
-    });
 }
 export async function saveStudentChanges(db, currentUserId, appId) {
     const id = document.getElementById('editStudentId').value;
@@ -731,9 +707,7 @@ export async function saveStudentChanges(db, currentUserId, appId) {
     const alan = alanSelect ? alanSelect.value : null;
     
     await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), {
-        ad, soyad, sinif, 
-        alan: alan, 
-        takipDersleri: dersler
+        ad, soyad, sinif, alan: alan, takipDersleri: dersler
     });
     document.getElementById('editStudentModal').style.display = 'none';
 }
@@ -741,20 +715,15 @@ export async function saveStudentChanges(db, currentUserId, appId) {
 export async function deleteStudentFull(db, currentUserId, appId) {
     const studentId = document.getElementById('editStudentId').value;
     if (!studentId) return;
-
-    if (!confirm("DİKKAT! Bu öğrenci ve ona ait TÜM VERİLER kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Onaylıyor musunuz?")) {
-        return;
-    }
-
+    if (!confirm("DİKKAT! Bu öğrenci ve ona ait TÜM VERİLER kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Onaylıyor musunuz?")) return;
     const btn = document.getElementById('btnDeleteStudent');
     const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Siliniyor...';
-
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Siliniyor...';
     try {
         const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
+        // Auth kullanıcı silme işlemi client-side yapılamaz (admin sdk gerekir), bu yüzden sadece verileri siliyoruz.
+        // Auth yetim kalacak ama linkedDocId silindiği için giriş yapamaz.
         const subCollections = ['odevler', 'denemeler', 'hedefler', 'soruTakibi', 'koclukNotlari', 'mesajlar'];
-        
         for (const subColName of subCollections) {
             const subColRef = collection(studentRef, subColName);
             const snapshot = await getDocs(subColRef);
@@ -764,16 +733,47 @@ export async function deleteStudentFull(db, currentUserId, appId) {
                 await batch.commit();
             }
         }
-
         await deleteDoc(studentRef);
         document.getElementById('editStudentModal').style.display = 'none';
         alert("Öğrenci silindi.");
         document.getElementById('nav-ogrencilerim').click(); 
-    } catch (error) {
-        console.error("Silme hatası:", error);
-        alert("Hata oluştu.");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    }
+    } catch (error) { console.error("Silme hatası:", error); alert("Hata oluştu."); } 
+    finally { btn.disabled = false; btn.innerHTML = originalText; }
+}
+
+async function resetStudentAccess(db, coachId, appId, studentDocId, studentName) {
+    if(!confirm(`${studentName} için yeni bir giriş şifresi oluşturulacak. Eski şifre geçersiz olacak. Devam edilsin mi?`)) return;
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const baseName = studentName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const username = `${baseName}.${randomSuffix}`;
+    const password = Math.random().toString(36).slice(-8);
+    try {
+        const newUid = await createStudentAccount(username, password);
+        await setDoc(doc(db, "artifacts", appId, "users", newUid, "settings", "profile"), {
+            email: `${username}@koc.com`, kocId: coachId, rol: "ogrenci", linkedDocId: studentDocId, kayitTarihi: serverTimestamp()
+        });
+        await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { username: username, authUid: newUid });
+        document.getElementById('uNameText').textContent = username;
+        showCredentialsModal(username, password, "Erişim Bilgileri Yenilendi");
+    } catch (error) { console.error("Yenileme hatası:", error); alert("İşlem başarısız: " + error.message); }
+}
+
+// YARDIMCI: Kullanıcı Oluşturma (Secondary App)
+async function createStudentAccount(username, password) {
+    const secondaryApp = initializeApp2(firebaseConfig, "StudentCreator");
+    const secondaryAuth = getAuth2(secondaryApp);
+    try {
+        const email = `${username}@koc.com`; 
+        const userCredential = await createUser2(secondaryAuth, email, password);
+        const uid = userCredential.user.uid;
+        await signOut2(secondaryAuth);
+        return uid;
+    } catch (error) { console.error("Hesap oluşturma hatası:", error); throw error; }
+}
+
+// YARDIMCI: KİMLİK BİLGİLERİ MODALI
+function showCredentialsModal(username, password, title) {
+    const oldModal = document.getElementById('credentialModal'); if(oldModal) oldModal.remove();
+    const modalHtml = `<div id="credentialModal" class="fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300"><div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl transform transition-all scale-100"><div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm"><i class="fa-solid fa-check"></i></div><h3 class="text-xl font-bold text-gray-800 mb-2 text-center">${title}</h3><p class="text-sm text-gray-500 mb-6 text-center">Bilgileri kopyalayıp öğrenciye iletin.</p><div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 space-y-3"><div><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Kullanıcı Adı</p><div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2"><span class="font-mono text-indigo-600 font-bold select-all text-sm">${username}</span><button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" onclick="navigator.clipboard.writeText('${username}')" title="Kopyala"><i class="fa-regular fa-copy"></i></button></div></div><div><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Şifre</p><div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2"><span class="font-mono text-indigo-600 font-bold select-all text-sm">${password}</span><button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" onclick="navigator.clipboard.writeText('${password}')" title="Kopyala"><i class="fa-regular fa-copy"></i></button></div></div></div><button onclick="document.getElementById('credentialModal').remove()" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2">Kapat</button></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }

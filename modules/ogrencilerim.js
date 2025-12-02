@@ -550,17 +550,14 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
                         data-id="${doc.id}">
                         <i class="fa-solid fa-trash text-xs"></i>
                     </button>
-                </div>`;
-        }).join('');
-
-        // Event delegation yerine direkt butonlara listener ekleyelim (HTML string olduğu için)
-        container.querySelectorAll('.delete-note-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
+             noteDiv.querySelector('.delete-note-btn').addEventListener('click', async () => {
                 if(confirm('Silinsin mi?')) {
-                    const noteId = btn.dataset.id;
-                    await deleteDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "koclukNotlari", noteId));
+                    // 'doc' değişkeni closure içinde doğru referansı tutuyor
+                    await deleteDoc(doc.ref); 
                 }
             });
+
+            container.appendChild(noteDiv);
         });
     });
 }
@@ -617,26 +614,40 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
             const bakiye = (s.toplamBorc || 0) - (s.toplamOdenen || 0);
             html += `
                 <tr class="hover:bg-purple-50 cursor-pointer transition-colors group" onclick="window.renderOgrenciDetaySayfasi('${doc.id}', '${s.ad} ${s.soyad}')">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 flex items-center justify-center font-bold mr-3 border border-white shadow-sm group-hover:scale-110 transition-transform">${s.ad[0]}${s.soyad[0]}</div>
-                            <div class="text-sm font-bold text-gray-800">${s.ad} ${s.soyad}</div>
-                        </div>
-                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap"><div class="flex items-center"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 flex items-center justify-center font-bold mr-3 border border-white shadow-sm group-hover:scale-110 transition-transform">${s.ad[0]}${s.soyad[0]}</div><div class="text-sm font-bold text-gray-800">${s.ad} ${s.soyad}</div></div></td>
                     <td class="px-6 py-4 whitespace-nowrap"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">${s.sinif}</span></td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${bakiye > 0 ? 'text-red-500' : 'text-green-600'}">${formatCurrency(bakiye)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-600 transition-colors"></i>
-                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-600 transition-colors"></i></td>
                 </tr>`;
         });
         html += `</tbody></table></div>`;
         container.innerHTML = html;
     });
 }
-// =================================================================
-// 2. YENİ ÖĞRENCİ EKLEME (GÜNCELLENDİ: OTO HESAP AÇMA)
-// =================================================================
+
+function showEditStudentModal(db, currentUserId, appId, studentId) {
+    const modal = document.getElementById('editStudentModal');
+    getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId)).then(snap => {
+        if(snap.exists()) {
+            const s = snap.data();
+            document.getElementById('editStudentId').value = studentId;
+            document.getElementById('editStudentName').value = s.ad;
+            document.getElementById('editStudentSurname').value = s.soyad;
+            const classSelect = document.getElementById('editStudentClass');
+            classSelect.value = s.sinif;
+            classSelect.dispatchEvent(new Event('change'));
+            setTimeout(() => {
+                renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
+                if (s.alan) { const alanSelect = document.querySelector('#editStudentOptionsContainer select'); if (alanSelect) alanSelect.value = s.alan; }
+                modal.style.display = 'block';
+            }, 100);
+        }
+    });
+}
+
+// --- KAYIT & ŞİFRE & SİLME FONKSİYONLARI ---
+// (Bu fonksiyonlar dışarıdan import edileceği için export ekliyoruz)
+
 export async function saveNewStudent(db, currentUserId, appId) {
     const ad = document.getElementById('studentName').value.trim();
     const soyad = document.getElementById('studentSurname').value.trim();
@@ -697,6 +708,7 @@ export async function saveNewStudent(db, currentUserId, appId) {
         btnSave.disabled = false; btnSave.textContent = "Kaydet";
     }
 }
+
 export async function saveStudentChanges(db, currentUserId, appId) {
     const id = document.getElementById('editStudentId').value;
     const ad = document.getElementById('editStudentName').value.trim();

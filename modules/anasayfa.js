@@ -51,7 +51,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
             </div>
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-regular fa-calendar-check"></i></div>
-                <div><p class="text-sm text-gray-500 font-medium">Bugünkü Randevular</p><h3 class="text-2xl font-bold text-gray-800" id="dashTodayAppt">...</h3></div>
+                <div><p class="text-sm text-gray-500 font-medium">Bugünkü Seanslar</p><h3 class="text-2xl font-bold text-gray-800" id="dashTodayAppt">...</h3></div>
             </div>
             
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">

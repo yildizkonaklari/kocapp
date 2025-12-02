@@ -760,23 +760,3 @@ async function resetStudentAccess(db, coachId, appId, studentDocId, studentName)
         showCredentialsModal(username, password, "Erişim Bilgileri Yenilendi");
     } catch (error) { console.error("Yenileme hatası:", error); alert("İşlem başarısız: " + error.message); }
 }
-
-// YARDIMCI: Kullanıcı Oluşturma (Secondary App)
-async function createStudentAccount(username, password) {
-    const secondaryApp = initializeApp2(firebaseConfig, "StudentCreator");
-    const secondaryAuth = getAuth2(secondaryApp);
-    try {
-        const email = `${username}@koc.com`; 
-        const userCredential = await createUser2(secondaryAuth, email, password);
-        const uid = userCredential.user.uid;
-        await signOut2(secondaryAuth);
-        return uid;
-    } catch (error) { console.error("Hesap oluşturma hatası:", error); throw error; }
-}
-
-// YARDIMCI: KİMLİK BİLGİLERİ MODALI
-function showCredentialsModal(username, password, title) {
-    const oldModal = document.getElementById('credentialModal'); if(oldModal) oldModal.remove();
-    const modalHtml = `<div id="credentialModal" class="fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300"><div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl transform transition-all scale-100"><div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm"><i class="fa-solid fa-check"></i></div><h3 class="text-xl font-bold text-gray-800 mb-2 text-center">${title}</h3><p class="text-sm text-gray-500 mb-6 text-center">Bilgileri kopyalayıp öğrenciye iletin.</p><div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 space-y-3"><div><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Kullanıcı Adı</p><div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2"><span class="font-mono text-indigo-600 font-bold select-all text-sm">${username}</span><button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" onclick="navigator.clipboard.writeText('${username}')" title="Kopyala"><i class="fa-regular fa-copy"></i></button></div></div><div><p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Şifre</p><div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2"><span class="font-mono text-indigo-600 font-bold select-all text-sm">${password}</span><button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" onclick="navigator.clipboard.writeText('${password}')" title="Kopyala"><i class="fa-regular fa-copy"></i></button></div></div></div><button onclick="document.getElementById('credentialModal').remove()" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2">Kapat</button></div></div>`;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}

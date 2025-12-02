@@ -9,6 +9,7 @@ import { getAuth as getAuth2, createUserWithEmailAndPassword as createUser2, sig
 
 import { activeListeners, formatDateTR, formatCurrency, renderDersSecimi } from './helpers.js';
 
+// Config (Secondary App için tekrar lazım)
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -17,7 +18,6 @@ const firebaseConfig = {
   messagingSenderId: "784379379600",
   appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
 };
-
 // =================================================================
 // YARDIMCI: KİMLİK BİLGİLERİ MODALI (KOPYALANABİLİR)
 // =================================================================
@@ -83,23 +83,25 @@ function showCredentialsModal(username, password, title = "İşlem Başarılı")
         });
     };
 }
-
 // =================================================================
 // YENİ: ÖĞRENCİ HESABI OLUŞTURUCU (SECONDARY APP)
 // =================================================================
 async function createStudentAccount(username, password) {
+    // Mevcut oturumu bozmamak için geçici bir app başlatıyoruz
     const secondaryApp = initializeApp2(firebaseConfig, "StudentCreator");
     const secondaryAuth = getAuth2(secondaryApp);
     
     try {
-        const email = `${username}@koc.com`; 
+        const email = `${username}@koc.com`; // Sanal E-posta
         const userCredential = await createUser2(secondaryAuth, email, password);
         const uid = userCredential.user.uid;
+        
+        // İşi bitince oturumu kapat (ki koçun oturumu karışmasın)
         await signOut2(secondaryAuth);
         return uid;
     } catch (error) {
         console.error("Hesap oluşturma hatası:", error);
-        throw error; 
+        throw error; // Hatayı yukarı fırlat
     }
 }
 
@@ -116,10 +118,10 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
                 <i class="fa-solid fa-arrow-left mr-1"></i> Listeye Dön
             </button>
             <div class="flex gap-2">
-                <button id="btnResetAccess" class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-200 transition-colors flex items-center shadow-sm border border-yellow-200">
+                <button id="btnResetAccess" class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-200 transition-colors flex items-center">
                     <i class="fa-solid fa-key mr-2"></i> Şifre Yenile
                 </button>
-                <button id="btnCreateReport" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-200 transition-colors flex items-center shadow-sm border border-green-200">
+                <button id="btnCreateReport" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-200 transition-colors flex items-center">
                     <i class="fa-brands fa-whatsapp mr-2 text-lg"></i> Rapor Oluştur
                 </button>
             </div>
@@ -139,7 +141,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
                     </p>
                     <p id="studentDetailArea" class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded hidden"></p>
                     
-                    <p id="studentUsernameDisplay" class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded mt-1 cursor-pointer hover:bg-indigo-100 transition-colors border border-indigo-100" title="Tıkla Kopyala">
+                    <p id="studentUsernameDisplay" class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded mt-1 cursor-pointer" title="Tıkla Kopyala">
                         <i class="fa-solid fa-user-lock mr-1"></i> <span id="uNameText">Yükleniyor...</span>
                     </p>
                 </div>
@@ -163,18 +165,18 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         <div class="h-24"></div>
     `;
 
-    // Event Listeners
+    // Listenerlar
     document.getElementById('btnEditStudent').addEventListener('click', () => showEditStudentModal(db, currentUserId, appId, studentId));
     document.getElementById('btnMsgStudent').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
     
+    // Şifre Yenileme Butonu
     document.getElementById('btnResetAccess').addEventListener('click', () => resetStudentAccess(db, currentUserId, appId, studentId, studentName));
     
+    // Kullanıcı Adı Kopyalama
     document.getElementById('studentUsernameDisplay').addEventListener('click', function() {
         const txt = document.getElementById('uNameText').textContent;
-        if(txt && txt !== 'Yükleniyor...') {
-            navigator.clipboard.writeText(txt);
-            alert("Kullanıcı adı kopyalandı!");
-        }
+        navigator.clipboard.writeText(txt);
+        alert("Kullanıcı adı kopyalandı: " + txt);
     });
 
     const btnReport = document.getElementById('btnCreateReport');
@@ -184,6 +186,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         });
     }
 
+    // Tab Geçişleri (Aynı)
     const tabBtns = document.querySelectorAll('.tab-button');
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -191,7 +194,6 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
             tabBtns.forEach(b => { b.classList.remove('active', 'text-purple-600', 'border-purple-600'); b.classList.add('text-gray-500'); });
             e.currentTarget.classList.add('active', 'text-purple-600', 'border-purple-600');
             e.currentTarget.classList.remove('text-gray-500');
-            
             const tab = e.currentTarget.dataset.tab;
             const contentArea = document.getElementById('tabContentArea');
             if (contentArea) {
@@ -204,7 +206,6 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
     renderOzetTab(db, currentUserId, appId, studentId);
 }
 
-// --- SEKME 1: ÖZET & ANALİZ ---
 async function renderOzetTab(db, currentUserId, appId, studentId) {
     const area = document.getElementById('tabContentArea');
     if (!area) return; 
@@ -535,36 +536,37 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
         const container = document.getElementById('noteList');
         if(snap.empty) { container.innerHTML = '<div class="text-center text-gray-400 py-10 flex flex-col items-center"><i class="fa-regular fa-note-sticky text-3xl mb-2 opacity-20"></i><p class="text-sm">Henüz not eklenmemiş.</p></div>'; return; }
         
-        container.innerHTML = snap.docs.map(doc => {
+        container.innerHTML = ''; 
+        snap.forEach(doc => {
             const d = doc.data();
-            return `
-                <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl relative group hover:shadow-md transition-all">
-                    <div class="flex items-start gap-3">
-                        <div class="mt-1 text-yellow-500"><i class="fa-solid fa-quote-left"></i></div>
-                        <div class="flex-1">
-                            <p class="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">${d.icerik}</p>
-                            <p class="text-[10px] text-gray-400 mt-2 flex items-center gap-1 font-medium"><i class="fa-regular fa-clock"></i> ${d.tarih?.toDate().toLocaleString()}</p>
-                        </div>
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'p-4 bg-yellow-50 border border-yellow-100 rounded-xl relative group hover:shadow-md transition-all';
+            noteDiv.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="mt-1 text-yellow-500"><i class="fa-solid fa-quote-left"></i></div>
+                    <div class="flex-1">
+                        <p class="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">${d.icerik}</p>
+                        <p class="text-[10px] text-gray-400 mt-2 flex items-center gap-1 font-medium"><i class="fa-regular fa-clock"></i> ${d.tarih?.toDate().toLocaleString()}</p>
                     </div>
-                    <button class="delete-note-btn absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-sm" 
+                </div>
+                <button class="delete-note-btn absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-sm" 
                         data-id="${doc.id}">
-                        <i class="fa-solid fa-trash text-xs"></i>
-                    </button>
-                </div>`;
-        }).join('');
-
-        // Event delegation yerine direkt butonlara listener ekleyelim (HTML string olduğu için)
-        container.querySelectorAll('.delete-note-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+            `;
+            
+            // DÜZELTİLEN KISIM: addEventListener kullanımı
+            noteDiv.querySelector('.delete-note-btn').addEventListener('click', async () => {
                 if(confirm('Silinsin mi?')) {
-                    const noteId = btn.dataset.id;
-                    await deleteDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "koclukNotlari", noteId));
+                    // 'doc' değişkeni closure içinde doğru referansı tutuyor
+                    await deleteDoc(doc.ref); 
                 }
             });
+
+            container.appendChild(noteDiv);
         });
     });
 }
-
 // =================================================================
 // 2. ÖĞRENCİ LİSTESİ (SAYFA)
 // =================================================================
@@ -697,6 +699,7 @@ export async function saveNewStudent(db, currentUserId, appId) {
         btnSave.disabled = false; btnSave.textContent = "Kaydet";
     }
 }
+
 export async function saveStudentChanges(db, currentUserId, appId) {
     const id = document.getElementById('editStudentId').value;
     const ad = document.getElementById('editStudentName').value.trim();

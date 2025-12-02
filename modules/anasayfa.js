@@ -35,7 +35,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     mainContentArea.innerHTML = `
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg mb-8 flex justify-between items-center">
             <div>
-                <h2 class="text-2xl font-bold mb-1">Hoş geldin, Hocam! 👋</h2>
+                <h2 class="text-2xl font-bold mb-1">Hoş geldin, Koç! 👋</h2>
                 <p class="text-purple-100 text-sm">Bugün öğrencilerinin başarısı için harika bir gün.</p>
             </div>
             <div class="hidden md:block text-right">

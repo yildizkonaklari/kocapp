@@ -721,50 +721,6 @@ function showEditStudentModal(db, currentUserId, appId, studentId) {
         }
     });
 }
-
-export async function saveNewStudent(db, currentUserId, appId) {
-    const ad = document.getElementById('studentName').value.trim();
-    const soyad = document.getElementById('studentSurname').value.trim();
-    const sinif = document.getElementById('studentClass').value;
-    const dersler = Array.from(document.querySelectorAll('#studentDersSecimiContainer input:checked')).map(cb => cb.value);
-    const alanSelect = document.querySelector('#studentOptionsContainer select');
-    const alan = alanSelect ? alanSelect.value : null;
-    
-    if(!ad || !soyad || !sinif) { alert('Lütfen Ad, Soyad ve Sınıf bilgilerini girin.'); return; }
-    
-    try {
-        const profileRef = doc(db, "artifacts", appId, "users", currentUserId, "settings", "profile");
-        const profileSnap = await getDoc(profileRef);
-        let maxOgrenci = 10; 
-        if (profileSnap.exists() && profileSnap.data().maxOgrenci !== undefined) {
-            maxOgrenci = profileSnap.data().maxOgrenci;
-        }
-        const studentsColl = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim");
-        const snapshot = await getCountFromServer(studentsColl);
-        const currentCount = snapshot.data().count;
-
-        if (currentCount >= maxOgrenci) {
-            document.getElementById('addStudentModal').style.display = 'none'; 
-            const msg = "Paket limitiniz doldu! En fazla " + maxOgrenci + " öğrenci kaydedebilirsiniz.\n\nPaketinizi yükseltmek ister misiniz?";
-            if(confirm(msg)) {
-                const upgradeBtn = document.getElementById('nav-paketyukselt');
-                if(upgradeBtn) upgradeBtn.click();
-            }
-            return; 
-        }
-    } catch (e) { console.error("Limit kontrol hatası:", e); return; }
-
-    await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
-        ad, soyad, sinif, 
-        alan: alan, 
-        takipDersleri: dersler, 
-        olusturmaTarihi: serverTimestamp(), 
-        toplamBorc: 0, 
-        toplamOdenen: 0
-    });
-    document.getElementById('addStudentModal').style.display = 'none';
-}
-
 export async function saveStudentChanges(db, currentUserId, appId) {
     const id = document.getElementById('editStudentId').value;
     const ad = document.getElementById('editStudentName').value.trim();

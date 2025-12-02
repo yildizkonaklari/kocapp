@@ -53,10 +53,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
                 <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-regular fa-calendar-check"></i></div>
                 <div><p class="text-sm text-gray-500 font-medium">Bugünkü Randevular</p><h3 class="text-2xl font-bold text-gray-800" id="dashTodayAppt">...</h3></div>
             </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-calendar-times"></i></div>
-                <div><p class="text-sm text-gray-500 font-medium">Gecikmiş Ödevler</p><h3 class="text-2xl font-bold text-red-600" id="dashPendingOdev">...</h3></div>
-            </div>
+            
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
                 <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-hourglass-half"></i></div>
                 <div><p class="text-sm text-gray-500 font-medium">Onay Bekleyenler</p><h3 class="text-2xl font-bold text-yellow-600" id="dashPendingOnay">...</h3></div>
@@ -66,31 +63,17 @@ export function renderAnaSayfa(db, currentUserId, appId) {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <div class="lg:col-span-2 space-y-6">
-                
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                         <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                            Tamamlanan Ödevler <i class="fa-solid fa-circle-info text-gray-400 text-xs"></i>
+                            <span class="w-2 h-6 bg-orange-500 rounded-full"></span>Bugünkü Seans Programım
                         </h3>
-                        <span id="totalCompletedOdevCount" class="text-blue-600 font-bold text-sm">0 adet</span>
+                        <button id="btnDashGoAjanda" class="text-sm text-purple-600 hover:text-purple-800 font-medium">Tümünü Gör</button>
                     </div>
-                    <div id="accordionCompletedHomeworks" class="p-4 space-y-2 bg-gray-50 min-h-[100px]">
-                        <p class="text-center text-gray-400 text-sm py-4">Yükleniyor...</p>
+                    <div id="dashAgendaList" class="p-2 max-h-96 overflow-y-auto">
+                        <p class="text-center text-gray-400 py-8">Yükleniyor...</p>
                     </div>
                 </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                            Onay Bekleyenler <i class="fa-solid fa-circle-info text-gray-400 text-xs"></i>
-                        </h3>
-                        <span id="totalPendingCount" class="text-orange-600 font-bold text-sm">0 adet</span>
-                    </div>
-                    <div id="accordionPendingApprovals" class="p-4 space-y-2 bg-gray-50 min-h-[100px]">
-                        <p class="text-center text-gray-400 text-sm py-4">Yükleniyor...</p>
-                    </div>
-                </div>
-
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100">
                         <h3 class="font-bold text-gray-800 flex items-center gap-2">
@@ -114,18 +97,33 @@ export function renderAnaSayfa(db, currentUserId, appId) {
             </div>
 
             <div class="space-y-6">
-                
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                         <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                            <span class="w-2 h-6 bg-orange-500 rounded-full"></span>Bugünkü Seans Programım
+                            Tamamlanan Ödevler <i class="fa-solid fa-circle-info text-gray-400 text-xs"></i>
                         </h3>
-                        <button id="btnDashGoAjanda" class="text-sm text-purple-600 hover:text-purple-800 font-medium">Tümünü Gör</button>
+                        <span id="totalCompletedOdevCount" class="text-blue-600 font-bold text-sm">0 adet</span>
                     </div>
-                    <div id="dashAgendaList" class="p-2 max-h-96 overflow-y-auto">
-                        <p class="text-center text-gray-400 py-8">Yükleniyor...</p>
+                    <div id="accordionCompletedHomeworks" class="p-4 space-y-2 bg-gray-50 min-h-[100px]">
+                        <p class="text-center text-gray-400 text-sm py-4">Yükleniyor...</p>
                     </div>
                 </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                            Onay Bekleyenler <i class="fa-solid fa-circle-info text-gray-400 text-xs"></i>
+                        </h3>
+                        <span id="totalPendingCount" class="text-orange-600 font-bold text-sm">0 adet</span>
+                    </div>
+                    <div id="accordionPendingApprovals" class="p-4 space-y-2 bg-gray-50 min-h-[100px]">
+                        <p class="text-center text-gray-400 text-sm py-4">Yükleniyor...</p>
+                    </div>
+                </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-xl mr-4"><i class="fa-solid fa-calendar-times"></i></div>
+                <div><p class="text-sm text-gray-500 font-medium">Gecikmiş Ödevler</p><h3 class="text-2xl font-bold text-red-600" id="dashPendingOdev">...</h3></div>
+            </div>
 
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <h3 class="font-bold text-gray-800 mb-4">Hızlı İşlemler</h3>

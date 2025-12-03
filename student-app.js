@@ -13,13 +13,12 @@ window.addEventListener('error', (e) => {
 // =================================================================
 // 1. FİREBASE VE AYARLAR
 // =================================================================
-import { initializeApp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js)";
-import { getAuth, onAuthStateChanged, signOut } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js)";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, updateDoc, 
     serverTimestamp, orderBy, limit, deleteDoc, writeBatch, onSnapshot 
-} from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
-
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { formatDateTR } from './modules/helpers.js';
 
 const firebaseConfig = {

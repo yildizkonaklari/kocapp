@@ -112,6 +112,7 @@ async function initializeStudentApp(uid) {
             if (coachId && studentDocId) {
                 loadDashboardData(); 
                 enableHeaderIcons();
+                LoadNotifications();
             } else {
                 // Profil Hatası
                 alert("Hesabınızla ilgili bir sorun var. Lütfen koçunuzla iletişime geçin.");
@@ -235,7 +236,6 @@ function LoadNotifications() {
         });
         renderNotifications();
     });
-}
 
 function listenUnreadMessages() {
     listeners.unreadMsg = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), where("gonderen", "==", "koc"), where("okundu", "==", false)), (snap) => {

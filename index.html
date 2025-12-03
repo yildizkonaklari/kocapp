@@ -159,11 +159,17 @@
                     <button id="btnHeaderMessages" class="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-50 rounded-full transition-colors"><i class="fa-regular fa-envelope text-xl"></i><span id="headerUnreadMsgCount" class="hidden absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">0</span></button>
                     <div class="relative">
                         <button id="btnHeaderNotifications" class="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-gray-50 rounded-full transition-colors"><i class="fa-regular fa-bell text-xl"></i><span id="headerNotificationDot" class="hidden absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span></button>
-                        <div id="coachNotificationDropdown" class="hidden absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 max-h-[80vh] flex flex-col origin-top-right transition-all animate-scale-in">
-                            <div class="p-3 border-b bg-gray-50 flex justify-between items-center rounded-t-xl"><span class="text-xs font-bold text-gray-500 uppercase">Bildirimler</span><button id="btnCloseCoachNotifications" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button></div>
-                            <div id="coachNotificationList" class="overflow-y-auto max-h-80 p-1 space-y-1"><p class="text-center text-gray-400 text-xs py-8">Bildirim yok.</p></div>
-                        </div>
-                    </div>
+<div id="coachNotificationDropdown" class="hidden absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[92vw] bg-white rounded-xl shadow-2xl border border-gray-100 z-[9999] flex flex-col origin-top-right transition-all animate-scale-in mr-2 sm:mr-0">
+    <div class="p-3 border-b bg-gray-50 flex justify-between items-center rounded-t-xl">
+        <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Bildirimler</span>
+        <button id="btnCloseCoachNotifications" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition-colors">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    <div id="coachNotificationList" class="overflow-y-auto max-h-[60vh] p-1 space-y-1 scroll-smooth custom-scrollbar">
+        <p class="text-center text-gray-400 text-xs py-8">Bildirim yok.</p>
+    </div>
+</div>
                 </div>
             </header>
             <!-- İçerik -->

@@ -39,7 +39,6 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
     
     mainContentArea.innerHTML = `
         <div class="bg-white rounded-lg shadow border border-gray-200 mb-6">
-            <!-- Takvim Kontrolleri -->
             <div class="flex flex-col sm:flex-row justify-between items-center p-4 border-b border-gray-200 gap-2">
                 <div class="flex items-center gap-2">
                     <button id="prevMonth" class="p-2 text-gray-500 hover:text-purple-600 rounded-full bg-gray-50 hover:bg-gray-100"><i class="fa-solid fa-chevron-left"></i></button>
@@ -52,7 +51,6 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
                 </button>
             </div>
             
-            <!-- Takvim Başlıkları -->
             <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-center">
                 <div class="py-2 text-xs font-semibold text-gray-500">Pzt</div>
                 <div class="py-2 text-xs font-semibold text-gray-500">Sal</div>
@@ -63,14 +61,11 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
                 <div class="py-2 text-xs font-semibold text-gray-500 text-red-500">Paz</div>
             </div>
 
-            <!-- Takvim Izgarası -->
             <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr bg-gray-200 gap-px border-b border-gray-200">
-                <!-- JS ile dolacak -->
                 <div class="col-span-7 bg-white p-8 text-center text-gray-400">Takvim yükleniyor...</div>
             </div>
         </div>
         
-        <!-- Gelecek 7 Gün Listesi -->
         <div>
             <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <i class="fa-regular fa-calendar-check text-purple-600"></i> Gelecek 7 Gün
@@ -192,7 +187,7 @@ function drawCalendarGrid(year, month, appointments) {
     }
 }
 
-// --- GELECEK 7 GÜN LİSTESİ ---
+// --- GELECEK 7 GÜN LİSTESİ (DÜZELTİLDİ) ---
 function loadUpcomingWeek(db, uid, appId) {
     const listContainer = document.getElementById('upcomingListContainer');
     const today = new Date();
@@ -224,7 +219,7 @@ function loadUpcomingWeek(db, uid, appId) {
         listContainer.innerHTML = list.map(r => {
             const isDone = r.durum === 'tamamlandi';
             return `
-            <div class="bg-white p-3 rounded-lg border-l-4 ${isDone ? 'border-green-500' : 'border-blue-500'} shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick="document.getElementById('openEditRandevuFromList').dataset.id='${r.id}'; document.getElementById('openEditRandevuFromList').click();">
+            <div class="bg-white p-3 rounded-lg border-l-4 ${isDone ? 'border-green-500' : 'border-blue-500'} shadow-sm hover:shadow-md transition-shadow cursor-pointer randevu-card" data-id="${r.id}">
                 <div class="flex justify-between items-center mb-1">
                     <span class="font-bold text-gray-800 text-sm">${r.ogrenciAd}</span>
                     <span class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">${formatDateTR(r.tarih)}</span>
@@ -233,32 +228,20 @@ function loadUpcomingWeek(db, uid, appId) {
                     <span>${r.baslangic} - ${r.bitis}</span>
                     <span class="${isDone ? 'text-green-600 font-bold' : 'text-blue-600'}">${isDone ? 'Tamamlandı' : 'Gelecek'}</span>
                 </div>
-                <!-- Gizli tetikleyici -->
-                <button id="openEditRandevuFromList" class="hidden"></button> 
             </div>`;
         }).join('');
 
-        // Listeye tıklayınca detay açma (Event delegation)
-        listContainer.addEventListener('click', (e) => {
-            const card = e.target.closest('div[onclick]');
-            if(card) {
-               // ID'yi string'den parse etmek yerine direkt DOM'a onclick yazdık, 
-               // ama en temizi aşağıda manuel bağlamaktır.
-               // openEditRandevuModal fonksiyonu export edilmediği için app.js üzerinden değil,
-               // helper bir buton üzerinden tetiklemek daha kolay olabilir.
-               // Veya doğrudan openEditRandevuModal'ı burada çağırırız.
-            }
+        // Tıklama olaylarını güvenli şekilde bağla
+        listContainer.querySelectorAll('.randevu-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = card.dataset.id; // ID'yi data attribute'dan al
+                if (id) openEditRandevuModal(id);
+            });
         });
 
-        // Dinamik tıklama olaylarını bağla
-        const cards = listContainer.querySelectorAll('div[onclick]');
-        cards.forEach(card => {
-            card.onclick = () => {
-                const id = card.querySelector('button').dataset.id;
-                openEditRandevuModal(id);
-            };
-        });
-
+    }, (error) => {
+        console.error("Gelecek liste hatası:", error);
+        listContainer.innerHTML = `<div class="col-span-full text-center text-red-500">Veri yüklenirken hata oluştu.</div>`;
     });
 }
 
@@ -351,6 +334,8 @@ export async function saveNewRandevu(db, currentUserId, appId) {
 
 // --- DÜZENLEME / SİLME / TAMAMLAMA ---
 async function openEditRandevuModal(id) {
+    if (!id) { console.error("Randevu ID bulunamadı"); return; }
+
     const ref = doc(currentDb, "artifacts", currentAppId, "users", currentUid, "ajandam", id);
     const snap = await getDoc(ref);
     
@@ -393,8 +378,6 @@ function setupEditModalListeners() {
 
     document.getElementById('btnToggleRandevuDurum').onclick = async () => {
         const id = document.getElementById('editRandevuId').value;
-        // Mevcut durumu kontrol etmek için tekrar okumaya gerek yok, basitçe toggle
-        // Ancak burada basitlik adına 'tamamlandi' yapıyoruz, geri alma mantığı eklenebilir.
         await updateDoc(doc(currentDb, "artifacts", currentAppId, "users", currentUid, "ajandam", id), { durum: 'tamamlandi' });
         document.getElementById('editRandevuModal').style.display = 'none';
     };

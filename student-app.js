@@ -2,9 +2,6 @@
 // 0. HATA YAKALAMA
 // =================================================================
 window.addEventListener('error', (e) => {
-    const spinner = document.getElementById('loadingSpinner');
-    if(spinner) spinner.style.display = 'none';
-
     const errorBox = document.getElementById('globalErrorDisplay');
     if(errorBox) {
         errorBox.classList.remove('hidden');
@@ -16,12 +13,12 @@ window.addEventListener('error', (e) => {
 // =================================================================
 // 1. FİREBASE VE AYARLAR
 // =================================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { initializeApp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js)";
+import { getAuth, onAuthStateChanged, signOut } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js)";
 import { 
     getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, updateDoc, 
     serverTimestamp, orderBy, limit, deleteDoc, writeBatch, onSnapshot 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+} from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
 
 import { formatDateTR } from './modules/helpers.js';
 
@@ -55,14 +52,21 @@ const AVATAR_LIBRARY = [
 
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
 const DERS_HAVUZU = { 
-    'ORTAOKUL': ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "T.C. İnkılap", "Din Kültürü", "İngilizce"], 
-    'LISE': ["Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"] 
+    'ORTAOKUL': [
+        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
+        "T.C. İnkılap", "Din Kültürü", "İngilizce"
+    ], 
+    'LISE': [
+        "Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji",
+        "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"
+    ] 
 };
 const SINAV_DERSLERI = { 
     'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 
     'AYT': ['Matematik', 'Fizik', 'Kimya', 'Biyoloji', 'Edebiyat', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu'], 
     'LGS': ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'Din', 'İngilizce'] 
 };
+
 const EXAM_CONFIG = {
     'LGS': { wrongRatio: 3, subjects: [{name:'Türkçe',max:20},{name:'Matematik',max:20},{name:'Fen Bilimleri',max:20},{name:'T.C. İnkılap Tarihi',max:10},{name:'Din Kültürü',max:10},{name:'Yabancı Dil',max:10}] },
     'TYT': { wrongRatio: 4, subjects: [{name:'Türkçe',max:40},{name:'Matematik',max:40},{name:'Tarih',max:5},{name:'Coğrafya',max:5},{name:'Felsefe',max:5},{name:'Din Kültürü',max:5},{name:'Fizik',max:7},{name:'Kimya',max:7},{name:'Biyoloji',max:6}] },
@@ -84,8 +88,6 @@ let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denem
 onAuthStateChanged(auth, async (user) => {
     if (user) { 
         currentUser = user; 
-        const spinner = document.getElementById('loadingSpinner');
-        if(spinner) spinner.style.display = 'none'; // Spinner'ı gizle
         await initializeStudentApp(user.uid); 
     } 
     else { window.location.href = "student-login.html"; }
@@ -97,44 +99,34 @@ async function initializeStudentApp(uid) {
         const profileSnap = await getDoc(profileRef);
         if (profileSnap.exists()) {
             const pd = profileSnap.data();
+            
+            // GÜVENLİK: Koç Girişini Engelle
+            if (pd.rol === 'koc') {
+                await signOut(auth);
+                alert("Koç hesapları öğrenci panelinden giriş yapamaz.");
+                window.location.href = "student-login.html";
+                return;
+            }
+            
             coachId = pd.kocId;
             studentDocId = pd.linkedDocId;
             if (coachId && studentDocId) {
                 loadDashboardData(); 
                 enableHeaderIcons();
-                initNotifications(); // Bildirimleri başlat
-                listenHeaderMessages(coachId);
             } else {
-                document.getElementById('modalMatchProfile').classList.remove('hidden');
-                document.getElementById('modalMatchProfile').style.display = 'flex';
+                // Profil Hatası
+                alert("Hesabınızla ilgili bir sorun var. Lütfen koçunuzla iletişime geçin.");
             }
-        } else signOut(auth);
+        } else {
+            signOut(auth);
+        }
     } catch (e) { console.error(e); }
-}
-
-const btnMatch = document.getElementById('btnMatchProfile');
-if (btnMatch) {
-    btnMatch.onclick = async () => {
-        const n = document.getElementById('matchName').value.trim(), s = document.getElementById('matchSurname').value.trim();
-        if(!n||!s) return alert("Bilgileri girin.");
-        const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"), where("ad", "==", n), where("soyad", "==", s));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-            studentDocId = snap.docs[0].id;
-            await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), { linkedDocId: studentDocId });
-            document.getElementById('modalMatchProfile').classList.add('hidden');
-            alert("Eşleşme başarılı!");
-            loadDashboardData();
-            enableHeaderIcons();
-        } else document.getElementById('matchError').classList.remove('hidden');
-    };
 }
 
 // =================================================================
 // 4. HEADER & AVATAR & BİLDİRİMLER
 // =================================================================
 function enableHeaderIcons() {
-    // Mesajlar
     const btnMsg = document.getElementById('btnHeaderMessages');
     if(btnMsg) {
         btnMsg.onclick = (e) => {
@@ -142,30 +134,22 @@ function enableHeaderIcons() {
             document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
             document.getElementById('tab-messages').classList.remove('hidden');
             document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('active', 'text-indigo-600'); b.classList.add('text-gray-400'); });
-            
             for(let k in listeners) { if(listeners[k] && k!=='notifications' && k!=='unreadMsg') { listeners[k](); listeners[k]=null; } }
             markMessagesAsRead();
             loadStudentMessages();
         };
+        listenUnreadMessages();
     }
 
-    // Bildirimler
     const btnNotif = document.getElementById('btnHeaderNotifications');
     const dropNotif = document.getElementById('notificationDropdown');
     if(btnNotif && dropNotif) {
-        btnNotif.onclick = (e) => { 
-            e.stopPropagation(); 
-            dropNotif.classList.toggle('hidden'); 
-            document.getElementById('headerNotificationDot').classList.add('hidden'); 
-        };
-        
-        const closeBtn = document.getElementById('btnCloseNotifications');
-        if(closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); dropNotif.classList.add('hidden'); };
-        
+        btnNotif.onclick = (e) => { e.stopPropagation(); dropNotif.classList.toggle('hidden'); document.getElementById('headerNotificationDot').classList.add('hidden'); };
+        document.getElementById('btnCloseNotifications').onclick = () => dropNotif.classList.add('hidden');
         document.addEventListener('click', (e) => { if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.add('hidden'); });
+        loadNotifications();
     }
 
-    // Avatar
     const btnChangeAvatar = document.getElementById('btnChangeAvatar');
     const modalAvatar = document.getElementById('modalAvatarSelect');
     if (btnChangeAvatar && modalAvatar) {
@@ -173,94 +157,8 @@ function enableHeaderIcons() {
             const grid = document.getElementById('avatarGrid');
             grid.innerHTML = AVATAR_LIBRARY.map(icon => `<button class="text-4xl p-2 hover:bg-gray-100 rounded-lg transition-colors" onclick="selectAvatar('${icon}')">${icon}</button>`).join('');
             modalAvatar.classList.remove('hidden');
-            modalAvatar.style.display = 'flex'; // Düzgün ortalama için
         };
     }
-}
-
-// --- DÜZELTİLMİŞ BİLDİRİM SİSTEMİ ---
-function initNotifications() {
-    const list = document.getElementById('notificationList'); // Doğru ID
-    const dot = document.getElementById('headerNotificationDot'); // Doğru ID
-    
-    if(!list || !coachId || !studentDocId) return;
-
-    let notifications = { appointments: [], pendingQuestions: [], pendingExams: [], pendingHomeworks: [] };
-
-    const renderNotifications = () => {
-        const all = [
-            ...notifications.appointments,
-            ...notifications.pendingHomeworks,
-            ...notifications.pendingExams,
-            ...notifications.pendingQuestions
-        ];
-        
-        if (all.length > 0) {
-            dot.classList.remove('hidden');
-            list.innerHTML = all.map(item => `
-                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors" onclick="${item.action}">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-xs font-bold text-gray-800">${item.title}</p><p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p></div>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${item.badgeClass}">${item.badgeText}</span>
-                    </div>
-                </div>`).join('');
-        } else {
-            dot.classList.add('hidden');
-            list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Yeni bildirim yok.</p></div>`;
-        }
-    };
-
-    // 1. Yaklaşan Seanslar
-    const today = new Date().toISOString().split('T')[0];
-    listeners.notifications = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), where("studentId", "==", studentDocId), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(3)), (snap) => {
-        notifications.appointments = [];
-        snap.forEach(d => {
-            const data = d.data();
-            notifications.appointments.push({
-                title: 'Yaklaşan Seans',
-                desc: `${formatDateTR(data.tarih)} ${data.baslangic}`,
-                badgeText: 'Seans',
-                badgeClass: 'bg-blue-100 text-blue-700',
-                action: "document.getElementById('btnNavAjanda').click()"
-            });
-        });
-        renderNotifications();
-    });
-
-    // 2. Yapılacak Ödevler (Örnek)
-    const qOdev = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam"), orderBy("bitisTarihi", "asc"), limit(5));
-    listeners.activeGoals = onSnapshot(qOdev, (snap) => {
-        notifications.pendingHomeworks = [];
-        snap.forEach(d => {
-            const data = d.data();
-            notifications.pendingHomeworks.push({
-                title: 'Ödev',
-                desc: `${data.title}`,
-                badgeText: 'Yapılacak',
-                badgeClass: 'bg-orange-100 text-orange-700',
-                action: "document.querySelector('[data-target=\"tab-homework\"]').click()"
-            });
-        });
-        renderNotifications();
-    });
-}
-
-// --- HEADER MESAJ SAYACI ---
-function listenHeaderMessages(coachUid) {
-    const badge = document.getElementById('headerUnreadMsgCount');
-    if(!badge) return;
-
-    const q = query(collection(db, "artifacts", appId, "users", coachUid, "ogrencilerim", studentDocId, "mesajlar"), where('gonderen', '==', 'koc'), where('okundu', '==', false));
-
-    listeners.unreadMsg = onSnapshot(q, (snapshot) => {
-        const count = snapshot.size;
-        if(count > 0) { 
-            badge.textContent = count > 99 ? '99+' : count; 
-            badge.classList.remove('hidden'); 
-        } else { 
-            badge.classList.add('hidden'); 
-        }
-    });
 }
 
 window.selectAvatar = async (icon) => {
@@ -269,25 +167,27 @@ window.selectAvatar = async (icon) => {
         const avatarEl = document.getElementById('profileAvatar');
         if (avatarEl) { avatarEl.textContent = icon; avatarEl.style.backgroundColor = '#fff'; avatarEl.style.fontSize = '3rem'; }
         document.getElementById('modalAvatarSelect').classList.add('hidden');
-        document.getElementById('modalAvatarSelect').style.display = 'none';
-        
         const headerLogo = document.querySelector('#headerLogoContainer i');
         if(headerLogo) { headerLogo.className = ''; headerLogo.textContent = icon; headerLogo.style.fontStyle = 'normal'; }
     } catch (e) { console.error(e); }
 };
 
-// --- MODAL KAPATMA MANTIĞI (DÜZELTİLDİ) ---
-const closeButtons = document.querySelectorAll('.close-modal');
-closeButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.preventDefault(); // Form submit'i engelle
-        const modal = e.target.closest('.fixed');
-        if(modal) {
-            modal.classList.add('hidden');
-            modal.style.display = 'none'; // Zorla gizle
-        }
+function loadNotifications() {
+    const list = document.getElementById('notificationList'); if(!list) return;
+    listeners.notifications = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), orderBy("olusturmaTarihi", "desc"), limit(5)), (snap) => {
+        let html = '';
+        snap.forEach(d => html += `<div class="p-2 border-b hover:bg-gray-50"><p class="text-xs font-bold">Yeni Hedef</p><p class="text-xs text-gray-600">${d.data().title}</p></div>`);
+        list.innerHTML = html || '<p class="text-center text-xs py-4">Bildirim yok.</p>';
+        if(!snap.empty) document.getElementById('headerNotificationDot').classList.remove('hidden');
     });
-});
+}
+
+function listenUnreadMessages() {
+    listeners.unreadMsg = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), where("gonderen", "==", "koc"), where("okundu", "==", false)), (snap) => {
+        const b = document.getElementById('headerUnreadMsgCount');
+        if(snap.size>0) { b.textContent=snap.size; b.classList.remove('hidden'); } else b.classList.add('hidden');
+    });
+}
 
 // =================================================================
 // 5. DASHBOARD & VERİ YÜKLEME
@@ -321,16 +221,13 @@ async function loadDashboardData() {
     }
     updateHomeworkMetrics(); loadActiveGoalsForDashboard(); loadStudentStats(db, coachId, appId, studentDocId, '30'); loadUpcomingAppointments(db, coachId, appId, studentDocId); loadOverdueHomeworks(db, coachId, appId, studentDocId);
 }
-
-// ... (loadUpcomingAppointments, loadStudentStats, renderProfileLessons, updateHomeworkMetrics, loadActiveGoalsForDashboard, loadOverdueHomeworks aynı) ...
-// (Kod tekrarını önlemek için buradaki fonksiyonları koruyun, sadece initNotifications ve modal kapatmayı yukarıdaki gibi değiştirin)
 async function loadUpcomingAppointments(db, uid, appId, sid) {
     const todayStr = new Date().toISOString().split('T')[0];
     const q = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid), where("tarih", ">=", todayStr), orderBy("tarih", "asc"), limit(3));
     const snap = await getDocs(q);
     const container = document.getElementById('upcomingAppointmentsList');
     if(!container) return;
-    if (snap.empty) container.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Planlanmış randevu yok.</p>';
+    if (snap.empty) container.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Planlanmış seans yok.</p>';
     else container.innerHTML = snap.docs.map(doc => { const a=doc.data(); const isToday=a.tarih===todayStr; return `<div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full ${isToday?'bg-green-100 text-green-600':'bg-indigo-50 text-indigo-600'} flex items-center justify-center font-bold text-sm shrink-0">${a.tarih.split('-')[2]}</div><div><h4 class="text-sm font-bold text-gray-800 leading-none mb-1">${a.baslik||'Görüşme'}</h4><p class="text-xs text-gray-500 flex items-center gap-1"><i class="fa-regular fa-clock text-[10px]"></i> ${a.baslangic} - ${a.bitis}</p></div></div>${isToday?'<span class="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">BUGÜN</span>':''}</div>`; }).join('');
 }
 async function loadStudentStats(db, uid, appId, sid, period) {
@@ -554,11 +451,7 @@ function loadCalendarDataAndDraw(date) {
     });
 }
 async function loadAllUpcomingAppointments(container, todayStr) {
-    const q = query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), 
-        where("studentId", "==", studentDocId), 
-        where("tarih", ">=", todayStr), 
-        orderBy("tarih", "asc")
-    );
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), where("studentId", "==", studentDocId), where("tarih", ">=", todayStr), orderBy("tarih", "asc"));
     const snap = await getDocs(q);
     if (snap.empty) {
         container.innerHTML = '<p class="text-center text-xs text-gray-400 py-4">Planlanmış seans yok.</p>';

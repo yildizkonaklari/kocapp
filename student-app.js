@@ -172,7 +172,6 @@ window.selectAvatar = async (icon) => {
 };
 
 function loadNotifications() {
-    function initNotifications() {
     const list = document.getElementById('notificationList'); // Doğru ID
     const dot = document.getElementById('headerNotificationDot'); // Doğru ID
     
@@ -242,7 +241,6 @@ function listenUnreadMessages() {
         const b = document.getElementById('headerUnreadMsgCount');
         if(snap.size>0) { b.textContent=snap.size; b.classList.remove('hidden'); } else b.classList.add('hidden');
     });
-}
 }
 // =================================================================
 // 5. DASHBOARD & VERİ YÜKLEME

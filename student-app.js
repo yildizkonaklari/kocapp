@@ -172,6 +172,7 @@ window.selectAvatar = async (icon) => {
 };
 
 function loadNotifications() {
+    function initNotifications() {
     const list = document.getElementById('notificationList'); // Doğru ID
     const dot = document.getElementById('headerNotificationDot'); // Doğru ID
     
@@ -199,16 +200,50 @@ function loadNotifications() {
         } else {
             dot.classList.add('hidden');
             list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Yeni bildirim yok.</p></div>`;
+        }
+    };
+
+    // 1. Yaklaşan Seanslar
+    const today = new Date().toISOString().split('T')[0];
+    listeners.notifications = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), where("studentId", "==", studentDocId), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(3)), (snap) => {
+        notifications.appointments = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.appointments.push({
+                title: 'Yaklaşan Seans',
+                desc: `${formatDateTR(data.tarih)} ${data.baslangic}`,
+                badgeText: 'Seans',
+                badgeClass: 'bg-blue-100 text-blue-700',
+                action: "document.getElementById('btnNavAjanda').click()"
+            });
+        });
+        renderNotifications();
+    });
+
+    // 2. Yapılacak Ödevler (Örnek)
+    const qOdev = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam"), orderBy("bitisTarihi", "asc"), limit(5));
+    listeners.activeGoals = onSnapshot(qOdev, (snap) => {
+        notifications.pendingHomeworks = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.pendingHomeworks.push({
+                title: 'Ödev',
+                desc: `${data.title}`,
+                badgeText: 'Yapılacak',
+                badgeClass: 'bg-orange-100 text-orange-700',
+                action: "document.querySelector('[data-target=\"tab-homework\"]').click()"
+            });
+        });
+        renderNotifications();
     });
 }
-
 function listenUnreadMessages() {
     listeners.unreadMsg = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), where("gonderen", "==", "koc"), where("okundu", "==", false)), (snap) => {
         const b = document.getElementById('headerUnreadMsgCount');
         if(snap.size>0) { b.textContent=snap.size; b.classList.remove('hidden'); } else b.classList.add('hidden');
     });
 }
-
+}
 // =================================================================
 // 5. DASHBOARD & VERİ YÜKLEME
 // =================================================================

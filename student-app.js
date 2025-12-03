@@ -171,13 +171,69 @@ window.selectAvatar = async (icon) => {
     } catch (e) { console.error(e); }
 };
 
-function loadNotifications() {
-    const list = document.getElementById('notificationList'); if(!list) return;
-    listeners.notifications = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), orderBy("olusturmaTarihi", "desc"), limit(5)), (snap) => {
-        let html = '';
-        snap.forEach(d => html += `<div class="p-2 border-b hover:bg-gray-50"><p class="text-xs font-bold">Yeni Hedef</p><p class="text-xs text-gray-600">${d.data().title}</p></div>`);
-        list.innerHTML = html || '<p class="text-center text-xs py-4">Bildirim yok.</p>';
-        if(!snap.empty) document.getElementById('headerNotificationDot').classList.remove('hidden');
+function LoadNotifications() {
+    const list = document.getElementById('notificationList'); // Doğru ID
+    const dot = document.getElementById('headerNotificationDot'); // Doğru ID
+    
+    if(!list || !coachId || !studentDocId) return;
+
+    let notifications = { appointments: [], pendingQuestions: [], pendingExams: [], pendingHomeworks: [] };
+
+    const renderNotifications = () => {
+        const all = [
+            ...notifications.appointments,
+            ...notifications.pendingHomeworks,
+            ...notifications.pendingExams,
+            ...notifications.pendingQuestions
+        ];
+        
+        if (all.length > 0) {
+            dot.classList.remove('hidden');
+            list.innerHTML = all.map(item => `
+                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors" onclick="${item.action}">
+                    <div class="flex justify-between items-start">
+                        <div><p class="text-xs font-bold text-gray-800">${item.title}</p><p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p></div>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${item.badgeClass}">${item.badgeText}</span>
+                    </div>
+                </div>`).join('');
+        } else {
+            dot.classList.add('hidden');
+            list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Yeni bildirim yok.</p></div>`;
+        }
+    };
+
+    // 1. Yaklaşan Seanslar
+    const today = new Date().toISOString().split('T')[0];
+    listeners.notifications = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), where("studentId", "==", studentDocId), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(3)), (snap) => {
+        notifications.appointments = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.appointments.push({
+                title: 'Yaklaşan Seans',
+                desc: `${formatDateTR(data.tarih)} ${data.baslangic}`,
+                badgeText: 'Seans',
+                badgeClass: 'bg-blue-100 text-blue-700',
+                action: "document.getElementById('btnNavAjanda').click()"
+            });
+        });
+        renderNotifications();
+    });
+
+    // 2. Yapılacak Ödevler (Örnek)
+    const qOdev = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam"), orderBy("bitisTarihi", "asc"), limit(5));
+    listeners.activeGoals = onSnapshot(qOdev, (snap) => {
+        notifications.pendingHomeworks = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.pendingHomeworks.push({
+                title: 'Ödev',
+                desc: `${data.title}`,
+                badgeText: 'Yapılacak',
+                badgeClass: 'bg-orange-100 text-orange-700',
+                action: "document.querySelector('[data-target=\"tab-homework\"]').click()"
+            });
+        });
+        renderNotifications();
     });
 }
 

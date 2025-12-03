@@ -1,11 +1,10 @@
 import { 
-    collection, collectionGroup, query, onSnapshot, updateDoc, deleteDoc, 
+    collection, query, onSnapshot, updateDoc, deleteDoc, 
     where, orderBy, getDocs, doc, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
 
-let allGoals = [];
-let studentMap = {};
+let currentStudentId = null;
 
 export async function renderHedeflerSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Hedef Yönetimi";
@@ -14,126 +13,122 @@ export async function renderHedeflerSayfasi(db, currentUserId, appId) {
     area.innerHTML = `
         <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
             <div class="w-full md:w-1/3">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Öğrenci Filtrele</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Öğrenci Seçin</label>
                 <select id="filterGoalStudent" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-purple-500">
-                    <option value="all">Tüm Öğrenciler</option>
+                    <option value="" disabled selected>Öğrenci Seçiniz...</option>
                 </select>
             </div>
-            <button id="btnAddNewGoal" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 shadow-sm flex items-center">
+            <button id="btnAddNewGoal" class="hidden bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 shadow-sm flex items-center">
                 <i class="fa-solid fa-plus mr-2"></i> Yeni Hedef Ata
             </button>
         </div>
+
         <div id="goalsListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <p class="col-span-full text-center text-gray-400 p-8">Hedefler yükleniyor...</p>
+            <div id="goalEmptyState" class="col-span-full text-center text-gray-400 py-12">
+                <i class="fa-solid fa-bullseye text-4xl mb-3 opacity-20"></i>
+                <p>Hedefleri görmek için lütfen bir öğrenci seçin.</p>
+            </div>
         </div>
     `;
 
-    await loadStudentMap(db, currentUserId, appId);
-    startGoalListener(db, currentUserId, appId);
+    // Öğrenci Listesini Doldur
+    await populateStudentSelect(db, currentUserId, appId, 'filterGoalStudent');
 
-    document.getElementById('filterGoalStudent').addEventListener('change', () => renderGoals(db));
+    // Event Listeners
+    document.getElementById('filterGoalStudent').addEventListener('change', (e) => {
+        currentStudentId = e.target.value;
+        document.getElementById('btnAddNewGoal').classList.remove('hidden');
+        // Hedefleri Getir
+        startGoalListener(db, currentUserId, appId, currentStudentId);
+    });
     
     // Ekle Butonu
-    document.getElementById('btnAddNewGoal').addEventListener('click', async () => {
-        const sid = document.getElementById('filterGoalStudent').value;
+    document.getElementById('btnAddNewGoal').addEventListener('click', () => {
+        if (!currentStudentId) { alert("Lütfen öğrenci seçin."); return; }
+
+        // Formu Temizle
         document.getElementById('hedefTitle').value = '';
         document.getElementById('hedefAciklama').value = '';
         document.getElementById('hedefBitisTarihi').value = '';
 
-        if (sid === 'all') {
-            document.getElementById('hedefStudentSelectContainer').classList.remove('hidden');
-            await populateStudentSelect(db, currentUserId, appId, 'hedefStudentSelect');
-        } else {
-            document.getElementById('hedefStudentSelectContainer').classList.add('hidden');
-            document.getElementById('currentStudentIdForHedef').value = sid;
-        }
+        // Gizli ID Ata
+        document.getElementById('currentStudentIdForHedef').value = currentStudentId;
+        
+        // Modal içindeki select'i gizle (Zaten seçili)
+        const selectContainer = document.getElementById('hedefStudentSelectContainer');
+        if(selectContainer) selectContainer.classList.add('hidden');
+
         document.getElementById('addHedefModal').style.display = 'block';
     });
 }
 
-async function loadStudentMap(db, uid, appId) {
-    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad"));
-    const snap = await getDocs(q);
-    const select = document.getElementById('filterGoalStudent');
-    select.innerHTML = '<option value="all">Tüm Öğrenciler</option>';
-    studentMap = {};
-    snap.forEach(doc => {
-        const name = `${doc.data().ad} ${doc.data().soyad}`;
-        studentMap[doc.id] = name;
-        const opt = document.createElement('option');
-        opt.value = doc.id;
-        opt.textContent = name;
-        select.appendChild(opt);
-    });
-}
-
-function startGoalListener(db, uid, appId) {
+function startGoalListener(db, uid, appId, studentId) {
     const container = document.getElementById('goalsListContainer');
-    
+    container.innerHTML = '<p class="col-span-full text-center text-gray-400 p-8">Yükleniyor...</p>';
+
+    // Doğrudan öğrencinin alt koleksiyonundan çekiyoruz
     const q = query(
-        collectionGroup(db, 'hedefler'), 
-        where('kocId', '==', uid), 
-        orderBy('olusturmaTarihi', 'desc')
+        collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "hedefler"),
+        orderBy('bitisTarihi', 'asc') // Yakın tarihli hedefler önce
     );
     
     if (activeListeners.hedeflerUnsubscribe) activeListeners.hedeflerUnsubscribe();
     
     activeListeners.hedeflerUnsubscribe = onSnapshot(q, (snap) => {
-        allGoals = [];
+        const goals = [];
         snap.forEach(doc => {
-            const sid = doc.ref.parent.parent.id; 
-            allGoals.push({ id: doc.id, ...doc.data(), studentId: sid, path: doc.ref.path });
+            goals.push({ id: doc.id, ...doc.data(), path: doc.ref.path });
         });
-        renderGoals(db);
+        renderGoals(goals, db);
     }, (error) => {
         console.error("Hedefler yüklenirken hata:", error);
-        container.innerHTML = `<p class="col-span-full text-center text-red-500 p-8">Hata: ${error.message}</p>`;
+        container.innerHTML = `<p class="col-span-full text-center text-red-500 p-8">Veriler yüklenemedi: ${error.message}</p>`;
     });
 }
 
-function renderGoals(db) {
+function renderGoals(goals, db) {
     const container = document.getElementById('goalsListContainer');
-    const filter = document.getElementById('filterGoalStudent').value;
     
-    let filtered = filter === 'all' ? allGoals : allGoals.filter(g => g.studentId === filter);
-    
-    // SIRALAMA: Başa Tutturulanlar En Üstte, Sonra Tarihe Göre
-    filtered.sort((a, b) => {
-        // Önce pin durumuna bak (true olanlar üstte)
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        // Pin durumu aynıysa tarihe göre sırala (bitiş tarihi yakın olan üstte)
-        return new Date(a.bitisTarihi) - new Date(b.bitisTarihi);
-    });
-
-    if (filtered.length === 0) {
-        container.innerHTML = '<p class="col-span-full text-center text-gray-400 p-8">Kayıtlı hedef bulunamadı.</p>';
+    if (goals.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full text-center text-gray-400 py-12">
+                <i class="fa-solid fa-bullseye text-4xl mb-3 opacity-20"></i>
+                <p>Bu öğrenciye atanmış hedef bulunmuyor.</p>
+            </div>`;
         return;
     }
 
-    container.innerHTML = filtered.map(g => {
+    // SIRALAMA: Önce Pinli Olanlar, Sonra Tarih
+    goals.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(a.bitisTarihi) - new Date(b.bitisTarihi);
+    });
+
+    container.innerHTML = goals.map(g => {
         const isDone = g.durum === 'tamamlandi';
         const isPinned = g.isPinned === true;
-        const sName = studentMap[g.studentId] || 'Öğrenci';
         
-        // Stil Ayarları
-        let cardClass = isDone ? 'border-green-200 bg-green-50 opacity-75' : 'border-gray-200 bg-white';
-        if (isPinned && !isDone) cardClass = 'border-yellow-400 bg-yellow-50 ring-2 ring-yellow-100'; // Pinli ve yapılmamışsa vurgula
+        // Kart Stili
+        let cardClass = isDone ? 'border-green-100 bg-green-50 opacity-80' : 'border-gray-200 bg-white';
+        if (isPinned && !isDone) cardClass = 'border-yellow-300 bg-yellow-50 shadow-md ring-1 ring-yellow-200'; 
 
         return `
         <div class="p-4 rounded-xl border shadow-sm relative group transition-all hover:shadow-md ${cardClass}">
             
-            ${isPinned ? '<div class="absolute -top-2 -right-2 bg-yellow-400 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm text-xs"><i class="fa-solid fa-thumbtack"></i></div>' : ''}
+            ${isPinned ? '<div class="absolute -top-2 -right-2 bg-yellow-400 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm text-xs z-10"><i class="fa-solid fa-thumbtack"></i></div>' : ''}
 
-            <div class="flex justify-between items-start mb-2 pr-4">
-                <span class="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded">${sName}</span>
-                <span class="text-xs text-gray-500 flex items-center gap-1"><i class="fa-regular fa-calendar"></i> ${formatDateTR(g.bitisTarihi)}</span>
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-xs text-gray-500 flex items-center gap-1 bg-gray-100 px-2 py-1 rounded font-mono">
+                    <i class="fa-regular fa-calendar"></i> ${formatDateTR(g.bitisTarihi)}
+                </span>
+                ${isDone ? '<span class="text-[10px] bg-green-200 text-green-800 px-2 py-0.5 rounded-full font-bold">Tamamlandı</span>' : ''}
             </div>
             
-            <h4 class="font-bold text-gray-800 ${isDone ? 'line-through text-gray-500' : ''} mb-1">${g.title}</h4>
-            <p class="text-sm text-gray-600 line-clamp-2 mb-3">${g.aciklama || ''}</p>
+            <h4 class="font-bold text-gray-800 ${isDone ? 'line-through text-gray-500' : ''} mb-1 line-clamp-2">${g.title}</h4>
+            <p class="text-sm text-gray-600 line-clamp-3 mb-4 min-h-[3rem]">${g.aciklama || ''}</p>
             
-            <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+            <div class="flex justify-between items-center pt-3 border-t border-gray-100/50">
                 <button class="text-gray-400 hover:text-yellow-500 transition-colors p-1" 
                         onclick="toggleGoalPin('${g.path}', ${isPinned})" 
                         title="${isPinned ? 'Başa tutturmayı kaldır' : 'Başa tuttur'}">
@@ -141,46 +136,54 @@ function renderGoals(db) {
                 </button>
 
                 <div class="flex gap-2">
-                    <button class="text-xs px-3 py-1 rounded border ${isDone ? 'border-gray-400 text-gray-600' : 'border-green-500 text-green-600 hover:bg-green-50'}" 
+                    <button class="text-xs px-3 py-1.5 rounded border font-medium transition-colors ${isDone ? 'border-gray-300 text-gray-500 hover:bg-gray-100' : 'border-green-500 text-green-600 hover:bg-green-50'}" 
                             onclick="toggleGlobalGoalStatus('${g.path}', '${g.durum}')">
-                        ${isDone ? 'Geri Al' : 'Tamamla'}
+                        ${isDone ? 'Geri Al' : '<i class="fa-solid fa-check mr-1"></i> Tamamla'}
                     </button>
-                    <button class="text-xs px-3 py-1 rounded border border-red-200 text-red-500 hover:bg-red-50" 
+                    <button class="text-xs px-3 py-1.5 rounded border border-red-200 text-red-500 hover:bg-red-50 transition-colors" 
                             onclick="deleteGlobalDoc('${g.path}')">Sil</button>
                 </div>
             </div>
         </div>
         `;
     }).join('');
-    
-    // Global Fonksiyonlar
-    window.toggleGlobalGoalStatus = async (path, current) => {
-        await updateDoc(doc(db, path), { durum: current === 'tamamlandi' ? 'devam' : 'tamamlandi' });
-    };
-    
-    window.deleteGlobalDoc = async (path) => {
-        if(confirm('Silinsin mi?')) await deleteDoc(doc(db, path));
-    };
-
-    // YENİ: Pinleme Fonksiyonu
-    window.toggleGoalPin = async (path, currentStatus) => {
-        await updateDoc(doc(db, path), { isPinned: !currentStatus });
-    };
 }
 
+// --- GLOBAL FONKSİYONLAR ---
+window.toggleGlobalGoalStatus = async (path, current) => {
+    await updateDoc(doc(db, path), { durum: current === 'tamamlandi' ? 'devam' : 'tamamlandi' });
+};
+
+window.deleteGlobalDoc = async (path) => {
+    if(confirm('Bu hedefi silmek istediğinize emin misiniz?')) await deleteDoc(doc(db, path));
+};
+
+window.toggleGoalPin = async (path, currentStatus) => {
+    await updateDoc(doc(db, path), { isPinned: !currentStatus });
+};
+
+// --- KAYDETME FONKSİYONU ---
 export async function saveGlobalHedef(db, uid, appId) {
     let sid = document.getElementById('currentStudentIdForHedef').value;
+    
+    // Fallback: Eğer modal içindeki select görünürse oradan al (ama gizliyoruz)
     if (!document.getElementById('hedefStudentSelectContainer').classList.contains('hidden')) {
         sid = document.getElementById('hedefStudentSelect').value;
     }
+    
     if (!sid) { alert('Öğrenci seçin'); return; }
 
+    const title = document.getElementById('hedefTitle').value.trim();
+    const date = document.getElementById('hedefBitisTarihi').value;
+    
+    if(!title || !date) { alert("Başlık ve Bitiş Tarihi zorunludur."); return; }
+
     await addDoc(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), {
-        title: document.getElementById('hedefTitle').value,
+        title: title,
         aciklama: document.getElementById('hedefAciklama').value,
-        bitisTarihi: document.getElementById('hedefBitisTarihi').value,
+        bitisTarihi: date,
         durum: 'devam',
-        isPinned: false, // Varsayılan olarak pinli değil
+        isPinned: false,
         kocId: uid,
         olusturmaTarihi: serverTimestamp()
     });

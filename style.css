@@ -160,7 +160,7 @@
 /* --- TAKİP BUTONU STİLİ (DİNAMİK) --- */
 /* Ortadaki Yuvarlak Buton */
 .bottom-nav-center-btn {
-    margin-top: -1rem; /* Yukarı taşma */
+    margin-top: 0.5rem; /* Yukarı taşma */
     /* background-color ve color KALDIRILDI - Artık HTML/JS kontrol edecek */
     box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5), 0 8px 10px -6px rgba(79, 70, 229, 0.1); /* İndigo gölge */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

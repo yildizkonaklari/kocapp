@@ -29,7 +29,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");
     
-    mainContentTitle.textContent = "Koçify✔️ - Öğrenci Takip Sistemi";
+    mainContentTitle.textContent = "Koçify✔️";
     
     // 1. İskeleti Oluştur
     mainContentArea.innerHTML = `

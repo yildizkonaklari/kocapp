@@ -1,12 +1,19 @@
 import { 
-    collection, query, onSnapshot, updateDoc, deleteDoc, 
+    collection, collectionGroup, query, onSnapshot, updateDoc, deleteDoc, 
     where, orderBy, getDocs, doc, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
 
+let allGoals = [];
+let studentMap = {};
+// YENİ: Veritabanı referansını modül genelinde saklamak için değişken
+let currentDb = null; 
 let currentStudentId = null;
 
 export async function renderHedeflerSayfasi(db, currentUserId, appId) {
+    // DB referansını kaydet, böylece global fonksiyonlar erişebilir
+    currentDb = db;
+
     document.getElementById("mainContentTitle").textContent = "Hedef Yönetimi";
     const area = document.getElementById("mainContentArea");
     
@@ -79,14 +86,15 @@ function startGoalListener(db, uid, appId, studentId) {
         snap.forEach(doc => {
             goals.push({ id: doc.id, ...doc.data(), path: doc.ref.path });
         });
-        renderGoals(goals, db);
+        // Not: renderGoals'a db geçmiyoruz, global currentDb kullanacak
+        renderGoals(goals); 
     }, (error) => {
         console.error("Hedefler yüklenirken hata:", error);
         container.innerHTML = `<p class="col-span-full text-center text-red-500 p-8">Veriler yüklenemedi: ${error.message}</p>`;
     });
 }
 
-function renderGoals(goals, db) {
+function renderGoals(goals) {
     const container = document.getElementById('goalsListContainer');
     
     if (goals.length === 0) {
@@ -150,16 +158,20 @@ function renderGoals(goals, db) {
 }
 
 // --- GLOBAL FONKSİYONLAR ---
+// Bu fonksiyonlar window nesnesine atanır ve currentDb kullanır.
 window.toggleGlobalGoalStatus = async (path, current) => {
-    await updateDoc(doc(db, path), { durum: current === 'tamamlandi' ? 'devam' : 'tamamlandi' });
+    if (!currentDb) { console.error("DB bağlantısı yok!"); return; }
+    await updateDoc(doc(currentDb, path), { durum: current === 'tamamlandi' ? 'devam' : 'tamamlandi' });
 };
 
 window.deleteGlobalDoc = async (path) => {
-    if(confirm('Bu hedefi silmek istediğinize emin misiniz?')) await deleteDoc(doc(db, path));
+    if (!currentDb) { console.error("DB bağlantısı yok!"); return; }
+    if(confirm('Bu hedefi silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path));
 };
 
 window.toggleGoalPin = async (path, currentStatus) => {
-    await updateDoc(doc(db, path), { isPinned: !currentStatus });
+    if (!currentDb) { console.error("DB bağlantısı yok!"); return; }
+    await updateDoc(doc(currentDb, path), { isPinned: !currentStatus });
 };
 
 // --- KAYDETME FONKSİYONU ---

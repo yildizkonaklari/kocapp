@@ -47,7 +47,7 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
                     <button id="goToday" class="ml-2 px-3 py-1 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full hover:bg-purple-200">Bugün</button>
                 </div>
                 <button id="btnOpenRandevuModal" class="w-full sm:w-auto bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Yeni Randevu
+                    <i class="fa-solid fa-plus"></i> Yeni Seans
                 </button>
             </div>
             

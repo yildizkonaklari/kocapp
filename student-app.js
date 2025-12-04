@@ -19,6 +19,7 @@ import {
     getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, updateDoc, 
     serverTimestamp, orderBy, limit, deleteDoc, writeBatch, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 import { formatDateTR } from './modules/helpers.js';
 
 const firebaseConfig = {
@@ -51,14 +52,8 @@ const AVATAR_LIBRARY = [
 
 const studentRutinler = ["Paragraf", "Problem", "Kitap Okuma"];
 const DERS_HAVUZU = { 
-    'ORTAOKUL': [
-        "Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", 
-        "T.C. İnkılap", "Din Kültürü", "İngilizce"
-    ], 
-    'LISE': [
-        "Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji",
-        "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"
-    ] 
+    'ORTAOKUL': ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "T.C. İnkılap", "Din Kültürü", "İngilizce"], 
+    'LISE': ["Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "Din Kültürü", "İngilizce"] 
 };
 const SINAV_DERSLERI = { 
     'TYT': ['Türkçe', 'Sosyal', 'Matematik', 'Fen'], 
@@ -79,7 +74,7 @@ let currentCalDate = new Date();
 let currentWeekOffset = 0;
 let odevWeekOffset = 0;
 
-let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null };
+let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denemeler: null, upcomingAjanda: null, notifications: null, activeGoals: null, unreadMsg: null, notifHomework: null, notifGoals: null, notifAppt: null };
 
 // =================================================================
 // 3. KİMLİK DOĞRULAMA VE BAŞLATMA
@@ -87,6 +82,8 @@ let listeners = { chat: null, ajanda: null, hedefler: null, odevler: null, denem
 onAuthStateChanged(auth, async (user) => {
     if (user) { 
         currentUser = user; 
+        const spinner = document.getElementById('loadingSpinner');
+        if(spinner) spinner.style.display = 'none';
         await initializeStudentApp(user.uid); 
     } 
     else { window.location.href = "student-login.html"; }
@@ -98,28 +95,37 @@ async function initializeStudentApp(uid) {
         const profileSnap = await getDoc(profileRef);
         if (profileSnap.exists()) {
             const pd = profileSnap.data();
-            
-            // GÜVENLİK: Koç Girişini Engelle
-            if (pd.rol === 'koc') {
-                await signOut(auth);
-                alert("Koç hesapları öğrenci panelinden giriş yapamaz.");
-                window.location.href = "student-login.html";
-                return;
-            }
-            
             coachId = pd.kocId;
             studentDocId = pd.linkedDocId;
             if (coachId && studentDocId) {
                 loadDashboardData(); 
                 enableHeaderIcons();
+                // Bildirimleri başlat
+                initStudentNotifications();
             } else {
-                // Profil Hatası
-                alert("Hesabınızla ilgili bir sorun var. Lütfen koçunuzla iletişime geçin.");
+                document.getElementById('modalMatchProfile').classList.remove('hidden');
+                document.getElementById('modalMatchProfile').style.display = 'flex';
             }
-        } else {
-            signOut(auth);
-        }
+        } else signOut(auth);
     } catch (e) { console.error(e); }
+}
+
+const btnMatch = document.getElementById('btnMatchProfile');
+if (btnMatch) {
+    btnMatch.onclick = async () => {
+        const n = document.getElementById('matchName').value.trim(), s = document.getElementById('matchSurname').value.trim();
+        if(!n||!s) return alert("Bilgileri girin.");
+        const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"), where("ad", "==", n), where("soyad", "==", s));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            studentDocId = snap.docs[0].id;
+            await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), { linkedDocId: studentDocId });
+            document.getElementById('modalMatchProfile').classList.add('hidden');
+            alert("Eşleşme başarılı!");
+            loadDashboardData();
+            enableHeaderIcons();
+        } else document.getElementById('matchError').classList.remove('hidden');
+    };
 }
 
 // =================================================================
@@ -133,7 +139,7 @@ function enableHeaderIcons() {
             document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
             document.getElementById('tab-messages').classList.remove('hidden');
             document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('active', 'text-indigo-600'); b.classList.add('text-gray-400'); });
-            for(let k in listeners) { if(listeners[k] && k!=='notifications' && k!=='unreadMsg') { listeners[k](); listeners[k]=null; } }
+            for(let k in listeners) { if(listeners[k] && k!=='notifications' && k!=='unreadMsg' && k!=='notifHomework' && k!=='notifGoals' && k!=='notifAppt') { listeners[k](); listeners[k]=null; } }
             markMessagesAsRead();
             loadStudentMessages();
         };
@@ -143,10 +149,13 @@ function enableHeaderIcons() {
     const btnNotif = document.getElementById('btnHeaderNotifications');
     const dropNotif = document.getElementById('notificationDropdown');
     if(btnNotif && dropNotif) {
-        btnNotif.onclick = (e) => { e.stopPropagation(); dropNotif.classList.toggle('hidden'); document.getElementById('headerNotificationDot').classList.add('hidden'); };
+        btnNotif.onclick = (e) => { 
+            e.stopPropagation(); 
+            dropNotif.classList.toggle('hidden'); 
+            document.getElementById('headerNotificationDot').classList.add('hidden'); 
+        };
         document.getElementById('btnCloseNotifications').onclick = () => dropNotif.classList.add('hidden');
         document.addEventListener('click', (e) => { if (!dropNotif.contains(e.target) && !btnNotif.contains(e.target)) dropNotif.classList.add('hidden'); });
-        loadNotifications();
     }
 
     const btnChangeAvatar = document.getElementById('btnChangeAvatar');
@@ -159,17 +168,6 @@ function enableHeaderIcons() {
         };
     }
 }
-
-window.selectAvatar = async (icon) => {
-    try {
-        await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon });
-        const avatarEl = document.getElementById('profileAvatar');
-        if (avatarEl) { avatarEl.textContent = icon; avatarEl.style.backgroundColor = '#fff'; avatarEl.style.fontSize = '3rem'; }
-        document.getElementById('modalAvatarSelect').classList.add('hidden');
-        const headerLogo = document.querySelector('#headerLogoContainer i');
-        if(headerLogo) { headerLogo.className = ''; headerLogo.textContent = icon; headerLogo.style.fontStyle = 'normal'; }
-    } catch (e) { console.error(e); }
-};
 
 // --- YENİ: GELİŞMİŞ ÖĞRENCİ BİLDİRİM SİSTEMİ ---
 function initStudentNotifications() {
@@ -299,70 +297,261 @@ window.selectAvatar = async (icon) => {
         if(headerLogo) { headerLogo.className = ''; headerLogo.textContent = icon; headerLogo.style.fontStyle = 'normal'; }
     } catch (e) { console.error(e); }
 };
+
 // =================================================================
 // 5. DASHBOARD & VERİ YÜKLEME
 // =================================================================
 async function loadDashboardData() {
     if (!coachId || !studentDocId) return;
+    if(document.getElementById('motivasyonSozu')) {
+        const randomSoz = motivasyonSozleri[Math.floor(Math.random() * motivasyonSozleri.length)];
+        document.getElementById('motivasyonSozu').textContent = `"${randomSoz}"`;
+    }
     
     const snap = await getDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId));
     if (snap.exists()) {
         const d = snap.data();
+        
         if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = d.ad;
         if(document.getElementById('profileName')) document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
         if(document.getElementById('profileClass')) document.getElementById('profileClass').textContent = d.sinif;
         if(document.getElementById('profileEmail')) document.getElementById('profileEmail').textContent = currentUser.email;
         
         const headerLogoContainer = document.getElementById('headerLogoContainer');
-        if(d.avatarIcon && headerLogoContainer) { headerLogoContainer.innerHTML = `<span class="text-2xl">${d.avatarIcon}</span>`; headerLogoContainer.style.backgroundColor = 'transparent'; headerLogoContainer.style.border = 'none'; }
+        if(d.avatarIcon && headerLogoContainer) {
+            headerLogoContainer.innerHTML = `<span class="text-2xl">${d.avatarIcon}</span>`;
+            headerLogoContainer.style.backgroundColor = 'transparent';
+            headerLogoContainer.style.border = 'none';
+        }
+
         const avatarEl = document.getElementById('profileAvatar');
-        if (d.avatarIcon) { avatarEl.textContent = d.avatarIcon; avatarEl.style.backgroundColor = '#fff'; avatarEl.style.fontSize = '3rem'; } else { avatarEl.textContent = d.ad[0].toUpperCase(); avatarEl.style.fontSize = ''; }
+        if (d.avatarIcon) {
+            avatarEl.textContent = d.avatarIcon;
+            avatarEl.style.backgroundColor = '#fff';
+            avatarEl.style.fontSize = '3rem';
+        } else {
+            avatarEl.textContent = d.ad[0].toUpperCase();
+            avatarEl.style.fontSize = '';
+        }
         
-        if (d.takipDersleri && Array.isArray(d.takipDersleri) && d.takipDersleri.length > 0) studentDersler = d.takipDersleri;
-        else studentDersler = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(d.sinif) ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE'];
-        
+        if (d.takipDersleri && Array.isArray(d.takipDersleri) && d.takipDersleri.length > 0) {
+            studentDersler = d.takipDersleri;
+        } else {
+            const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(d.sinif);
+            studentDersler = isOrtaokul ? DERS_HAVUZU['ORTAOKUL'] : DERS_HAVUZU['LISE'];
+        }
+
         renderProfileLessons(studentDersler);
+        
         const filterSelect = document.getElementById('dashboardTimeFilter');
         if (filterSelect) {
             const newFilterSelect = filterSelect.cloneNode(true);
             filterSelect.parentNode.replaceChild(newFilterSelect, filterSelect);
-            newFilterSelect.addEventListener('change', () => loadStudentStats(db, coachId, appId, studentDocId, newFilterSelect.value));
+            newFilterSelect.addEventListener('change', () => {
+                loadStudentStats(db, coachId, appId, studentDocId, newFilterSelect.value);
+            });
         }
     }
-    updateHomeworkMetrics(); loadActiveGoalsForDashboard(); loadStudentStats(db, coachId, appId, studentDocId, '30'); loadUpcomingAppointments(db, coachId, appId, studentDocId); loadOverdueHomeworks(db, coachId, appId, studentDocId);
+    
+    updateHomeworkMetrics(); 
+    loadActiveGoalsForDashboard(); 
+    loadStudentStats(db, coachId, appId, studentDocId, '30'); 
+    loadUpcomingAppointments(db, coachId, appId, studentDocId);
+    loadOverdueHomeworks(db, coachId, appId, studentDocId);
 }
+
+function renderProfileLessons(dersler) {
+    const profileTab = document.getElementById('tab-profile');
+    if(!profileTab) return;
+
+    const oldSection = document.getElementById('profileLessonsContainer');
+    if(oldSection) oldSection.remove();
+
+    const infoCards = profileTab.querySelectorAll('.profile-info-card');
+    const lastInfoCard = infoCards[infoCards.length - 1]; 
+
+    if (lastInfoCard) {
+        const lessonsDiv = document.createElement('div');
+        lessonsDiv.id = 'profileLessonsContainer';
+        lessonsDiv.className = 'mt-6';
+        lessonsDiv.innerHTML = `
+            <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Takip Edilen Dersler</h3>
+            <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <div class="flex flex-wrap gap-2">
+                    ${dersler.map(d => `<span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100">${d}</span>`).join('')}
+                </div>
+            </div>
+        `;
+        lastInfoCard.parentNode.insertBefore(lessonsDiv, lastInfoCard.nextSibling);
+    }
+}
+
+async function updateHomeworkMetrics() {
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"));
+    const snap = await getDocs(q);
+    const today = new Date().toISOString().split('T')[0];
+    let total=0, done=0, overdue=[];
+    snap.forEach(doc => {
+        const d = doc.data(); 
+        total++;
+        if(d.durum==='tamamlandi') done++;
+        if(d.bitisTarihi < today && d.durum!=='tamamlandi') overdue.push({...d});
+    });
+    const p = total===0 ? 0 : Math.round((done/total)*100);
+    if(document.getElementById('haftalikIlerlemeText')) document.getElementById('haftalikIlerlemeText').textContent = `%${p}`;
+    if(document.getElementById('haftalikIlerlemeBar')) document.getElementById('haftalikIlerlemeBar').style.width = `${p}%`;
+    const list = document.getElementById('gecikmisOdevlerList');
+    if(list) list.innerHTML = overdue.length ? overdue.map(o=>`<div class="bg-red-50 p-2 rounded text-xs text-red-700 mb-1 border border-red-100">${o.title}</div>`).join('') : '<p class="text-center text-xs text-gray-400">Gecikmiş ödev yok.</p>';
+}
+
+async function loadActiveGoalsForDashboard() {
+    const list = document.getElementById('dashboardHedefList'); if(!list) return;
+    // Dinleyici zaten initNotifications ile yapılıyor, burası sadece dashboard yüklenirken ilk gösterim için.
+    // Ancak listeners.activeGoals ile karışmaması için burada getDocs kullanıyoruz.
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), where("durum","!=","tamamlandi"), limit(3));
+    const snap = await getDocs(q);
+    list.innerHTML = snap.empty ? '<p class="text-center text-xs text-gray-400">Aktif hedef yok.</p>' : snap.docs.map(d=>`<div class="bg-white p-2 rounded shadow-sm border border-gray-100 mb-2"><p class="text-sm text-gray-700">${d.data().title}</p></div>`).join('');
+}
+
+// ... (loadUpcomingAppointments, loadStudentStats, loadOverdueHomeworks AYNI KALACAK) ...
+// Kod tekrarını önlemek için bu kısımları önceki cevaptan alabilirsiniz. 
+// Önemli olan initNotifications fonksiyonunun güncellenmiş olmasıdır.
+
 async function loadUpcomingAppointments(db, uid, appId, sid) {
     const todayStr = new Date().toISOString().split('T')[0];
-    const q = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid), where("tarih", ">=", todayStr), orderBy("tarih", "asc"), limit(3));
+    const q = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), 
+        where("studentId", "==", sid), 
+        where("tarih", ">=", todayStr),
+        orderBy("tarih", "asc"),
+        limit(3)
+    );
     const snap = await getDocs(q);
     const container = document.getElementById('upcomingAppointmentsList');
     if(!container) return;
-    if (snap.empty) container.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Planlanmış seans yok.</p>';
-    else container.innerHTML = snap.docs.map(doc => { const a=doc.data(); const isToday=a.tarih===todayStr; return `<div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full ${isToday?'bg-green-100 text-green-600':'bg-indigo-50 text-indigo-600'} flex items-center justify-center font-bold text-sm shrink-0">${a.tarih.split('-')[2]}</div><div><h4 class="text-sm font-bold text-gray-800 leading-none mb-1">${a.baslik||'Görüşme'}</h4><p class="text-xs text-gray-500 flex items-center gap-1"><i class="fa-regular fa-clock text-[10px]"></i> ${a.baslangic} - ${a.bitis}</p></div></div>${isToday?'<span class="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">BUGÜN</span>':''}</div>`; }).join('');
+
+    if (snap.empty) {
+        container.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Planlanmış randevu yok.</p>';
+    } else {
+        container.innerHTML = snap.docs.map(doc => {
+            const a = doc.data();
+            const isToday = a.tarih === todayStr;
+            return `
+            <div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full ${isToday ? 'bg-green-100 text-green-600' : 'bg-indigo-50 text-indigo-600'} flex items-center justify-center font-bold text-sm shrink-0">
+                        ${a.tarih.split('-')[2]}
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-800 leading-none mb-1">${a.baslik || 'Görüşme'}</h4>
+                        <p class="text-xs text-gray-500 flex items-center gap-1">
+                            <i class="fa-regular fa-clock text-[10px]"></i> ${a.baslangic} - ${a.bitis}
+                        </p>
+                    </div>
+                </div>
+                ${isToday ? '<span class="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">BUGÜN</span>' : ''}
+            </div>`;
+        }).join('');
+    }
 }
+
 async function loadStudentStats(db, uid, appId, sid, period) {
     const now = new Date();
     let startDate = null;
-    if (period !== 'all') { const days = parseInt(period); const pastDate = new Date(now); pastDate.setDate(now.getDate() - days); startDate = pastDate.toISOString().split('T')[0]; } else { startDate = '2000-01-01'; }
-    const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
-        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("durum", "==", "tamamlandi"), where("bitisTarihi", ">=", startDate))),
-        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("durum", "==", "tamamlandi"), where("bitisTarihi", ">=", startDate))),
-        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"), where("tarih", ">=", startDate))),
-        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate))),
-        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid), where("tarih", ">=", startDate), where("durum", "==", "tamamlandi")))
-    ]);
-    document.getElementById('kpiCompletedGoals').textContent = snapGoals.size; document.getElementById('kpiCompletedHomework').textContent = snapHomework.size; document.getElementById('kpiTotalExams').textContent = snapExams.size; document.getElementById('kpiTotalSessions').textContent = snapSessions.size;
-    let totalQ = 0, totalRead = 0; snapQuestions.forEach(doc => { const d = doc.data(); const adet = parseInt(d.adet) || 0; if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += adet; else totalQ += adet; });
-    document.getElementById('kpiTotalQuestions').textContent = totalQ; document.getElementById('kpiReading').textContent = totalRead;
-    let totalNet = 0, subjectStats = {}; snapExams.forEach(doc => { const d = doc.data(); totalNet += (parseFloat(d.toplamNet) || 0); if(d.netler) { for (const [ders, stats] of Object.entries(d.netler)) { if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 }; subjectStats[ders].total += (parseFloat(stats.net) || 0); subjectStats[ders].count++; } } });
-    const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-'; document.getElementById('kpiAvgNet').textContent = avgNet;
-    let bestLesson = { name: '-', avg: -Infinity }; for (const [name, stat] of Object.entries(subjectStats)) { const avg = stat.total / stat.count; if (avg > bestLesson.avg) bestLesson = { name, avg }; }
-    document.getElementById('kpiBestLesson').textContent = bestLesson.name !== '-' ? `${bestLesson.name} (${bestLesson.avg.toFixed(1)})` : '-';
+    if (period !== 'all') {
+        const days = parseInt(period);
+        const pastDate = new Date(now);
+        pastDate.setDate(now.getDate() - days);
+        startDate = pastDate.toISOString().split('T')[0];
+    } else {
+        startDate = '2000-01-01'; 
+    }
+
+    const qGoals = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("bitisTarihi", ">=", startDate));
+    const qHomework = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("bitisTarihi", ">=", startDate));
+    const qExams = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"), where("tarih", ">=", startDate));
+    const qQuestions = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate));
+    const qSessions = query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid));
+
+    try {
+        const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
+            getDocs(qGoals), getDocs(qHomework), getDocs(qExams), getDocs(qQuestions), getDocs(qSessions)
+        ]);
+
+        let completedGoals = 0; snapGoals.forEach(doc => { if (doc.data().durum === 'tamamlandi') completedGoals++; });
+        document.getElementById('kpiCompletedGoals').textContent = completedGoals;
+
+        let completedHomework = 0; snapHomework.forEach(doc => { if (doc.data().durum === 'tamamlandi') completedHomework++; });
+        document.getElementById('kpiCompletedHomework').textContent = completedHomework;
+
+        document.getElementById('kpiTotalExams').textContent = snapExams.size;
+
+        let completedSessions = 0; snapSessions.forEach(doc => { const d = doc.data(); if (d.tarih >= startDate && d.durum === 'tamamlandi') completedSessions++; });
+        document.getElementById('kpiTotalSessions').textContent = completedSessions;
+
+        let totalQ = 0; let totalRead = 0;
+        snapQuestions.forEach(doc => { const d = doc.data(); const adet = parseInt(d.adet) || 0; if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += adet; else totalQ += adet; });
+        document.getElementById('kpiTotalQuestions').textContent = totalQ;
+        document.getElementById('kpiReading').textContent = totalRead;
+
+        let totalNet = 0; let subjectStats = {}; 
+        snapExams.forEach(doc => {
+            const d = doc.data();
+            totalNet += (parseFloat(d.toplamNet) || 0);
+            if(d.netler) {
+                for (const [ders, stats] of Object.entries(d.netler)) {
+                    if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 };
+                    subjectStats[ders].total += (parseFloat(stats.net) || 0);
+                    subjectStats[ders].count++;
+                }
+            }
+        });
+
+        const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-';
+        document.getElementById('kpiAvgNet').textContent = avgNet;
+
+        let bestLesson = { name: '-', avg: -Infinity };
+        for (const [name, stat] of Object.entries(subjectStats)) {
+            const avg = stat.total / stat.count;
+            if (avg > bestLesson.avg) bestLesson = { name, avg };
+        }
+        if(bestLesson.name !== '-') {
+            document.getElementById('kpiBestLesson').textContent = `${bestLesson.name} (${bestLesson.avg.toFixed(1)})`;
+        } else {
+            document.getElementById('kpiBestLesson').textContent = '-';
+        }
+
+    } catch (err) {
+        console.error("Dashboard istatistik hatası:", err);
+    }
 }
-function renderProfileLessons(dersler) { const profileTab = document.getElementById('tab-profile'); if(!profileTab) return; const oldSection = document.getElementById('profileLessonsContainer'); if(oldSection) oldSection.remove(); const infoCards = profileTab.querySelectorAll('.profile-info-card'); const lastInfoCard = infoCards[infoCards.length - 1]; if (lastInfoCard) { const lessonsDiv = document.createElement('div'); lessonsDiv.id = 'profileLessonsContainer'; lessonsDiv.className = 'mt-6'; lessonsDiv.innerHTML = `<h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 ml-1">Takip Edilen Dersler</h3><div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"><div class="flex flex-wrap gap-2">${dersler.map(d => `<span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100">${d}</span>`).join('')}</div></div>`; lastInfoCard.parentNode.insertBefore(lessonsDiv, lastInfoCard.nextSibling); } }
-async function updateHomeworkMetrics() { const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler")); const snap = await getDocs(q); const today = new Date().toISOString().split('T')[0]; let total=0, done=0, overdue=[]; snap.forEach(doc => { const d = doc.data(); total++; if(d.durum==='tamamlandi') done++; if(d.bitisTarihi < today && d.durum!=='tamamlandi') overdue.push({...d}); }); const p = total === 0 ? 0 : Math.round((done/total)*100); document.getElementById('homeworkChartPercent').textContent = `%${p}`; document.getElementById('homeworkChartText').textContent = `${done} Tamamlanan / ${total} Toplam`; const ctx = document.getElementById('weeklyHomeworkChart'); if(ctx) { if(homeworkChart) homeworkChart.destroy(); homeworkChart = new Chart(ctx, { type: 'doughnut', data: { labels: ['Tamamlanan', 'Kalan'], datasets: [{ data: [done, total - done], backgroundColor: ['#4f46e5', '#e5e7eb'], borderWidth: 0, cutout: '75%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { animateScale: true, animateRotate: true } } }); } }
-async function loadActiveGoalsForDashboard() { const list = document.getElementById('dashboardHedefList'); if(!list) return; listeners.activeGoals = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), where("durum","!=","tamamlandi"), limit(3)), (snap) => { list.innerHTML = snap.empty ? '<p class="text-center text-xs text-gray-400">Aktif hedef yok.</p>' : snap.docs.map(d=>`<div class="bg-white p-2 rounded shadow-sm border border-gray-100 mb-2"><p class="text-sm text-gray-700">${d.data().title}</p></div>`).join(''); }); }
-async function loadOverdueHomeworks(db, uid, appId, sid) { const today = new Date().toISOString().split('T')[0]; const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("durum", "!=", "tamamlandi"), where("bitisTarihi", "<", today), orderBy("bitisTarihi", "asc")); const snap = await getDocs(q); const container = document.getElementById('gecikmisOdevlerList'); if(!container) return; if (snap.empty) container.innerHTML = '<p class="text-center text-xs text-gray-400 py-4">Gecikmiş ödev yok.</p>'; else container.innerHTML = snap.docs.map(doc => { const d = doc.data(); return `<div class="bg-red-50 p-2.5 rounded-lg border border-red-100 mb-1.5 flex justify-between items-center"><div class="flex-1 min-w-0 pr-2"><p class="text-sm font-bold text-red-700 truncate">${d.title}</p><p class="text-[10px] text-red-500 flex items-center gap-1"><i class="fa-solid fa-calendar-xmark"></i> ${formatDateTR(d.bitisTarihi)}</p></div></div>`; }).join(''); }
+
+async function loadOverdueHomeworks(db, uid, appId, sid) {
+    const today = new Date().toISOString().split('T')[0];
+    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"),
+        where("durum", "!=", "tamamlandi"),
+        where("bitisTarihi", "<", today),
+        orderBy("bitisTarihi", "asc")
+    );
+
+    const snap = await getDocs(q);
+    const container = document.getElementById('gecikmisOdevlerList');
+    if(!container) return;
+    
+    if (snap.empty) {
+        container.innerHTML = '<p class="text-center text-xs text-gray-400 py-4">Gecikmiş ödev yok.</p>';
+    } else {
+        container.innerHTML = snap.docs.map(doc => {
+            const d = doc.data();
+            return `
+            <div class="bg-red-50 p-2.5 rounded-lg border border-red-100 mb-1.5 flex justify-between items-center">
+                <div class="flex-1 min-w-0 pr-2">
+                    <p class="text-sm font-bold text-red-700 truncate">${d.title}</p>
+                    <p class="text-[10px] text-red-500 flex items-center gap-1"><i class="fa-solid fa-calendar-xmark"></i> ${formatDateTR(d.bitisTarihi)}</p>
+                </div>
+            </div>`;
+        }).join('');
+    }
+}
 
 // =================================================================
 // 6. TAB NAVİGASYONU
@@ -393,7 +582,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
         document.getElementById(targetId).classList.remove('hidden');
 
-        for(let k in listeners) if(listeners[k] && k!=='notifications' && k!=='activeGoals' && k!=='unreadMsg') { listeners[k](); listeners[k]=null; }
+        for(let k in listeners) if(listeners[k] && k!=='notifications' && k!=='activeGoals' && k!=='unreadMsg' && k!=='notifHomework' && k!=='notifGoals' && k!=='notifAppt') { listeners[k](); listeners[k]=null; }
 
         if (targetId === 'tab-homework') { odevWeekOffset=0; loadHomeworksTab(); }
         else if (targetId === 'tab-messages') { markMessagesAsRead(); loadStudentMessages(); }

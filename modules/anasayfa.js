@@ -29,7 +29,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");
     
-    mainContentTitle.textContent = "Koçify✔️";
+    mainContentTitle.textContent = "NetKoç✔️";
     
     // 1. İskeleti Oluştur
     mainContentArea.innerHTML = `

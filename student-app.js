@@ -171,77 +171,134 @@ window.selectAvatar = async (icon) => {
     } catch (e) { console.error(e); }
 };
 
-function loadNotifications() {
-    const list = document.getElementById('notificationList'); // Doğru ID
-    const dot = document.getElementById('headerNotificationDot'); // Doğru ID
+// --- YENİ: GELİŞMİŞ ÖĞRENCİ BİLDİRİM SİSTEMİ ---
+function initStudentNotifications() {
+    const list = document.getElementById('notificationList');
+    const dot = document.getElementById('headerNotificationDot');
     
     if(!list || !coachId || !studentDocId) return;
 
-    let notifications = { appointments: [], pendingQuestions: [], pendingExams: [], pendingHomeworks: [] };
+    // Bildirim Veri Deposu
+    let notifications = { 
+        homeworks: [], 
+        goals: [], 
+        appts: [] 
+    };
 
     const renderNotifications = () => {
         const all = [
-            ...notifications.appointments,
-            ...notifications.pendingHomeworks,
-            ...notifications.pendingExams,
-            ...notifications.pendingQuestions
+            ...notifications.appts,
+            ...notifications.homeworks,
+            ...notifications.goals
         ];
         
+        // Tarihe göre sırala (En yeni en üstte - basitçe eklenme sırasına göre veya tarih varsa ona göre)
+        // Burada basit bir birleştirme yapıyoruz.
+
         if (all.length > 0) {
             dot.classList.remove('hidden');
             list.innerHTML = all.map(item => `
                 <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors" onclick="${item.action}">
                     <div class="flex justify-between items-start">
-                        <div><p class="text-xs font-bold text-gray-800">${item.title}</p><p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p></div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-800">${item.title}</p>
+                            <p class="text-xs text-gray-500 line-clamp-1">${item.desc}</p>
+                        </div>
                         <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${item.badgeClass}">${item.badgeText}</span>
                     </div>
                 </div>`).join('');
         } else {
             dot.classList.add('hidden');
-            list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Yeni bildirim yok.</p></div>`;
+            list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Bildirim yok.</p></div>`;
         }
     };
 
-    // 1. Yaklaşan Seanslar
-    const today = new Date().toISOString().split('T')[0];
-    listeners.notifications = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), where("studentId", "==", studentDocId), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(3)), (snap) => {
-        notifications.appointments = [];
+    // 1. Ödevler (Yapılacaklar)
+    const qOdev = query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), 
+        where("durum", "==", "devam"), 
+        orderBy("bitisTarihi", "asc"), 
+        limit(5)
+    );
+    listeners.notifHomework = onSnapshot(qOdev, (snap) => {
+        notifications.homeworks = [];
         snap.forEach(d => {
             const data = d.data();
-            notifications.appointments.push({
-                title: 'Yaklaşan Seans',
-                desc: `${formatDateTR(data.tarih)} ${data.baslangic}`,
-                badgeText: 'Seans',
-                badgeClass: 'bg-blue-100 text-blue-700',
-                action: "document.getElementById('btnNavAjanda').click()"
-            });
-        });
-        renderNotifications();
-    });
-
-    // 2. Yapılacak Ödevler (Örnek)
-    const qOdev = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam"), orderBy("bitisTarihi", "asc"), limit(5));
-    listeners.activeGoals = onSnapshot(qOdev, (snap) => {
-        notifications.pendingHomeworks = [];
-        snap.forEach(d => {
-            const data = d.data();
-            notifications.pendingHomeworks.push({
-                title: 'Ödev',
+            notifications.homeworks.push({
+                title: 'Ödevin Var',
                 desc: `${data.title}`,
-                badgeText: 'Yapılacak',
+                badgeText: 'Ödev',
                 badgeClass: 'bg-orange-100 text-orange-700',
                 action: "document.querySelector('[data-target=\"tab-homework\"]').click()"
             });
         });
         renderNotifications();
     });
+
+    // 2. Hedefler (Yeni Eklenenler)
+    const qHedef = query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), 
+        where("durum", "==", "devam"),
+        orderBy("olusturmaTarihi", "desc"), 
+        limit(3)
+    );
+    listeners.notifGoals = onSnapshot(qHedef, (snap) => {
+        notifications.goals = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.goals.push({
+                title: 'Yeni Hedef',
+                desc: `${data.title}`,
+                badgeText: 'Hedef',
+                badgeClass: 'bg-green-100 text-green-700',
+                action: "document.querySelector('[data-target=\"tab-goals\"]').click()"
+            });
+        });
+        renderNotifications();
+    });
+
+    // 3. Yaklaşan Seanslar
+    const today = new Date().toISOString().split('T')[0];
+    const qAppt = query(
+        collection(db, "artifacts", appId, "users", coachId, "ajandam"), 
+        where("studentId", "==", studentDocId), 
+        where("tarih", ">=", today), 
+        orderBy("tarih", "asc"), 
+        limit(3)
+    );
+    listeners.notifAppt = onSnapshot(qAppt, (snap) => {
+        notifications.appts = [];
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.appts.push({
+                title: 'Seans Hatırlatması',
+                desc: `${formatDateTR(data.tarih)} ${data.baslangic}`,
+                badgeText: 'Seans',
+                badgeClass: 'bg-blue-100 text-blue-700',
+                action: "document.querySelector('[data-target=\"tab-ajanda\"]').click()"
+            });
+        });
+        renderNotifications();
+    });
 }
+
 function listenUnreadMessages() {
     listeners.unreadMsg = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), where("gonderen", "==", "koc"), where("okundu", "==", false)), (snap) => {
         const b = document.getElementById('headerUnreadMsgCount');
         if(snap.size>0) { b.textContent=snap.size; b.classList.remove('hidden'); } else b.classList.add('hidden');
     });
 }
+
+window.selectAvatar = async (icon) => {
+    try {
+        await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon });
+        const avatarEl = document.getElementById('profileAvatar');
+        if (avatarEl) { avatarEl.textContent = icon; avatarEl.style.backgroundColor = '#fff'; avatarEl.style.fontSize = '3rem'; }
+        document.getElementById('modalAvatarSelect').classList.add('hidden');
+        const headerLogo = document.querySelector('#headerLogoContainer i');
+        if(headerLogo) { headerLogo.className = ''; headerLogo.textContent = icon; headerLogo.style.fontStyle = 'normal'; }
+    } catch (e) { console.error(e); }
+};
 // =================================================================
 // 5. DASHBOARD & VERİ YÜKLEME
 // =================================================================

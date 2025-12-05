@@ -60,7 +60,7 @@ if (loginButton) {
                 });
             }
 
-            window.location.href = "index.html";
+            window.location.href = "coach-dashboard.html";
         } catch (error) {
             handleFirebaseError(error);
             loginButton.disabled = false;
@@ -111,7 +111,7 @@ if (signupButton) {
                 maxOgrenci: 1 // LİMİT 1 OLARAK AYARLANDI
             });
             
-            window.location.href = "index.html";
+            window.location.href = "coach-dashboard.html";
         } catch (error) {
             handleFirebaseError(error);
             signupButton.disabled = false;

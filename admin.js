@@ -36,7 +36,7 @@ onAuthStateChanged(auth, (user) => {
         // Yetki Kontrolü
         if (user.email !== ADMIN_EMAIL) {
             alert("Bu sayfaya erişim yetkiniz yok! Ana sayfaya yönlendiriliyorsunuz.");
-            window.location.href = "index.html";
+            window.location.href = "coach-dashboard.html";
             return;
         }
         

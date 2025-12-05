@@ -2,9 +2,6 @@
 // 0. HATA YAKALAMA
 // =================================================================
 window.addEventListener('error', (e) => {
-    const spinner = document.getElementById('loadingSpinner');
-    if(spinner) spinner.style.display = 'none';
-
     const errorBox = document.getElementById('globalErrorDisplay');
     if(errorBox) {
         errorBox.classList.remove('hidden');
@@ -96,39 +93,38 @@ async function initializeStudentApp(uid) {
     try {
         const profileRef = doc(db, "artifacts", appId, "users", uid, "settings", "profile");
         const profileSnap = await getDoc(profileRef);
-        
         if (profileSnap.exists()) {
             const pd = profileSnap.data();
-            
-            // GÜVENLİK: Koç Girişini Engelle
-            if (pd.rol === 'koc') {
-                await signOut(auth);
-                alert("Koç hesapları öğrenci panelinden giriş yapamaz.");
-                window.location.href = "student-login.html";
-                return;
-            }
-            
             coachId = pd.kocId;
             studentDocId = pd.linkedDocId;
-            
-            // DÜZELTME: Eşleştirme Modalı Kaldırıldı
-            // Hesap zaten koç tarafından oluşturulduğu için bağlantı olmalı.
             if (coachId && studentDocId) {
                 loadDashboardData(); 
                 enableHeaderIcons();
                 initStudentNotifications(); 
             } else {
-                // Bağlantı yoksa hata ver (Eski sistemden kalma veya hatalı kayıt)
-                alert("Hesabınızla ilgili bir sorun var. Koç bağlantısı bulunamadı. Lütfen koçunuzla iletişime geçin.");
-                await signOut(auth);
-                window.location.href = "student-login.html";
+                document.getElementById('modalMatchProfile').classList.remove('hidden');
+                document.getElementById('modalMatchProfile').style.display = 'flex';
             }
-        } else {
-            // Profil yoksa
-            await signOut(auth);
-            window.location.href = "student-login.html";
-        }
+        } else signOut(auth);
     } catch (e) { console.error(e); }
+}
+
+const btnMatch = document.getElementById('btnMatchProfile');
+if (btnMatch) {
+    btnMatch.onclick = async () => {
+        const n = document.getElementById('matchName').value.trim(), s = document.getElementById('matchSurname').value.trim();
+        if(!n||!s) return alert("Bilgileri girin.");
+        const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim"), where("ad", "==", n), where("soyad", "==", s));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            studentDocId = snap.docs[0].id;
+            await updateDoc(doc(db, "artifacts", appId, "users", currentUser.uid, "settings", "profile"), { linkedDocId: studentDocId });
+            document.getElementById('modalMatchProfile').classList.add('hidden');
+            alert("Eşleşme başarılı!");
+            loadDashboardData();
+            enableHeaderIcons();
+        } else document.getElementById('matchError').classList.remove('hidden');
+    };
 }
 
 // =================================================================
@@ -201,7 +197,7 @@ window.navigateToTab = (tabId) => {
     else if (tabId === 'tab-home') loadDashboardData();
 };
 
-// --- BİLDİRİM SİSTEMİ ---
+// --- BİLDİRİM SİSTEMİ (GÜNCELLENDİ: TIKLAYINCA KAPANIYOR) ---
 function initStudentNotifications() {
     const list = document.getElementById('notificationList');
     const dot = document.getElementById('headerNotificationDot');
@@ -213,13 +209,14 @@ function initStudentNotifications() {
     const renderNotifications = () => {
         let all = [...notifications.appts, ...notifications.homeworks, ...notifications.goals];
         
-        // JS tarafında sıralama (Yeniden eskiye)
+        // JS tarafında sıralama
         all.sort((a, b) => b.sortDate - a.sortDate);
 
         if (all.length > 0) {
             dot.classList.remove('hidden');
             list.innerHTML = all.map(item => `
-                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors group" onclick="navigateToTab('${item.targetTab}')">
+                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors group" 
+                     onclick="navigateToTab('${item.targetTab}'); document.getElementById('notificationDropdown').classList.add('hidden');">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-xs font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">${item.title}</p>
@@ -238,8 +235,7 @@ function initStudentNotifications() {
     // 1. Ödevler
     const qOdev = query(
         collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), 
-        where("durum", "==", "devam"), 
-        limit(5)
+        where("durum", "==", "devam")
     );
     listeners.notifHomework = onSnapshot(qOdev, (snap) => {
         notifications.homeworks = [];
@@ -262,8 +258,7 @@ function initStudentNotifications() {
     // 2. Hedefler
     const qHedef = query(
         collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), 
-        where("durum", "==", "devam"),
-        limit(3)
+        where("durum", "==", "devam")
     );
     listeners.notifGoals = onSnapshot(qHedef, (snap) => {
         notifications.goals = [];
@@ -334,10 +329,6 @@ window.selectAvatar = async (icon) => {
 // =================================================================
 async function loadDashboardData() {
     if (!coachId || !studentDocId) return;
-    if(document.getElementById('motivasyonSozu')) {
-        const randomSoz = motivasyonSozleri[Math.floor(Math.random() * motivasyonSozleri.length)];
-        document.getElementById('motivasyonSozu').textContent = `"${randomSoz}"`;
-    }
     
     const snap = await getDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId));
     if (snap.exists()) {
@@ -533,15 +524,27 @@ async function loadStudentStats(db, uid, appId, sid, period) {
 
         document.getElementById('kpiTotalExams').textContent = snapExams.size;
 
-        let completedSessions = 0; snapSessions.forEach(doc => { const d = doc.data(); if (d.tarih >= startDate && d.durum === 'tamamlandi') completedSessions++; });
+        let completedSessions = 0;
+        snapSessions.forEach(doc => {
+            const d = doc.data();
+            if (d.tarih >= startDate && d.durum === 'tamamlandi') completedSessions++;
+        });
         document.getElementById('kpiTotalSessions').textContent = completedSessions;
 
-        let totalQ = 0; let totalRead = 0;
-        snapQuestions.forEach(doc => { const d = doc.data(); const adet = parseInt(d.adet) || 0; if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += adet; else totalQ += adet; });
+        let totalQ = 0;
+        let totalRead = 0;
+        snapQuestions.forEach(doc => {
+            const d = doc.data();
+            const adet = parseInt(d.adet) || 0;
+            if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += adet;
+            else totalQ += adet;
+        });
         document.getElementById('kpiTotalQuestions').textContent = totalQ;
         document.getElementById('kpiReading').textContent = totalRead;
 
-        let totalNet = 0; let subjectStats = {}; 
+        let totalNet = 0;
+        let subjectStats = {}; 
+
         snapExams.forEach(doc => {
             const d = doc.data();
             totalNet += (parseFloat(d.toplamNet) || 0);
@@ -868,9 +871,7 @@ function loadGoalsTab() {
 
             return `
             <div class="p-4 rounded-xl border shadow-sm mb-3 flex gap-4 relative ${cardClass}">
-                
                 ${isPinned ? '<div class="absolute top-0 right-0 bg-yellow-400 text-white rounded-bl-xl rounded-tr-xl w-8 h-8 flex items-center justify-center shadow-sm"><i class="fa-solid fa-thumbtack text-sm"></i></div>' : ''}
-
                 <div class="w-10 h-10 rounded-full ${isDone ? 'bg-green-100 text-green-600' : (isPinned ? 'bg-yellow-200 text-yellow-700' : 'bg-purple-100 text-purple-600')} flex items-center justify-center text-lg shrink-0">
                     <i class="fa-solid ${isDone ? 'fa-check' : 'fa-bullseye'}"></i>
                 </div>
@@ -880,23 +881,15 @@ function loadGoalsTab() {
                         ${isDone ? '<span class="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold">Tamamlandı</span>' : ''}
                     </div>
                     <p class="text-xs text-gray-600 mt-1 leading-relaxed">${h.aciklama || ''}</p>
-                    
                     <div class="flex items-center gap-3 mt-2 pt-2 border-t border-gray-200/50 text-[10px] text-gray-400">
-                        <span title="Veriliş Tarihi" class="flex items-center gap-1">
-                            <i class="fa-regular fa-calendar-plus text-purple-400"></i> ${olusturma}
-                        </span>
-                        <span title="Bitiş Tarihi" class="flex items-center gap-1 ${!isDone ? 'text-orange-500 font-bold' : ''}">
-                            <i class="fa-regular fa-flag"></i> ${bitis}
-                        </span>
+                        <span title="Veriliş Tarihi" class="flex items-center gap-1"><i class="fa-regular fa-calendar-plus text-purple-400"></i> ${olusturma}</span>
+                        <span title="Bitiş Tarihi" class="flex items-center gap-1 ${!isDone ? 'text-orange-500 font-bold' : ''}"><i class="fa-regular fa-flag"></i> ${bitis}</span>
                     </div>
                 </div>
             </div>`;
         }).join('');
     });
 }
-
-// ... (Diğer modüller aynı) ...
-// (Kodun geri kalanı, özellikle window.completeOdev, loadDenemelerTab, loadStudentMessages vb. önceki versiyondaki gibi kalmalı)
 
 // --- DENEMELER ---
 function loadDenemelerTab() {

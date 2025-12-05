@@ -209,23 +209,7 @@ function initStudentNotifications() {
 if(!list || !coachId || !studentDocId) return;
     
         // Toggle Mantığı
-    btn.onclick = (e) => { 
-        e.stopPropagation(); 
-        dropdown.classList.toggle('hidden'); 
-        if (!dropdown.classList.contains('hidden')) {
-            dropdown.classList.remove('scale-95', 'opacity-0');
-        } else {
-            dropdown.classList.add('scale-95', 'opacity-0');
-        }
-        if(dot) dot.classList.add('hidden'); 
-    };
-
-    document.addEventListener('click', (e) => { 
-        if(!dropdown.contains(e.target) && !btn.contains(e.target)) {
-            dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
-        }
-    });
-
+    
     const closeBtn = document.getElementById('btnCloseCoachNotifications');
     if(closeBtn) closeBtn.onclick = (e) => {
         e.stopPropagation();

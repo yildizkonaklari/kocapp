@@ -206,16 +206,8 @@ function initStudentNotifications() {
     const list = document.getElementById('notificationList');
     const dot = document.getElementById('headerNotificationDot');
     
-if(!list || !coachId || !studentDocId) return;
-    
-        // Toggle Mantığı
-    
-    const closeBtn = document.getElementById('btnCloseCoachNotifications');
-    if(closeBtn) closeBtn.onclick = (e) => {
-        e.stopPropagation();
-        dropdown.classList.add('hidden', 'scale-95', 'opacity-0');
-    };
-    
+    if(!list || !coachId || !studentDocId) return;
+
     let notifications = { homeworks: [], goals: [], appts: [] };
 
     const renderNotifications = () => {

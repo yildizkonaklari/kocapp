@@ -206,8 +206,9 @@ function initStudentNotifications() {
     const list = document.getElementById('notificationList');
     const dot = document.getElementById('headerNotificationDot');
     
-    if(!list || !coachId || !studentDocId) return;
-
+if(!list || !coachId || !studentDocId) return;  
+ if(!btn || !dropdown) return;
+    
     let notifications = { homeworks: [], goals: [], appts: [] };
 
     const renderNotifications = () => {

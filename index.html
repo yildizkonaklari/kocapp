@@ -861,24 +861,25 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Sizin Firebase Proje Ayarlarınız
         const firebaseConfig = {
-  apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
-  authDomain: "kocluk-99ad2.firebaseapp.com",
-  projectId: "kocluk-99ad2",
-  storageBucket: "kocluk-99ad2.firebasestorage.app",
-  messagingSenderId: "784379379600",
-  appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
-};
+            apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
+            authDomain: "kocluk-99ad2.firebaseapp.com",
+            projectId: "kocluk-99ad2",
+            storageBucket: "kocluk-99ad2.firebasestorage.app",
+            messagingSenderId: "784379379600",
+            appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // Anonymous Sign-in for public write access
         signInAnonymously(auth).then(() => {
-            console.log("Signed in anonymously for form submission");
+            console.log("Form gönderimi için anonim giriş yapıldı.");
         }).catch((error) => {
-            console.error("Auth error", error);
+            console.error("Auth hatası:", error);
         });
 
         const contactForm = document.getElementById('contactForm');
@@ -896,7 +897,8 @@
                 const phone = document.getElementById('phone').value;
                 const role = document.getElementById('role').value;
 
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'demoRequests'), {
+                // Veriyi 'demoRequests' koleksiyonuna kaydet
+                await addDoc(collection(db, 'demoRequests'), {
                     name,
                     email,
                     phone,
@@ -907,8 +909,8 @@
                 alert("Talebiniz başarıyla alındı! En kısa sürede sizinle iletişime geçeceğiz.");
                 contactForm.reset();
             } catch (error) {
-                console.error("Error adding document: ", error);
-                alert("Bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+                console.error("Belge eklenirken hata oluştu: ", error);
+                alert("Bir hata oluştu: " + error.message);
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerText = originalText;

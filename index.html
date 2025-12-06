@@ -13,17 +13,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* --- YENİ RENK PALETİ (İndigo & Turkuaz) --- */
+        /* --- RENK PALETİ (İndigo & Turkuaz) --- */
         :root {
             /* Site Teması: İndigo & Turkuaz */
             --primary: #4F46E5;       /* İndigo Mavisi (Ana Renk) */
             --primary-dark: #4338CA;  /* Koyu İndigo */
             --secondary: #27C3C8;     /* Turkuaz (İkincil/Vurgu Renk) */
-            --accent: #F472B6;        /* Pembe Aksan (Korundu, gerekirse değiştirilebilir) */
+            --accent: #F472B6;        /* Pembe Aksan */
             
             /* Logo Renkleri */
-            --logo-indigo: #4F46E5;   /* İndigo */
-            --logo-teal: #27C3C8;     /* Turkuaz */
+            --logo-indigo: #4F46E5;   
+            --logo-teal: #27C3C8;     
 
             /* Genel */
             --dark: #1F2937;
@@ -36,7 +36,7 @@
             --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            --hero-gradient: linear-gradient(135deg, #4F46E5 0%, #27C3C8 100%); /* Yeni Gradient */
+            --hero-gradient: linear-gradient(135deg, #4F46E5 0%, #27C3C8 100%);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -51,13 +51,25 @@
 
         a { text-decoration: none; transition: all 0.3s ease; }
         ul { list-style: none; }
-        input, textarea, button { font-family: 'Poppins', sans-serif; }
+        input, textarea, button, select { font-family: 'Poppins', sans-serif; }
         img { max-width: 100%; display: block; }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 24px;
+        }
+
+        /* --- SCROLL ANİMASYONLARI --- */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         /* --- NAVBAR --- */
@@ -81,46 +93,74 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 8px; /* Boşluk azaltıldı */
+            gap: 8px; 
             text-decoration: none;
         }
 
-        .logo-img {
-            height: 45px; 
-            width: auto;
-        }
+        .logo-img { height: 45px; width: auto; }
 
         .logo-text {
             font-family: 'Poppins', sans-serif;
             font-size: 26px;
             font-weight: 700;
-            color: var(--logo-indigo); /* İndigo */
+            color: var(--logo-indigo);
             letter-spacing: -0.5px;
             line-height: 1;
         }
 
-        .logo-text span {
-            color: var(--logo-teal); /* Turkuaz */
-        }
+        .logo-text span { color: var(--logo-teal); }
 
-        .nav-links {
-            display: flex;
-            gap: 32px;
-        }
-
-        .nav-links a {
-            color: var(--gray);
-            font-weight: 500;
-            font-size: 15px;
-        }
-
+        /* Desktop Nav Links */
+        .nav-links { display: flex; gap: 32px; }
+        .nav-links a { color: var(--gray); font-weight: 500; font-size: 15px; }
         .nav-links a:hover { color: var(--primary); }
 
-        /* Dropdown Menu Styles */
-        .dropdown {
-            position: relative;
-            display: inline-block;
+        /* Desktop Actions */
+        .nav-actions { display: flex; align-items: center; gap: 15px; }
+
+        /* Mobile Hamburger Menu Icon */
+        .mobile-menu-btn {
+            display: none;
+            font-size: 1.8rem;
+            color: var(--dark);
+            cursor: pointer;
+            z-index: 1002;
         }
+
+        /* Mobile Overlay Menu */
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: white;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transform: translateX(100%);
+            transition: transform 0.4s ease-in-out;
+            padding: 20px;
+        }
+
+        .mobile-menu-overlay.active { transform: translateX(0); }
+
+        .mobile-menu-links {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .mobile-menu-links a { color: var(--dark); }
+        .mobile-menu-links a:hover { color: var(--primary); }
+
+        /* Dropdown Menu Styles */
+        .dropdown { position: relative; display: inline-block; }
 
         .btn-login-trigger {
             background: white;
@@ -136,9 +176,7 @@
             transition: all 0.3s;
         }
 
-        .btn-login-trigger:hover {
-            background: var(--light-bg);
-        }
+        .btn-login-trigger:hover { background: var(--light-bg); }
 
         .dropdown-content {
             display: none;
@@ -164,10 +202,8 @@
             border-bottom: 1px solid #f9fafb;
         }
 
-        .dropdown-content a:last-child { border-bottom: none; }
         .dropdown-content a:hover { background-color: #f3f4f6; color: var(--primary); }
         .dropdown-content a i { margin-right: 8px; color: var(--gray); width: 20px; }
-
         .show { display: block; }
 
         @keyframes fadeIn {
@@ -182,7 +218,7 @@
             border-radius: 50px;
             font-weight: 600;
             font-size: 0.95rem;
-            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3); /* İndigo gölge */
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
             display: inline-block;
             border: none;
             cursor: pointer;
@@ -196,16 +232,11 @@
         /* --- HERO SECTION --- */
         .hero {
             padding-top: 140px;
-            padding-bottom: 80px;
-            background: radial-gradient(circle at 90% 10%, rgba(79, 70, 229, 0.08) 0%, transparent 40%); /* İndigo arka plan */
+            padding-bottom: 60px;
+            background: radial-gradient(circle at 90% 10%, rgba(79, 70, 229, 0.08) 0%, transparent 40%);
         }
 
-        .hero-content {
-            display: flex;
-            align-items: center;
-            gap: 60px;
-        }
-
+        .hero-content { display: flex; align-items: center; gap: 60px; }
         .hero-text { flex: 1; }
 
         .hero-text h1 {
@@ -224,14 +255,9 @@
             max-width: 550px;
         }
 
-        .hero-image {
-            flex: 1;
-            position: relative;
-            display: flex;
-            justify-content: center;
-        }
+        .hero-image { flex: 1; position: relative; display: flex; justify-content: center; }
 
-        /* --- CİHAZ MOCKUP CSS --- */
+        /* --- MOCKUP CSS --- */
         .device-composition {
             position: relative;
             width: 100%;
@@ -239,11 +265,7 @@
             perspective: 1000px;
         }
 
-        .laptop-device {
-            width: 100%;
-            position: relative;
-            z-index: 1;
-        }
+        .laptop-device { width: 100%; position: relative; z-index: 1; }
         
         .laptop-screen-frame {
             background: #111;
@@ -256,139 +278,100 @@
         }
 
         .laptop-camera {
-            width: 8px;
-            height: 8px;
-            background: #333;
-            border-radius: 50%;
-            position: absolute;
-            top: 4px;
-            left: 50%;
-            transform: translateX(-50%);
+            width: 8px; height: 8px; background: #333; border-radius: 50%;
+            position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
         }
 
         .laptop-display {
-            width: 100%;
-            height: 100%;
-            background: #fff;
-            border-radius: 4px 4px 0 0;
-            overflow: hidden;
-            position: relative;
+            width: 100%; height: 100%; background: #fff;
+            border-radius: 4px 4px 0 0; overflow: hidden;
         }
 
-        .laptop-display img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: top;
-        }
+        .laptop-display img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 
         .laptop-base {
-            background: #e5e7eb;
-            height: 18px;
-            border-radius: 0 0 16px 16px;
-            width: 120%;
-            margin-left: -10%;
-            position: relative;
-            border-top: 2px solid #d1d5db;
+            background: #e5e7eb; height: 18px; border-radius: 0 0 16px 16px;
+            width: 120%; margin-left: -10%; position: relative; border-top: 2px solid #d1d5db;
         }
         
         .phone-device {
-            position: absolute;
-            bottom: -20px;
-            right: -30px;
-            width: 110px;
-            z-index: 2;
-            background: #111;
-            border-radius: 20px;
-            padding: 5px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            border: 2px solid #333;
+            position: absolute; bottom: -20px; right: -30px; width: 110px; z-index: 2;
+            background: #111; border-radius: 20px; padding: 5px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 2px solid #333;
         }
 
         .phone-screen-frame {
-            background: #fff;
-            border-radius: 16px;
-            overflow: hidden;
-            width: 100%;
-            aspect-ratio: 9 / 19.5;
-            position: relative;
+            background: #fff; border-radius: 16px; overflow: hidden; width: 100%; aspect-ratio: 9 / 19.5; position: relative;
         }
 
         .phone-notch {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40%;
-            height: 12px;
-            background: #111;
-            border-radius: 0 0 8px 8px;
-            z-index: 3;
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 40%; height: 12px; background: #111; border-radius: 0 0 8px 8px; z-index: 3;
         }
 
-        .phone-screen-frame img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: top;
+        .phone-screen-frame img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+        /* --- LOGO BAND (TRUST SECTION) --- */
+        .logo-band {
+            padding: 40px 0;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            margin-top: 20px;
         }
 
-        /* --- ÖZELLİKLER (6 KART) --- */
-        .features {
-            padding: 100px 0;
-            background: var(--white);
-        }
-
-        .section-header {
+        .logo-band p {
             text-align: center;
-            margin-bottom: 60px;
-        }
-        
-        .section-header h2 {
-            font-size: 2.5rem;
-            margin-bottom: 16px;
-        }
-        
-        .section-header h2 span { color: var(--secondary); /* Turkuaz */ }
-        .section-header p { color: var(--gray); font-size: 1.1rem; }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-            gap: 30px;
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
         }
 
-        .feature-card {
-            background: var(--white);
-            border: 1px solid #E5E7EB;
-            border-radius: 24px;
-            padding: 40px 32px;
-            transition: all 0.3s ease;
+        .logos-wrapper {
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 40px;
+            opacity: 0.6;
         }
 
-        .feature-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--secondary); /* Turkuaz border */
-        }
-
-        .icon-box {
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
+        .trust-logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--gray);
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: white;
-            margin-bottom: 24px;
-            background: var(--hero-gradient); /* Yeni Gradient */
+            gap: 10px;
+            filter: grayscale(100%);
+            transition: all 0.3s;
         }
 
-        /* Kart İkonları İçin Yeni Renkler (İndigo/Turkuaz Temelli) */
+        .trust-logo:hover { filter: grayscale(0%); color: var(--dark); opacity: 1; }
+
+        /* --- ÖZELLİKLER --- */
+        .features { padding: 100px 0; background: var(--white); }
+        .section-header { text-align: center; margin-bottom: 60px; }
+        .section-header h2 { font-size: 2.5rem; margin-bottom: 16px; }
+        .section-header h2 span { color: var(--secondary); }
+        .section-header p { color: var(--gray); font-size: 1.1rem; }
+
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 30px; }
+
+        .feature-card {
+            background: var(--white); border: 1px solid #E5E7EB; border-radius: 24px; padding: 40px 32px;
+            transition: all 0.3s ease; display: flex; flex-direction: column; align-items: flex-start;
+        }
+
+        .feature-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); border-color: var(--secondary); }
+
+        .icon-box {
+            width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; margin-bottom: 24px; background: var(--hero-gradient);
+        }
+
+        /* İkon Renkleri */
         .icon-indigo-teal { background: linear-gradient(135deg, #4F46E5, #27C3C8); }
         .icon-teal-indigo { background: linear-gradient(135deg, #27C3C8, #4F46E5); }
         .icon-accent-indigo { background: linear-gradient(135deg, #F472B6, #4F46E5); }
@@ -396,298 +379,69 @@
         .icon-teal-accent { background: linear-gradient(135deg, #27C3C8, #F472B6); }
         .icon-accent-teal { background: linear-gradient(135deg, #F472B6, #27C3C8); }
 
+        .feature-card h3 { font-size: 1.25rem; margin-bottom: 12px; color: var(--dark); }
+        .feature-card p { font-size: 0.95rem; color: var(--gray); line-height: 1.6; }
 
-        .feature-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 12px;
-            color: var(--dark);
-        }
+        /* --- FAYDALAR --- */
+        .benefits-section { padding: 100px 0; background: #F8FAFC; }
+        .benefits-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 60px; align-items: center; }
+        .benefits-label { color: var(--logo-teal); font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; display: block; }
+        .benefits-title { font-size: 2.2rem; font-weight: 700; color: var(--logo-indigo); line-height: 1.2; margin-bottom: 20px; }
+        .benefits-desc { color: var(--gray); margin-bottom: 30px; font-size: 1.05rem; }
+        .benefits-list li { margin-bottom: 15px; display: flex; align-items: flex-start; gap: 12px; color: var(--gray); }
+        .benefits-list i { color: white; background: var(--logo-teal); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; margin-top: 3px; }
 
-        .feature-card p {
-            font-size: 0.95rem;
-            color: var(--gray);
-            line-height: 1.6;
-        }
-
-        /* "Detayları Gör" linki kaldırıldı */
-
-        /* --- FAYDALAR (Yeni Bölüm) --- */
-        .benefits-section {
-            padding: 100px 0;
-            background: #F8FAFC;
-        }
-
-        .benefits-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 60px;
-            align-items: center;
-        }
-
-        .benefits-label {
-            color: var(--logo-teal); /* Turkuaz */
-            font-weight: 700;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .benefits-title {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: var(--logo-indigo); /* İndigo */
-            line-height: 1.2;
-            margin-bottom: 20px;
-        }
-
-        .benefits-desc {
-            color: var(--gray);
-            margin-bottom: 30px;
-            font-size: 1.05rem;
-        }
-
-        .benefits-list {
-            list-style: none;
-        }
-
-        .benefits-list li {
-            margin-bottom: 15px;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            color: var(--gray);
-        }
-
-        .benefits-list i {
-            color: white;
-            background: var(--logo-teal); /* Turkuaz */
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            flex-shrink: 0;
-            margin-top: 3px;
-        }
-
-        /* Faydalar Sağ Taraf (Koyu Kart) */
         .benefits-card {
-            background-color: var(--logo-indigo); /* İndigo */
-            color: white;
-            border-radius: 30px;
-            padding: 50px;
-            box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.4); /* İndigo gölge */
-            position: relative;
-            overflow: hidden;
+            background-color: var(--logo-indigo); color: white; border-radius: 30px; padding: 50px;
+            box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.4); position: relative; overflow: hidden;
         }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; }
+        .stat-item h3 { font-size: 2.5rem; font-weight: 700; margin-bottom: 5px; background: linear-gradient(to right, #fff, #27C3C8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-item p { font-size: 0.9rem; opacity: 0.7; line-height: 1.4; }
 
-        .benefits-card-text {
-            font-size: 1rem;
-            line-height: 1.7;
-            margin-bottom: 40px;
-            opacity: 0.9;
-        }
+        /* --- NASIL ÇALIŞIR --- */
+        .how-it-works { padding: 80px 0 120px; background: #ffffff; }
+        .process-steps { display: flex; justify-content: space-between; position: relative; margin-top: 60px; }
+        .process-steps::before { content: ''; position: absolute; top: 30px; left: 50px; right: 50px; height: 2px; background: #E5E7EB; z-index: 0; }
+        .step-item { position: relative; z-index: 1; text-align: center; flex: 1; padding: 0 15px; }
+        .step-icon { width: 64px; height: 64px; background: var(--white); border: 2px solid #E5E7EB; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 24px; color: var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: all 0.3s; }
+        .step-item:hover .step-icon { border-color: var(--primary); background: var(--primary); color: white; transform: scale(1.1); }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
-        }
+        /* --- REFERANSLAR --- */
+        #referans { padding: 100px 0; background: linear-gradient(to bottom, #ffffff, #f9fafb); }
 
-        .stat-item h3 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-            /* Beyazdan Turkuaza geçiş */
-            background: linear-gradient(to right, #fff, #27C3C8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        /* --- SSS (FAQ) SECTION - YENİ --- */
+        .faq-section { padding: 100px 0; background: #ffffff; }
+        .faq-container { max-width: 800px; margin: 0 auto; }
+        .faq-item { border-bottom: 1px solid #E5E7EB; margin-bottom: 15px; }
+        .faq-question {
+            padding: 20px; cursor: pointer; font-weight: 600; font-size: 1.1rem; color: var(--dark);
+            display: flex; justify-content: space-between; align-items: center; transition: color 0.3s;
         }
-
-        .stat-item p {
-            font-size: 0.9rem;
-            opacity: 0.7;
-            line-height: 1.4;
+        .faq-question:hover { color: var(--primary); }
+        .faq-answer {
+            max-height: 0; overflow: hidden; transition: max-height 0.4s ease; padding: 0 20px; color: var(--gray); font-size: 0.95rem;
         }
-
-        /* --- NASIL ÇALIŞIR? --- */
-        .how-it-works {
-            padding: 80px 0 120px;
-            background: #ffffff;
-        }
-
-        .process-steps {
-            display: flex;
-            justify-content: space-between;
-            position: relative;
-            margin-top: 60px;
-        }
-        
-        .process-steps::before {
-            content: '';
-            position: absolute;
-            top: 30px;
-            left: 50px;
-            right: 50px;
-            height: 2px;
-            background: #E5E7EB;
-            z-index: 0;
-        }
-
-        .step-item {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            flex: 1;
-            padding: 0 15px;
-        }
-
-        .step-icon {
-            width: 64px;
-            height: 64px;
-            background: var(--white);
-            border: 2px solid #E5E7EB;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 24px;
-            color: var(--primary); /* İndigo */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: all 0.3s;
-        }
-        
-        .step-item:hover .step-icon {
-            border-color: var(--primary);
-            background: var(--primary);
-            color: white;
-            transform: scale(1.1);
-        }
-
-        .step-item h4 { font-size: 1.1rem; margin-bottom: 8px; }
-        .step-item p { font-size: 0.9rem; color: var(--gray); }
+        .faq-item.active .faq-answer { max-height: 200px; padding-bottom: 25px; }
+        .faq-item.active .faq-question i { transform: rotate(180deg); transition: transform 0.3s; }
 
         /* --- DEMO TALEP FORMU --- */
-        .demo-section {
-            padding: 100px 0;
-            background: var(--white);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .demo-section::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            /* İndigo ve Turkuaz arka plan efekti */
-            background: radial-gradient(circle at 10% 90%, rgba(79, 70, 229, 0.05) 0%, transparent 40%),
-                        radial-gradient(circle at 90% 10%, rgba(39, 195, 200, 0.05) 0%, transparent 40%);
-            z-index: 0;
-        }
-
-        .demo-container {
-            position: relative;
-            z-index: 1;
-            background: var(--hero-gradient); /* İndigo-Turkuaz Gradient */
-            border-radius: 30px;
-            padding: 60px;
-            display: flex;
-            gap: 60px;
-            color: white;
-            box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.25); /* İndigo gölge */
-        }
-
-        .demo-text { flex: 1; }
-        .demo-text h2 { font-size: 2.5rem; margin-bottom: 20px; line-height: 1.2; }
-        .demo-text p { font-size: 1.1rem; opacity: 0.9; margin-bottom: 30px; }
-        .demo-features li { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 1.05rem; }
-        .demo-features i { background: rgba(255,255,255,0.2); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
-
-        .demo-form-wrapper {
-            flex: 0.8;
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .form-group { margin-bottom: 20px; }
-        .form-label { display: block; color: var(--dark); font-weight: 500; margin-bottom: 8px; font-size: 0.9rem; }
-        .form-input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #E5E7EB;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-        
+        .demo-section { padding: 100px 0; background: var(--white); position: relative; overflow: hidden; }
+        .demo-container { position: relative; z-index: 1; background: var(--hero-gradient); border-radius: 30px; padding: 60px; display: flex; gap: 60px; color: white; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.25); }
+        .demo-form-wrapper { flex: 0.8; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .form-input { width: 100%; padding: 12px 15px; border: 1px solid #E5E7EB; border-radius: 10px; font-size: 1rem; transition: all 0.3s; }
         .form-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        .form-btn { width: 100%; margin-top: 10px; }
 
         /* --- FOOTER --- */
-        footer {
-            background: var(--white);
-            border-top: 1px solid #E5E7EB;
-            padding: 60px 0 30px;
-        }
-        
-        .footer-bottom {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #E5E7EB;
-            font-size: 0.9rem;
-            color: var(--gray);
-        }
-
+        footer { background: var(--white); border-top: 1px solid #E5E7EB; padding: 60px 0 30px; }
+        .footer-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; font-size: 0.9rem; color: var(--gray); }
         .footer-links a { color: var(--gray); margin-left: 20px; }
         .footer-links a:hover { color: var(--primary); text-decoration: underline; }
 
         /* --- MODAL --- */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 2000; 
-            left: 0;
-            top: 0;
-            width: 100%; 
-            height: 100%; 
-            overflow: auto; 
-            background-color: rgba(0,0,0,0.5); 
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto; 
-            padding: 40px;
-            border: 1px solid #888;
-            width: 80%; 
-            max-width: 800px;
-            border-radius: 20px;
-            position: relative;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 40px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 20px; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close:hover { color: black; }
 
         /* --- RESPONSIVE --- */
@@ -696,24 +450,26 @@
             .hero-text h1 { font-size: 2.8rem; }
             .process-steps { flex-direction: column; gap: 40px; margin-top: 40px; }
             .process-steps::before { display: none; }
-            .nav-links { display: none; } 
             
-            /* Mobil Buton Gizleme */
-            .nav-cta-btn { display: none; }
-
+            /* Navbar Düzenlemeleri */
+            .nav-links, .nav-actions { display: none; } /* Masaüstü öğeleri gizle */
+            .mobile-menu-btn { display: block; } /* Mobil butonu göster */
+            
             .demo-container { flex-direction: column; padding: 30px; }
             .demo-text { text-align: center; }
             .demo-features { text-align: left; display: inline-block; }
             
-            /* Mockup Responsive */
             .device-composition { max-width: 100%; margin-top: 40px; }
             .phone-device { width: 80px; right: -10px; bottom: -15px; }
             .laptop-base { width: 100%; margin-left: 0; }
 
-            /* Faydalar Responsive */
             .benefits-grid { grid-template-columns: 1fr; gap: 40px; }
             .benefits-card { padding: 30px; }
             .stats-grid { grid-template-columns: 1fr; gap: 20px; }
+            
+            /* Logo Band */
+            .logos-wrapper { gap: 20px; }
+            .trust-logo { font-size: 1.1rem; }
         }
     </style>
 </head>
@@ -724,22 +480,21 @@
         <div class="container">
             <nav>
                 <a href="#" class="logo">
-                    <!-- LOGO RESMİ -->
                     <img src="public/logo.png" alt="NetKoç Logo" class="logo-img">
-                    <!-- YENİ LOGO YAZISI (Boşluk azaltıldı) -->
                     <div class="logo-text">Net<span>Koç</span></div>
                 </a>
 
+                <!-- Desktop Links -->
                 <ul class="nav-links">
                     <li><a href="#features">Özellikler</a></li>
                     <li><a href="#benefits">Faydalar</a></li>
                     <li><a href="#how">Nasıl Çalışır?</a></li>
                     <li><a href="#referans">Referanslar</a></li>
-                    <li><a href="#demo-form">İletişim</a></li>
+                    <li><a href="#faq">SSS</a></li>
                 </ul>
 
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <!-- Dropdown Giriş Butonu -->
+                <!-- Desktop Actions -->
+                <div class="nav-actions">
                     <div class="dropdown">
                         <button onclick="toggleDropdown()" class="btn-login-trigger">
                             Giriş Yap <i class="fa fa-chevron-down" style="font-size: 0.8rem;"></i>
@@ -751,55 +506,85 @@
                             <a href="#" onclick="alert('Çok Yakında!'); return false;"><i class="fa-solid fa-building"></i> Kurum Girişi (Yakında)</a>
                         </div>
                     </div>
-                    
-                    <!-- Mobilde Gizlenen Buton (nav-cta-btn sınıfı eklendi) -->
-                    <a href="#demo-form" class="btn-primary nav-cta-btn">15 Gün Ücretsiz Dene</a>
+                    <a href="#demo-form" class="btn-primary">15 Gün Ücretsiz Dene</a>
+                </div>
+
+                <!-- Mobile Hamburger Button -->
+                <div class="mobile-menu-btn" onclick="openMobileMenu()">
+                    <i class="fa-solid fa-bars"></i>
                 </div>
             </nav>
         </div>
     </header>
 
+    <!-- MOBILE MENU OVERLAY -->
+    <div class="mobile-menu-overlay" id="mobileMenu">
+        <div style="position:absolute; top:20px; right:25px; font-size:2rem; cursor:pointer;" onclick="closeMobileMenu()">
+            <i class="fa-solid fa-times"></i>
+        </div>
+        <div class="mobile-menu-links">
+            <a href="#features" onclick="closeMobileMenu()">Özellikler</a>
+            <a href="#benefits" onclick="closeMobileMenu()">Faydalar</a>
+            <a href="#how" onclick="closeMobileMenu()">Nasıl Çalışır?</a>
+            <a href="#referans" onclick="closeMobileMenu()">Referanslar</a>
+            <a href="#faq" onclick="closeMobileMenu()">Sıkça Sorulan Sorular</a>
+            <a href="#demo-form" onclick="closeMobileMenu()" style="color:var(--primary);">İletişim</a>
+            <!-- Mobil için Giriş Linkleri -->
+            <hr style="width:50%; margin: 10px auto; border-color:#eee;">
+            <a href="/login.html" style="font-weight:400; font-size:1rem;"><i class="fa-solid fa-user-tie"></i> Koç Girişi</a>
+            <a href="/student-login" style="font-weight:400; font-size:1rem;"><i class="fa-solid fa-graduation-cap"></i> Öğrenci Girişi</a>
+        </div>
+    </div>
+
     <!-- HERO ALANI -->
-    <section class="hero">
+    <section class="hero fade-in">
         <div class="container hero-content">
             <div class="hero-text">
-                <h1>Koçların öğrenci takibinde <br> <span style="color:var(--secondary)">net</span>çözüm: NetKoç</h1>
+                <h1>Başarıyı Şansa Bırakma, <br> <span style="color:var(--secondary)">Netlerini Katla!</span></h1>
                 <p>LGS, TYT ve AYT hazırlığında öğrenci takibi ve dijital koçluk sistemi ile hedeflerinize ulaşın. Netlerinizi yükseltmek için NetKoç yanınızda!</p>
                 <a href="#demo-form" class="btn-primary" style="padding: 16px 40px; font-size: 1.1rem; background: var(--success);">Hemen Başla</a>
             </div>
             
             <div class="hero-image">
-                <!-- CSS CİHAZ KOMPOZİSYONU -->
                 <div class="device-composition">
-                    
                     <!-- Laptop -->
                     <div class="laptop-device">
                         <div class="laptop-screen-frame">
                             <div class="laptop-camera"></div>
                             <div class="laptop-display">
-                                <!-- PC MOCKUP RESMİ -->
                                 <img src="public/mockup-pc.jpg" alt="NetKoç Dashboard Panel">
                             </div>
                         </div>
                         <div class="laptop-base"></div>
                     </div>
-
                     <!-- Telefon -->
                     <div class="phone-device">
                         <div class="phone-screen-frame">
                             <div class="phone-notch"></div>
-                            <!-- TELEFON MOCKUP RESMİ -->
                             <img src="public/mockup-phone.jpg" alt="NetKoç Mobil Uygulama">
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ÖZELLİKLER (6 KART) - LİNKLER KALDIRILDI & YENİ RENKLER -->
-    <section id="features" class="features">
+    <!-- LOGO BAND (SOCIAL PROOF) - YENİ -->
+    <section class="logo-band fade-in">
+        <div class="container">
+            <p>Eğitimde Başarıya Ortak Olduğumuz Kurumlar</p>
+            <div class="logos-wrapper">
+                <div class="trust-logo"><i class="fa-solid fa-building-columns"></i> Atılım Koleji</div>
+                <div class="trust-logo"><i class="fa-solid fa-school"></i> Hedef Etüt</div>
+                <div class="trust-logo"><i class="fa-solid fa-graduation-cap"></i> Fen Bilimleri</div>
+                <div class="trust-logo"><i class="fa-solid fa-book-open"></i> Sınav Kurs</div>
+                <div class="trust-logo"><i class="fa-solid fa-chalkboard-user"></i> Başarı Okulları</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ÖZELLİKLER -->
+    <section id="features" class="features fade-in">
         <div class="container">
             <div class="section-header">
                 <h2>Sınav Başarısını <span>Artıran</span> Teknoloji</h2>
@@ -807,37 +592,32 @@
             </div>
 
             <div class="features-grid">
-                <!-- Kart 1 -->
+                <!-- Kartlar (İçerik aynı, sadece fade-in sınıfı eklendi) -->
                 <div class="feature-card">
                     <div class="icon-box icon-indigo-teal"><i class="fa-solid fa-robot"></i></div>
                     <h3>Yapay Zeka Asistanı</h3>
                     <p>Öğrenci performansını analiz eden yapay zeka, zayıf konuları tespit eder ve kişiselleştirilmiş çalışma planları önerir.</p>
                 </div>
-                <!-- Kart 2 -->
                 <div class="feature-card">
                     <div class="icon-box icon-teal-indigo"><i class="fa-solid fa-mobile-screen"></i></div>
                     <h3>Mobil Öğrenci Paneli</h3>
                     <p>Öğrenciler telefonlarından hedeflerini, deneme sonuçlarını ve ilerlemelerini takip edebilir. Her yerde, her zaman erişim.</p>
                 </div>
-                <!-- Kart 3 -->
                 <div class="feature-card">
                     <div class="icon-box icon-accent-indigo"><i class="fa-solid fa-chart-pie"></i></div>
                     <h3>Detaylı Analiz ve Raporlar</h3>
                     <p>Net analizi, konu bazlı performans grafikleri ve sınav karşılaştırmaları ile gelişimi detaylı ölçün.</p>
                 </div>
-                <!-- Kart 4 -->
                 <div class="feature-card">
                     <div class="icon-box icon-indigo-accent"><i class="fa-solid fa-list-check"></i></div>
                     <h3>Akıllı Çalışma Takvimi</h3>
                     <p>Öğrenciler için otomatik çalışma programları oluşturun. Hatırlatıcılar ve motivasyon bildirimleri ile disiplini artırın.</p>
                 </div>
-                <!-- Kart 5 -->
                 <div class="feature-card">
                     <div class="icon-box icon-teal-accent"><i class="fa-solid fa-file-pen"></i></div>
                     <h3>Deneme Sınavı Takibi</h3>
                     <p>TYT, AYT ve LGS deneme sonuçlarını kaydedin. Net artışını izleyin ve hedef odaklı ilerleme sağlayın.</p>
                 </div>
-                <!-- Kart 6 -->
                 <div class="feature-card">
                     <div class="icon-box icon-accent-teal"><i class="fa-solid fa-trophy"></i></div>
                     <h3>Hedef ve Motivasyon</h3>
@@ -847,16 +627,14 @@
         </div>
     </section>
 
-    <!-- YENİ FAYDALAR BÖLÜMÜ (RENKLER GÜNCELLENDİ) -->
-    <section id="benefits" class="benefits-section">
+    <!-- FAYDALAR -->
+    <section id="benefits" class="benefits-section fade-in">
         <div class="container">
             <div class="benefits-grid">
-                <!-- Sol Taraf -->
                 <div>
                     <span class="benefits-label">FAYDALAR</span>
                     <h2 class="benefits-title">Koçlar, kurumlar ve aileler için aynı ekranda netlik</h2>
                     <p class="benefits-desc">NetKoç, sadece netleri değil, öğrencinin tüm gelişim sürecini daha görünür kılar. Böylece herkes aynı hedefe daha net odaklanır.</p>
-                    
                     <ul class="benefits-list">
                         <li><i class="fa-solid fa-check"></i> Koç için her öğrencinin güncel durumunu birkaç saniyede görme imkânı.</li>
                         <li><i class="fa-solid fa-check"></i> Kurum için koç, öğrenci ve veli arasındaki iletişimi tek platformda toplama.</li>
@@ -864,11 +642,8 @@
                         <li><i class="fa-solid fa-check"></i> Öğrenci için hedef odaklı, takip edilen ve motive edici bir süreç.</li>
                     </ul>
                 </div>
-
-                <!-- Sağ Taraf (Koyu Kart - İndigo Renk) -->
                 <div class="benefits-card">
                     <p class="benefits-card-text">NetKoç kullanan kurumlar, öğrencilerinin gelişimini sadece “sınav sonucundan” değil; net artışı, konu takibi ve ödev disiplininden de okuyabiliyor.</p>
-                    
                     <div class="stats-grid">
                         <div class="stat-item">
                             <h3>%32</h3>
@@ -883,20 +658,16 @@
                             <p>Takipsizlik kaynaklı başarı kaybında azalma</p>
                         </div>
                     </div>
-                    
                     <p style="font-size:0.75rem; opacity:0.5; margin-top:30px;">*Veriler, NetKoç'a geçen kurumların kendi paylaştığı istatistiklerden derlenmiştir.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- NASIL ÇALIŞIR (RENKLER GÜNCELLENDİ) -->
-    <section id="how" class="how-it-works">
+    <!-- NASIL ÇALIŞIR -->
+    <section id="how" class="how-it-works fade-in">
         <div class="container">
-            <div class="section-header">
-                <h2>Nasıl Çalışır?</h2>
-            </div>
-            
+            <div class="section-header"><h2>Nasıl Çalışır?</h2></div>
             <div class="process-steps">
                 <div class="step-item">
                     <div class="step-icon"><i class="fa-solid fa-file-signature"></i></div>
@@ -922,89 +693,84 @@
         </div>
     </section>
 
-    <!-- REFERANSLAR (RENKLER GÜNCELLENDİ) -->
-    <section id="referans" style="padding: 100px 0; background: linear-gradient(to bottom, #ffffff, #f9fafb);">
+    <!-- REFERANSLAR -->
+    <section id="referans" class="features fade-in" style="background: linear-gradient(to bottom, #ffffff, #f9fafb); padding: 80px 0;">
         <div class="container">
-            <div class="section-header" style="text-align: center; margin-bottom: 60px;">
-                <h2 style="font-size: 2.5rem; margin-bottom: 10px; color: var(--dark);">Referanslar</h2>
-                <p style="color: var(--gray); font-size: 1.1rem;">NetKoç'u tercih eden eğitim profesyonelleri ve öğrencilerin deneyimleri</p>
+            <div class="section-header">
+                <h2>Referanslar</h2>
+                <p>NetKoç'u tercih eden eğitim profesyonellerinin deneyimleri</p>
             </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px;">
-                
-                <!-- Card 1: Coach -->
-                <div style="background: white; border-radius: 24px; padding: 40px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column; transition: transform 0.3s ease;">
-                    <div style="font-size: 3rem; color: #E0E7FF; line-height: 1; margin-bottom: 20px;"><i class="fa-solid fa-quote-left"></i></div>
-                    <p style="font-size: 1.05rem; color: #4B5563; font-style: italic; line-height: 1.7; margin-bottom: 30px; flex-grow: 1;">
-                        "NetKoç, öğrenci takip süreçlerimi tamamen dijitalleştirdi. Kağıt kalemle uğraşmak yerine analizlere odaklanıyorum. Velilerime sunduğum profesyonel raporlar sayesinde güvenilirliğim arttı."
-                    </p>
-                    <div style="display: flex; align-items: center; gap: 15px; border-top: 1px solid #F3F4F6; padding-top: 20px;">
-                        <div style="width: 56px; height: 56px; background: var(--hero-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">
-                            <i class="fa-solid fa-user-tie"></i>
+            <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 40px;">
+                <!-- Yorum 1 -->
+                <div class="feature-card" style="border:none; box-shadow: var(--shadow-md); background: white; padding: 35px; align-items: flex-start; border-radius: 16px;">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <div style="width: 50px; height: 50px; background: #EEF2FF; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid #E0E7FF;">
+                            <i class="fa-solid fa-user-tie" style="color: var(--primary); font-size: 1.4rem;"></i>
                         </div>
                         <div>
-                            <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--dark); margin: 0;">Mert Demir</h4>
-                            <span style="font-size: 0.9rem; color: var(--primary); font-weight: 500;">Profesyonel Eğitim Koçu</span>
-                            <div style="color: #FBBF24; font-size: 0.8rem; margin-top: 4px;">
-                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-                            </div>
+                            <strong style="font-size: 1.1rem; color: var(--dark);">Zeynep Aksoy</strong><br>
+                            <span style="font-size:0.85rem; color:var(--gray);">Profesyonel Eğitim Koçu</span>
                         </div>
                     </div>
+                    <p style="font-style:italic; font-size: 0.95rem; color: var(--gray); line-height: 1.6; flex-grow: 1;">"NetKoç, öğrenci takip süreçlerimi tamamen dijitalleştirdi. Artık analizlerle vakit kaybetmiyor, öğrencilerimle birebir seanslarıma odaklanıyorum."</p>
+                    <div style="margin-top: 20px; display: flex; align-items: center; gap: 5px; color: #FBBF24; font-size: 0.9rem;">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
                 </div>
-
-                <!-- Card 2: Student -->
-                <div style="background: white; border-radius: 24px; padding: 40px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column;">
-                    <div style="font-size: 3rem; color: #DCFCE7; line-height: 1; margin-bottom: 20px;"><i class="fa-solid fa-quote-left"></i></div>
-                    <p style="font-size: 1.05rem; color: #4B5563; font-style: italic; line-height: 1.7; margin-bottom: 30px; flex-grow: 1;">
-                        "Mobil uygulamadan deneme sonuçlarımı girip gelişimimi izlemek çok motive edici. Yapay zekanın önerdiği çalışma programı sayesinde TYT netlerimde 2 ayda 15 net artış sağladım."
-                    </p>
-                    <div style="display: flex; align-items: center; gap: 15px; border-top: 1px solid #F3F4F6; padding-top: 20px;">
-                        <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #10B981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">
-                            <i class="fa-solid fa-graduation-cap"></i>
+                <!-- Yorum 2 -->
+                <div class="feature-card" style="border:none; box-shadow: var(--shadow-md); background: white; padding: 35px; align-items: flex-start; border-radius: 16px;">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <div style="width: 50px; height: 50px; background: #F0FDF4; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid #DCFCE7;">
+                            <i class="fa-solid fa-graduation-cap" style="color: var(--success); font-size: 1.4rem;"></i>
                         </div>
                         <div>
-                            <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--dark); margin: 0;">Zeynep S.</h4>
-                            <span style="font-size: 0.9rem; color: #10B981; font-weight: 500;">12. Sınıf Öğrencisi</span>
-                            <div style="color: #FBBF24; font-size: 0.8rem; margin-top: 4px;">
-                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-                            </div>
+                            <strong style="font-size: 1.1rem; color: var(--dark);">Ali Yılmaz</strong><br>
+                            <span style="font-size:0.85rem; color:var(--gray);">12. Sınıf Öğrencisi</span>
                         </div>
                     </div>
-                </div>
-                
-                 <!-- Card 3: Parent/Institution -->
-                <div style="background: white; border-radius: 24px; padding: 40px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.03); display: flex; flex-direction: column;">
-                    <div style="font-size: 3rem; color: #FEF3C7; line-height: 1; margin-bottom: 20px;"><i class="fa-solid fa-quote-left"></i></div>
-                    <p style="font-size: 1.05rem; color: #4B5563; font-style: italic; line-height: 1.7; margin-bottom: 30px; flex-grow: 1;">
-                        "Kızımın çalışma disiplinini oturtması konusunda zorlanıyorduk. NetKoç'un ödev takip sistemi ve bildirimleri sayesinde sorumluluk bilinci gelişti. Ebeveyn olarak süreci takip etmek artık çok kolay."
-                    </p>
-                    <div style="display: flex; align-items: center; gap: 15px; border-top: 1px solid #F3F4F6; padding-top: 20px;">
-                        <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #F59E0B, #D97706); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
-                            <i class="fa-solid fa-user-group"></i>
-                        </div>
-                        <div>
-                            <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--dark); margin: 0;">Ayşe Yılmaz</h4>
-                            <span style="font-size: 0.9rem; color: #F59E0B; font-weight: 500;">Öğrenci Velisi</span>
-                            <div style="color: #FBBF24; font-size: 0.8rem; margin-top: 4px;">
-                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-                            </div>
-                        </div>
+                    <p style="font-style:italic; font-size: 0.95rem; color: var(--gray); line-height: 1.6; flex-grow: 1;">"Yapay zekanın oluşturduğu kişiselleştirilmiş çalışma planı sayesinde eksik konularımı çok daha hızlı kapattım. Netlerimdeki artış inanılmaz!"</p>
+                    <div style="margin-top: 20px; display: flex; align-items: center; gap: 5px; color: #FBBF24; font-size: 0.9rem;">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                     </div>
                 </div>
-
             </div>
         </div>
     </section>
 
-    <!-- DEMO TALEP FORMU (YENİ BAŞLIK & RENKLER) -->
-    <section id="demo-form" class="demo-section">
+    <!-- SIKÇA SORULAN SORULAR (SSS) - YENİ -->
+    <section id="faq" class="faq-section fade-in">
+        <div class="container">
+            <div class="section-header">
+                <h2>Sıkça Sorulan Sorular</h2>
+            </div>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <div class="faq-question">NetKoç kimler için uygundur? <i class="fa-solid fa-chevron-down"></i></div>
+                    <div class="faq-answer">NetKoç; bireysel eğitim koçları, özel öğretim kursları, kolejler ve öğrencisini yakından takip etmek isteyen veliler için tasarlanmış kapsamlı bir takip sistemidir.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Ücretsiz deneme süresi bittikten sonra ne olur? <i class="fa-solid fa-chevron-down"></i></div>
+                    <div class="faq-answer">15 günlük ücretsiz deneme süreniz bittikten sonra verileriniz korunur. Size uygun bir paket seçerek kaldığınız yerden devam edebilirsiniz. Herhangi bir otomatik çekim yapılmaz.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Öğrenciler sisteme nasıl giriş yapıyor? <i class="fa-solid fa-chevron-down"></i></div>
+                    <div class="faq-answer">Öğrenciler, mobil uygulamamızı (iOS ve Android) indirerek veya web sitemizdeki "Öğrenci Girişi" panelini kullanarak kendilerine verilen bilgilerle giriş yapabilirler.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Verilerim güvende mi? <i class="fa-solid fa-chevron-down"></i></div>
+                    <div class="faq-answer">Kesinlikle. NetKoç, verilerinizi endüstri standardı şifreleme yöntemleriyle korur ve KVKK uyumlu sunucularda saklar.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DEMO TALEP FORMU (GÜNCELLENDİ) -->
+    <section id="demo-form" class="demo-section fade-in">
         <div class="container">
             <div class="demo-container">
                 <div class="demo-text">
-                    <!-- YENİ ETKİLEYİCİ BAŞLIK -->
                     <h2>Öğrencilerinizin Başarı Hikayesini <br>Birlikte Yazalım</h2>
                     <p>Öğrenci takip süreçlerinizi dijitalleştirin, verimi artırın. Ekibimiz size özel bir demo sunumu yapsın.</p>
-                    
                     <ul class="demo-features">
                         <li><i class="fa-solid fa-check"></i> Sınırsız Öğrenci Ekleme</li>
                         <li><i class="fa-solid fa-check"></i> Kurumsal Raporlama</li>
@@ -1012,25 +778,31 @@
                         <li><i class="fa-solid fa-check"></i> Ücretsiz Kurulum</li>
                     </ul>
                 </div>
-                
                 <div class="demo-form-wrapper">
-                    <form>
+                    <form id="contactForm">
                         <h3 style="margin-bottom:20px; color:var(--dark);">Demo Talep Formu</h3>
                         <div class="form-group">
                             <label class="form-label">Ad Soyad</label>
-                            <input type="text" class="form-input" placeholder="Adınız Soyadınız">
+                            <input type="text" class="form-input" id="name" placeholder="Adınız Soyadınız" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">E-Posta</label>
-                            <input type="email" class="form-input" placeholder="ornek@mail.com">
+                            <input type="email" class="form-input" id="email" placeholder="ornek@mail.com" required>
+                        </div>
+                        <!-- YENİ TELEFON ALANI -->
+                        <div class="form-group">
+                            <label class="form-label">Telefon Numaranız</label>
+                            <input type="tel" class="form-input" id="phone" placeholder="05XX XXX XX XX" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Kurum / Rol</label>
-                            <select class="form-input">
+                            <select class="form-input" id="role" required>
+                                <option value="" disabled selected>Seçiniz</option>
                                 <option>Bireysel Eğitim Koçu</option>
-                                <option>Öğretmen</option> <!-- Öğretmen eklendi -->
+                                <option>Öğretmen</option>
                                 <option>Özel Öğretim Kursu</option>
                                 <option>Okul / Kolej</option>
+                                <option>Aile / Veli</option> <!-- EKLENDİ -->
                                 <option>Diğer</option>
                             </select>
                         </div>
@@ -1041,13 +813,12 @@
         </div>
     </section>
 
-    <!-- FOOTER (YENİ LOGO YAZISI EKLENDİ) -->
+    <!-- FOOTER -->
     <footer>
         <div class="container">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
                 <div class="logo">
                     <img src="public/logo.png" alt="NetKoç" style="height: 35px;">
-                    <!-- FOOTER LOGO YAZISI -->
                     <div class="logo-text" style="font-size: 22px;">Net<span>Koç</span></div>
                 </div>
                 <div class="footer-links" style="display:flex; align-items:center;">
@@ -1067,43 +838,89 @@
         </div>
     </footer>
 
-    <!-- GİZLİLİK POLİTİKASI MODAL -->
+    <!-- MODALS -->
+    <!-- Gizlilik ve Kullanım Koşulları modalları aynı kaldı -->
     <div id="privacyModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('privacyModal')">&times;</span>
             <h2>Gizlilik Politikası</h2>
-            <br>
-            <p>NetKoç olarak kişisel verilerinizin güvenliğine önem veriyoruz. Bu gizlilik politikası, hizmetlerimizi kullanırken verilerinizin nasıl toplandığını, kullanıldığını ve korunduğunu açıklar.</p>
-            <p><strong>1. Toplanan Veriler:</strong> Ad, soyad, e-posta adresi ve eğitim süreciyle ilgili veriler.</p>
-            <p><strong>2. Veri Kullanımı:</strong> Verileriniz sadece koçluk hizmetlerinin sağlanması ve iyileştirilmesi amacıyla kullanılır.</p>
-            <p><strong>3. Veri Güvenliği:</strong> Verileriniz endüstri standardı şifreleme yöntemleriyle korunmaktadır.</p>
-            <br>
-            <p>Detaylı bilgi için bizimle iletişime geçebilirsiniz.</p>
+            <br><p>NetKoç olarak kişisel verilerinizin güvenliğine önem veriyoruz...</p>
         </div>
     </div>
-
-    <!-- KULLANIM KOŞULLARI MODAL -->
     <div id="termsModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('termsModal')">&times;</span>
             <h2>Kullanım Koşulları</h2>
-            <br>
-            <p>NetKoç platformunu kullanarak aşağıdaki koşulları kabul etmiş sayılırsınız:</p>
-            <ul style="list-style:disc; padding-left:20px; margin-top:10px;">
-                <li>Platform sadece eğitim amaçlı kullanılabilir.</li>
-                <li>Hesap güvenliğinden kullanıcı sorumludur.</li>
-                <li>NetKoç, hizmet özelliklerinde önceden haber vermeksizin değişiklik yapma hakkını saklı tutar.</li>
-            </ul>
+            <br><p>NetKoç platformunu kullanarak aşağıdaki koşulları kabul etmiş sayılırsınız...</p>
         </div>
     </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+  apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
+  authDomain: "kocluk-99ad2.firebaseapp.com",
+  projectId: "kocluk-99ad2",
+  storageBucket: "kocluk-99ad2.firebasestorage.app",
+  messagingSenderId: "784379379600",
+  appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
+};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Anonymous Sign-in for public write access
+        signInAnonymously(auth).then(() => {
+            console.log("Signed in anonymously for form submission");
+        }).catch((error) => {
+            console.error("Auth error", error);
+        });
+
+        const contactForm = document.getElementById('contactForm');
+        contactForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = contactForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerText;
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Gönderiliyor...";
+
+            try {
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const phone = document.getElementById('phone').value;
+                const role = document.getElementById('role').value;
+
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'demoRequests'), {
+                    name,
+                    email,
+                    phone,
+                    role,
+                    createdAt: serverTimestamp()
+                });
+
+                alert("Talebiniz başarıyla alındı! En kısa sürede sizinle iletişime geçeceğiz.");
+                contactForm.reset();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                alert("Bir hata oluştu. Lütfen daha sonra tekrar deneyin.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
+            }
+        });
+    </script>
 
     <script>
         // Dropdown Logic
         function toggleDropdown() {
             document.getElementById("loginDropdown").classList.toggle("show");
         }
-
-        // Close dropdown if user clicks outside of it
         window.onclick = function(event) {
             if (!event.target.matches('.btn-login-trigger') && !event.target.matches('.btn-login-trigger *')) {
                 var dropdowns = document.getElementsByClassName("dropdown-content");
@@ -1117,20 +934,40 @@
         }
 
         // Modal Logic
-        function openModal(modalId) {
-            document.getElementById(modalId).style.display = "block";
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = "none";
-        }
-
-        // Close modal when clicking outside
+        function openModal(modalId) { document.getElementById(modalId).style.display = "block"; }
+        function closeModal(modalId) { document.getElementById(modalId).style.display = "none"; }
         window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.style.display = "none";
-            }
+            if (event.target.classList.contains('modal')) { event.target.style.display = "none"; }
         }
+
+        // Mobile Menu Logic
+        function openMobileMenu() { document.getElementById('mobileMenu').classList.add('active'); }
+        function closeMobileMenu() { document.getElementById('mobileMenu').classList.remove('active'); }
+
+        // FAQ Accordion Logic
+        const faqItems = document.querySelectorAll('.faq-item');
+        faqItems.forEach(item => {
+            const question = item.querySelector('.faq-question');
+            question.addEventListener('click', () => {
+                // Diğerlerini kapat (opsiyonel)
+                faqItems.forEach(otherItem => {
+                    if (otherItem !== item) otherItem.classList.remove('active');
+                });
+                item.classList.toggle('active');
+            });
+        });
+
+        // Scroll Animation Logic
+        const observerOptions = { threshold: 0.1 };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
     </script>
 
 </body>

@@ -28,7 +28,7 @@ import { renderOgrenciSayfasi, renderOgrenciDetaySayfasi, saveNewStudent, saveSt
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
 import { renderMuhasebeSayfasi, saveNewBorc, saveNewTahsilat } from './modules/muhasebe.js';
 import { renderMesajlarSayfasi } from './modules/mesajlar.js';
-import { renderDenemelerSayfasi, saveGlobalDeneme, renderDenemeNetInputs } from './modules/denemeler.js';
+import { renderDenemelerSayfasi } from './modules/denemeler.js'; // DÜZELTİLDİ: Sadece render fonksiyonu import ediliyor
 import { renderSoruTakibiSayfasi, saveGlobalSoru } from './modules/sorutakibi.js';
 import { renderHedeflerSayfasi, saveGlobalHedef } from './modules/hedefler.js';
 import { renderOdevlerSayfasi, saveGlobalOdev } from './modules/odevler.js';
@@ -52,40 +52,35 @@ const appId = "kocluk-sistemi";
 let currentUserId = null;
 
 // =================================================================
-// 2. BAŞLATMA (GÜVENLİK KONTROLÜ EKLENDİ)
+// 2. BAŞLATMA (GÜVENLİK KONTROLÜ)
 // =================================================================
 async function main() {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // --- GÜVENLİK KONTROLÜ BAŞLANGIÇ ---
-            // Giren kişinin gerçekten 'KOÇ' olup olmadığını kontrol et.
+            // --- GÜVENLİK KONTROLÜ ---
             try {
                 const userProfileRef = doc(db, "artifacts", appId, "users", user.uid, "settings", "profile");
                 const userProfileSnap = await getDoc(userProfileRef);
 
                 if (userProfileSnap.exists()) {
                     const userData = userProfileSnap.data();
-                    // Eğer rol 'koc' değilse (örn: 'ogrenci'), içeri alma!
                     if (userData.rol !== 'koc') {
-                        await signOut(auth); // Oturumu kapat
+                        await signOut(auth); 
                         alert("Bu panele sadece Koç hesapları erişebilir. Öğrenci girişi için yönlendiriliyorsunuz.");
-                        window.location.href = 'student-login.html'; // Öğrenci girişine at
-                        return; // Fonksiyonu durdur
+                        window.location.href = 'student-login.html'; 
+                        return; 
                     }
                 } else {
-                    // Profil yoksa güvenli değil, çıkar.
                     await signOut(auth);
                     window.location.href = 'login.html';
                     return;
                 }
             } catch (error) {
                 console.error("Yetki kontrolü hatası:", error);
-                // Hata durumunda güvenlik için çıkar
                 await signOut(auth);
                 window.location.href = 'login.html';
                 return;
             }
-            // --- GÜVENLİK KONTROLÜ BİTİŞ ---
 
             currentUserId = user.uid;
             
@@ -98,7 +93,6 @@ async function main() {
             updateUIForLoggedInUser(user);
             navigateToPage('anasayfa');
             
-            // Bildirimleri ve Mesajları Başlat
             initNotifications(user.uid); 
             listenUnreadMessages(user.uid);
         } else {
@@ -270,13 +264,12 @@ if(document.getElementById('btnHeaderMessages')) {
 // 2. Koç Bildirim Sistemi
 function initNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
-    const dot = document.getElementById('headerNotificationDot'); // DÜZELTİLMİŞ ID
+    const dot = document.getElementById('headerNotificationDot'); 
     const dropdown = document.getElementById('coachNotificationDropdown');
     const btn = document.getElementById('btnHeaderNotifications');
     
     if(!btn || !dropdown) return;
 
-    // Toggle Mantığı
     btn.onclick = (e) => { 
         e.stopPropagation(); 
         dropdown.classList.toggle('hidden'); 
@@ -449,8 +442,8 @@ addListener('saveStudentChangesButton', 'click', () => saveStudentChanges(db, cu
 addListener('studentClass', 'change', (e) => renderStudentOptions(e.target.value, 'studentOptionsContainer', 'studentDersSecimiContainer'));
 addListener('editStudentClass', 'change', (e) => renderStudentOptions(e.target.value, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer'));
 
-addListener('saveDenemeButton', 'click', () => saveGlobalDeneme(db, currentUserId, appId));
-addListener('denemeTuru', 'change', (e) => renderDenemeNetInputs(e.target.value));
+// DÜZELTME: Deneme kaydı artık 'denemeler.js' içinde modaldan yönetiliyor, buradaki listener kaldırıldı.
+// addListener('saveDenemeButton', ...); -> Kaldırıldı
 
 addListener('saveSoruButton', 'click', () => saveGlobalSoru(db, currentUserId, appId));
 

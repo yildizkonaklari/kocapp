@@ -1,4 +1,3 @@
-
 // =================================================================
 // 0. HATA YAKALAMA
 // =================================================================
@@ -895,36 +894,160 @@ function loadGoalsTab() {
     });
 }
 
-// ... (Diğer modüller aynı) ...
-// (Kodun geri kalanı, özellikle window.completeOdev, loadDenemelerTab, loadStudentMessages vb. önceki versiyondaki gibi kalmalı)
-
-// --- DENEMELER ---
+// --- DENEMELER (GÜNCELLENMİŞ) ---
 function loadDenemelerTab() {
     const list = document.getElementById('studentDenemeList'); if(!list) return;
     const btn = document.getElementById('btnAddNewDeneme');
     if(btn) { const n=btn.cloneNode(true); btn.parentNode.replaceChild(n,btn); n.onclick=openDenemeModal; }
     
     listeners.denemeler = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), orderBy("tarih", "desc")), (snap) => {
-        const data = []; snap.forEach(d => data.push({id:d.id, ...d.data()}));
-        const onayli = data.filter(x=>x.onayDurumu==='onaylandi');
-        let totalNet=0, maxNet=0; onayli.forEach(x=>{ const n=parseFloat(x.toplamNet); totalNet+=n; if(n>maxNet) maxNet=n; });
-        if(document.getElementById('studentKpiAvg')) document.getElementById('studentKpiAvg').textContent = (onayli.length ? (totalNet/onayli.length) : 0).toFixed(2);
-        if(document.getElementById('studentKpiMax')) document.getElementById('studentKpiMax').textContent = maxNet.toFixed(2);
-        if(document.getElementById('studentKpiTotal')) document.getElementById('studentKpiTotal').textContent = data.length;
+        const data = []; 
+        snap.forEach(d => data.push({id:d.id, ...d.data()}));
         
+        // İstatistikler (Sadece Onaylı ve Analize Dahil Olanlar)
+        const validData = data.filter(x => x.onayDurumu === 'onaylandi' && x.analizHaric !== true);
+        
+        let totalNet = 0, maxNet = 0;
+        validData.forEach(x => { 
+            const n = parseFloat(x.toplamNet); 
+            totalNet += n; 
+            if(n > maxNet) maxNet = n; 
+        });
+
+        if(document.getElementById('studentKpiAvg')) document.getElementById('studentKpiAvg').textContent = (validData.length ? (totalNet/validData.length) : 0).toFixed(2);
+        if(document.getElementById('studentKpiMax')) document.getElementById('studentKpiMax').textContent = maxNet.toFixed(2);
+        if(document.getElementById('studentKpiTotal')) document.getElementById('studentKpiTotal').textContent = validData.length;
+        
+        // Grafik
         const ctx = document.getElementById('studentDenemeChart');
         if(ctx) {
-            const sorted = [...onayli].sort((a,b) => a.tarih.localeCompare(b.tarih)).slice(-10);
+            const sorted = [...validData].sort((a,b) => a.tarih.localeCompare(b.tarih)).slice(-10);
             if(denemeChartInstance) denemeChartInstance.destroy();
             denemeChartInstance = new Chart(ctx, { type: 'line', data: { labels: sorted.map(d=>d.tarih.slice(5)), datasets: [{ label: 'Net', data: sorted.map(d=>d.toplamNet), borderColor: '#7c3aed', tension: 0.4 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
         }
 
+        // Liste (Hepsini Göster)
         list.innerHTML = data.length === 0 ? '<p class="text-center text-gray-400">Deneme yok.</p>' : data.map(d => {
-            const pending = d.onayDurumu==='bekliyor'; const net = parseFloat(d.toplamNet)||0;
-            return `<div class="bg-white p-4 rounded-xl border ${pending?'border-yellow-200 bg-yellow-50':'border-gray-200'} shadow-sm mb-2"><div class="flex justify-between"><span class="font-bold text-sm text-gray-800">${d.ad}</span><span class="text-[10px] px-2 py-1 rounded-full ${pending?'bg-yellow-200 text-yellow-800':'bg-green-100 text-green-800'}">${pending?'Bekliyor':'Onaylı'}</span></div><div class="flex justify-between mt-2 text-xs text-gray-500"><span>${d.tur} • ${d.tarih}</span><span class="font-bold text-indigo-600 text-base">${net.toFixed(2)} Net</span></div></div>`;
+            const pending = d.onayDurumu === 'bekliyor'; 
+            const isExcluded = d.analizHaric === true;
+            const net = parseFloat(d.toplamNet) || 0;
+            
+            let detailsHtml = '';
+            if (d.netler) {
+                detailsHtml = '<div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100 hidden animate-fade-in">';
+                for (const [ders, stats] of Object.entries(d.netler)) {
+                    if (stats.d > 0 || stats.y > 0) {
+                        detailsHtml += `<div class="text-[10px] bg-gray-50 p-1 rounded flex justify-between"><span class="font-bold truncate w-16">${ders}</span><span class="text-gray-500">D:${stats.d} Y:${stats.y} N:${stats.net}</span></div>`;
+                    }
+                }
+                detailsHtml += '</div>';
+            } else {
+                detailsHtml = `<div class="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500 hidden animate-fade-in">Soru: ${d.soruSayisi} | D: ${d.dogru} | Y: ${d.yanlis}</div>`;
+            }
+
+            return `
+            <div class="bg-white p-4 rounded-xl border ${isExcluded ? 'border-orange-200 bg-orange-50' : (pending ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200')} shadow-sm mb-2 cursor-pointer" onclick="this.querySelector('.animate-fade-in').classList.toggle('hidden')">
+                <div class="flex justify-between">
+                    <span class="font-bold text-sm text-gray-800">${d.ad} <span class="font-normal text-xs text-gray-500">(${d.tur})</span></span>
+                    ${pending ? '<span class="text-[10px] px-2 py-1 rounded-full bg-yellow-200 text-yellow-800">Bekliyor</span>' : ''}
+                    ${isExcluded ? '<span class="text-[10px] px-2 py-1 rounded-full bg-orange-200 text-orange-800">Analiz Dışı</span>' : ''}
+                </div>
+                <div class="flex justify-between mt-2 text-xs text-gray-500">
+                    <span>${d.tarih}</span>
+                    <span class="font-bold text-indigo-600 text-base">${net.toFixed(2)} Net</span>
+                </div>
+                ${detailsHtml}
+            </div>`;
         }).join('');
     });
 }
+
+// Modal Açma
+const openDenemeModal = () => { 
+    document.getElementById('modalDenemeEkle').classList.remove('hidden'); 
+    
+    // Öğrenci Sınıfına Göre Ayar
+    const profileClass = document.getElementById('profileClass').textContent;
+    const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(profileClass);
+    
+    // Select Options
+    const types = isOrtaokul ? ['LGS', 'Diger'] : ['TYT', 'AYT', 'YDS', 'Diger'];
+    const sel = document.getElementById('inpDenemeTur');
+    sel.innerHTML = types.map(t => `<option value="${t}">${t}</option>`).join('');
+    
+    renderDenemeInputs(types[0], isOrtaokul); 
+    document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0]; 
+};
+
+// Input Render
+function renderDenemeInputs(tur, isOrtaokul) {
+    const c = document.getElementById('denemeDersContainer'); if(!c) return; c.innerHTML='';
+    const ratio = isOrtaokul ? 3 : 4;
+    
+    if (tur === 'Diger') {
+        c.innerHTML = `
+            <div class="bg-orange-50 p-2 rounded text-xs text-orange-700 mb-2 text-center">Genel analize dahil edilmez. (${ratio}Y 1D götürür)</div>
+            <input type="number" id="inpDigerSoru" placeholder="Soru Sayısı" class="w-full p-2 mb-2 bg-white border rounded">
+            <div class="flex gap-2">
+                <input type="number" id="inpDigerDogru" placeholder="Doğru" class="w-1/2 p-2 bg-white border border-green-200 rounded">
+                <input type="number" id="inpDigerYanlis" placeholder="Yanlış" class="w-1/2 p-2 bg-white border border-red-200 rounded">
+            </div>
+        `;
+    } else {
+        const config = EXAM_CONFIG[tur] || EXAM_CONFIG['Diger']; // Fallback
+        c.innerHTML = `<p class="text-xs text-gray-400 mb-2 text-center">${ratio} yanlış 1 doğruyu götürür.</p>`;
+        config.subjects.forEach(sub => {
+            c.innerHTML += `<div class="flex justify-between text-sm py-2 border-b items-center"><span class="w-24 truncate font-bold text-gray-700">${sub.name}</span><div class="flex gap-1"><input type="number" placeholder="D" class="inp-deneme-d w-10 p-1 border-green-200 border rounded text-center text-green-700 font-bold outline-none" data-ders="${sub.name}"><input type="number" placeholder="Y" class="inp-deneme-y w-10 p-1 border-red-200 border rounded text-center text-red-700 font-bold outline-none" data-ders="${sub.name}"></div></div>`;
+        });
+    }
+}
+
+document.getElementById('inpDenemeTur').onchange = (e) => {
+    const profileClass = document.getElementById('profileClass').textContent;
+    const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(profileClass);
+    renderDenemeInputs(e.target.value, isOrtaokul);
+};
+
+// Kaydet Butonu
+document.getElementById('btnSaveDeneme').onclick = async () => {
+    const ad = document.getElementById('inpDenemeAd').value || "Deneme";
+    const tur = document.getElementById('inpDenemeTur').value;
+    const tarih = document.getElementById('inpDenemeTarih').value;
+    
+    const profileClass = document.getElementById('profileClass').textContent;
+    const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(profileClass);
+    const ratio = isOrtaokul ? 3 : 4;
+
+    if(!tarih) return alert('Tarih seçin');
+    
+    let payload = { ad, tur, tarih, onayDurumu: 'bekliyor', kocId: coachId, studentId: studentDocId, studentAd: document.getElementById('headerStudentName').textContent, eklenmeTarihi: serverTimestamp() };
+    
+    if (tur === 'Diger') {
+        const s = parseInt(document.getElementById('inpDigerSoru').value)||0;
+        const d = parseInt(document.getElementById('inpDigerDogru').value)||0;
+        const y = parseInt(document.getElementById('inpDigerYanlis').value)||0;
+        const net = d - (y/ratio);
+        payload.soruSayisi = s; payload.dogru = d; payload.yanlis = y; payload.toplamNet = net.toFixed(2);
+        payload.analizHaric = true;
+    } else {
+        let totalNet=0, netler={};
+        document.querySelectorAll('.inp-deneme-d').forEach(i => {
+            const d=parseInt(i.value)||0, y=parseInt(i.parentElement.querySelector('.inp-deneme-y').value)||0;
+            if(d>0 || y>0) {
+                const n = d - (y/ratio || 0); 
+                totalNet+=n; 
+                netler[i.dataset.ders]={d,y,net:n.toFixed(2)};
+            }
+        });
+        payload.toplamNet = totalNet.toFixed(2);
+        payload.netler = netler;
+        payload.analizHaric = false;
+    }
+    
+    await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), payload);
+    document.getElementById('modalDenemeEkle').classList.add('hidden'); 
+    alert(`Kaydedildi. (${payload.analizHaric ? 'Analiz Dışı' : payload.toplamNet + ' Net'})`);
+};
 
 // --- MESAJLAR ---
 function loadStudentMessages() {

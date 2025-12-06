@@ -22,8 +22,8 @@
             --accent: #F472B6;        /* Pembe Aksan */
             
             /* Logo Orijinal Renkleri (Korumalı) */
-            --logo-teal: #27C3C8;
-            --logo-navy: #0A2A43;
+            --logo-teal: #27C3C8;     /* Turkuaz */
+            --logo-navy: #0A2A43;     /* Koyu Lacivert */
 
             /* Genel */
             --dark: #1F2937;
@@ -78,9 +78,29 @@
             align-items: center;
         }
 
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
         .logo-img {
-            height: 45px; /* Logo yüksekliği */
+            height: 45px; 
             width: auto;
+        }
+
+        .logo-text {
+            font-family: 'Poppins', sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--logo-navy);
+            letter-spacing: -0.5px;
+            line-height: 1;
+        }
+
+        .logo-text span {
+            color: var(--logo-teal);
         }
 
         .nav-links {
@@ -211,16 +231,14 @@
             justify-content: center;
         }
 
-        /* --- CİHAZ MOCKUP CSS (CSS DEVICE FRAMES) --- */
+        /* --- CİHAZ MOCKUP CSS --- */
         .device-composition {
             position: relative;
             width: 100%;
             max-width: 650px;
-            /* Hafif perspektif efekti */
             perspective: 1000px;
         }
 
-        /* Laptop Frame */
         .laptop-device {
             width: 100%;
             position: relative;
@@ -243,7 +261,7 @@
             background: #333;
             border-radius: 50%;
             position: absolute;
-            top: 4px; /* Çerçevenin içinde */
+            top: 4px;
             left: 50%;
             transform: translateX(-50%);
         }
@@ -260,12 +278,12 @@
         .laptop-display img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Resmi ekrana sığdır */
+            object-fit: cover;
             object-position: top;
         }
 
         .laptop-base {
-            background: #e5e7eb; /* Gümüş renk */
+            background: #e5e7eb;
             height: 18px;
             border-radius: 0 0 16px 16px;
             width: 120%;
@@ -274,12 +292,11 @@
             border-top: 2px solid #d1d5db;
         }
         
-        /* Phone Frame */
         .phone-device {
             position: absolute;
             bottom: -20px;
             right: -30px;
-            width: 110px; /* Telefon genişliği */
+            width: 110px;
             z-index: 2;
             background: #111;
             border-radius: 20px;
@@ -293,7 +310,7 @@
             border-radius: 16px;
             overflow: hidden;
             width: 100%;
-            aspect-ratio: 9 / 19.5; /* Modern telefon oranı */
+            aspect-ratio: 9 / 19.5;
             position: relative;
         }
 
@@ -403,10 +420,112 @@
         
         .feature-link:hover { gap: 8px; }
 
+        /* --- FAYDALAR (Yeni Bölüm) --- */
+        .benefits-section {
+            padding: 100px 0;
+            background: #F8FAFC;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .benefits-label {
+            color: var(--logo-teal);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .benefits-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--logo-navy);
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .benefits-desc {
+            color: var(--gray);
+            margin-bottom: 30px;
+            font-size: 1.05rem;
+        }
+
+        .benefits-list {
+            list-style: none;
+        }
+
+        .benefits-list li {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            color: var(--gray);
+        }
+
+        .benefits-list i {
+            color: white;
+            background: var(--logo-teal);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            margin-top: 3px;
+        }
+
+        /* Faydalar Sağ Taraf (Koyu Kart) */
+        .benefits-card {
+            background-color: var(--logo-navy);
+            color: white;
+            border-radius: 30px;
+            padding: 50px;
+            box-shadow: 0 25px 50px -12px rgba(10, 42, 67, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .benefits-card-text {
+            font-size: 1rem;
+            line-height: 1.7;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+        }
+
+        .stat-item h3 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-item p {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            line-height: 1.4;
+        }
+
         /* --- NASIL ÇALIŞIR? --- */
         .how-it-works {
             padding: 80px 0 120px;
-            background: #F9FAFB;
+            background: #ffffff;
         }
 
         .process-steps {
@@ -461,7 +580,7 @@
         .step-item h4 { font-size: 1.1rem; margin-bottom: 8px; }
         .step-item p { font-size: 0.9rem; color: var(--gray); }
 
-        /* --- DEMO TALEP FORMU (Yeni Bölüm) --- */
+        /* --- DEMO TALEP FORMU --- */
         .demo-section {
             padding: 100px 0;
             background: var(--white);
@@ -469,7 +588,6 @@
             overflow: hidden;
         }
         
-        /* Arka plan süslemesi */
         .demo-section::before {
             content: '';
             position: absolute;
@@ -543,7 +661,7 @@
         .footer-links a { color: var(--gray); margin-left: 20px; }
         .footer-links a:hover { color: var(--primary); text-decoration: underline; }
 
-        /* --- MODAL (Gizlilik ve Şartlar İçin) --- */
+        /* --- MODAL --- */
         .modal {
             display: none; 
             position: fixed; 
@@ -585,7 +703,11 @@
             .hero-text h1 { font-size: 2.8rem; }
             .process-steps { flex-direction: column; gap: 40px; margin-top: 40px; }
             .process-steps::before { display: none; }
-            .nav-links { display: none; } /* Basitlik için gizlendi */
+            .nav-links { display: none; } 
+            
+            /* Mobil Buton Gizleme */
+            .nav-cta-btn { display: none; }
+
             .demo-container { flex-direction: column; padding: 30px; }
             .demo-text { text-align: center; }
             .demo-features { text-align: left; display: inline-block; }
@@ -594,6 +716,11 @@
             .device-composition { max-width: 100%; margin-top: 40px; }
             .phone-device { width: 80px; right: -10px; bottom: -15px; }
             .laptop-base { width: 100%; margin-left: 0; }
+
+            /* Faydalar Responsive */
+            .benefits-grid { grid-template-columns: 1fr; gap: 40px; }
+            .benefits-card { padding: 30px; }
+            .stats-grid { grid-template-columns: 1fr; gap: 20px; }
         }
     </style>
 </head>
@@ -604,12 +731,15 @@
         <div class="container">
             <nav>
                 <a href="#" class="logo">
-                    <!-- LOGO RESMİ BURAYA -->
+                    <!-- LOGO RESMİ -->
                     <img src="public/logo.png" alt="NetKoç Logo" class="logo-img">
+                    <!-- YENİ LOGO YAZISI -->
+                    <div class="logo-text">Net<span>Koç</span></div>
                 </a>
 
                 <ul class="nav-links">
                     <li><a href="#features">Özellikler</a></li>
+                    <li><a href="#benefits">Faydalar</a></li>
                     <li><a href="#how">Nasıl Çalışır?</a></li>
                     <li><a href="#referans">Referanslar</a></li>
                     <li><a href="#demo-form">İletişim</a></li>
@@ -629,7 +759,8 @@
                         </div>
                     </div>
                     
-                    <a href="#demo-form" class="btn-primary">15 Gün Ücretsiz Dene</a>
+                    <!-- Mobilde Gizlenen Buton (nav-cta-btn sınıfı eklendi) -->
+                    <a href="#demo-form" class="btn-primary nav-cta-btn">15 Gün Ücretsiz Dene</a>
                 </div>
             </nav>
         </div>
@@ -653,7 +784,7 @@
                         <div class="laptop-screen-frame">
                             <div class="laptop-camera"></div>
                             <div class="laptop-display">
-                                <!-- PC MOCKUP RESMİ BURAYA -->
+                                <!-- PC MOCKUP RESMİ -->
                                 <img src="public/mockup-pc.jpg" alt="NetKoç Dashboard Panel">
                             </div>
                         </div>
@@ -664,7 +795,7 @@
                     <div class="phone-device">
                         <div class="phone-screen-frame">
                             <div class="phone-notch"></div>
-                            <!-- TELEFON MOCKUP RESMİ BURAYA -->
+                            <!-- TELEFON MOCKUP RESMİ -->
                             <img src="public/mockup-phone.jpg" alt="NetKoç Mobil Uygulama">
                         </div>
                     </div>
@@ -729,6 +860,49 @@
         </div>
     </section>
 
+    <!-- YENİ FAYDALAR BÖLÜMÜ -->
+    <section id="benefits" class="benefits-section">
+        <div class="container">
+            <div class="benefits-grid">
+                <!-- Sol Taraf -->
+                <div>
+                    <span class="benefits-label">FAYDALAR</span>
+                    <h2 class="benefits-title">Koçlar, kurumlar ve aileler için aynı ekranda netlik</h2>
+                    <p class="benefits-desc">NetKoç, sadece netleri değil, öğrencinin tüm gelişim sürecini daha görünür kılar. Böylece herkes aynı hedefe daha net odaklanır.</p>
+                    
+                    <ul class="benefits-list">
+                        <li><i class="fa-solid fa-check"></i> Koç için her öğrencinin güncel durumunu birkaç saniyede görme imkânı.</li>
+                        <li><i class="fa-solid fa-check"></i> Kurum için koç, öğrenci ve veli arasındaki iletişimi tek platformda toplama.</li>
+                        <li><i class="fa-solid fa-check"></i> Veli için anlaşılır grafikler ve düzenli gelişim raporları.</li>
+                        <li><i class="fa-solid fa-check"></i> Öğrenci için hedef odaklı, takip edilen ve motive edici bir süreç.</li>
+                    </ul>
+                </div>
+
+                <!-- Sağ Taraf (Koyu Kart) -->
+                <div class="benefits-card">
+                    <p class="benefits-card-text">NetKoç kullanan kurumlar, öğrencilerinin gelişimini sadece “sınav sonucundan” değil; net artışı, konu takibi ve ödev disiplininden de okuyabiliyor.</p>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <h3>%32</h3>
+                            <p>Daha yüksek deneme verimliliği</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3>%45</h3>
+                            <p>Ödev tamamlama oranında artış</p>
+                        </div>
+                        <div class="stat-item" style="grid-column: span 2;">
+                            <h3>-%28</h3>
+                            <p>Takipsizlik kaynaklı başarı kaybında azalma</p>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size:0.75rem; opacity:0.5; margin-top:30px;">*Veriler, NetKoç'a geçen kurumların kendi paylaştığı istatistiklerden derlenmiştir.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- NASIL ÇALIŞIR -->
     <section id="how" class="how-it-works">
         <div class="container">
@@ -761,7 +935,7 @@
         </div>
     </section>
 
-    <!-- REFERANSLAR (PROFESYONEL TASARIM) -->
+    <!-- REFERANSLAR -->
     <section id="referans" style="padding: 100px 0; background: linear-gradient(to bottom, #ffffff, #f9fafb);">
         <div class="container">
             <div class="section-header" style="text-align: center; margin-bottom: 60px;">

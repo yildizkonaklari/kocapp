@@ -157,3 +157,86 @@ window.saveCoach = async (uid) => {
         alert("Hata: " + error.message);
     }
 };
+        // --- DEMO TALEPLERİ LİSTELEME KODU (Bunu admin.js'ye ekleyin) ---
+        const demoTableBody = document.getElementById('demoTableBody');
+        const requestCountBadge = document.getElementById('requestCountBadge');
+
+        // Firestore Referansı
+        const requestsRef = collection(db, 'artifacts', appId, 'public', 'data', 'demoRequests');
+
+        // Verileri Dinle (Real-time)
+        onSnapshot(requestsRef, (snapshot) => {
+            if (snapshot.empty) {
+                demoTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center text-gray-400">
+                            <i class="fa-regular fa-folder-open text-3xl mb-2"></i><br>
+                            Henüz bekleyen talep yok.
+                        </td>
+                    </tr>`;
+                requestCountBadge.textContent = "0 Talep";
+                return;
+            }
+
+            let requests = [];
+            snapshot.forEach(doc => {
+                requests.push({ id: doc.id, ...doc.data() });
+            });
+
+            // Tarihe göre sırala (Yeniden eskiye)
+            requests.sort((a, b) => {
+                const dateA = a.createdAt ? a.createdAt.seconds : 0;
+                const dateB = b.createdAt ? b.createdAt.seconds : 0;
+                return dateB - dateA;
+            });
+
+            // Tabloyu Güncelle
+            demoTableBody.innerHTML = '';
+            requests.forEach(req => {
+                // Tarih Formatlama
+                const date = req.createdAt ? new Date(req.createdAt.seconds * 1000).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' }) : '-';
+                
+                // Rol Badge Rengi
+                let roleClass = "bg-gray-100 text-gray-800";
+                if(req.role && req.role.includes("Koç")) roleClass = "bg-purple-100 text-purple-800";
+                if(req.role && req.role.includes("Kurum")) roleClass = "bg-blue-100 text-blue-800";
+                if(req.role && req.role.includes("Okul")) roleClass = "bg-orange-100 text-orange-800";
+                if(req.role && req.role.includes("Aile")) roleClass = "bg-green-100 text-green-800";
+
+                const row = `
+                    <tr class="hover:bg-indigo-50 transition-colors fade-in">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-regular fa-clock text-gray-400"></i> ${date}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-bold text-gray-900">${req.name || 'İsimsiz'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900"><i class="fa-solid fa-envelope text-gray-400 mr-1"></i> ${req.email || '-'}</div>
+                            <div class="text-sm text-gray-500 mt-1"><i class="fa-solid fa-phone text-gray-400 mr-1"></i> ${req.phone || '-'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${roleClass}">
+                                ${req.role || 'Belirtilmemiş'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded transition-colors">
+                                İncele
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                demoTableBody.innerHTML += row;
+            });
+
+            // Rozet Güncelle
+            requestCountBadge.textContent = `${requests.length} Talep`;
+            
+        }, (error) => {
+            console.error("Veri çekme hatası: ", error);
+            demoTableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Veriler yüklenirken hata oluştu.</td></tr>`;
+        });
+        // --- DEMO TALEPLERİ KODU SONU ---

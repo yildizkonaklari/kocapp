@@ -61,7 +61,7 @@ const EXAM_CONFIG = {
     'TYT': { wrongRatio: 4, subjects: [{name:'Türkçe',max:40},{name:'Matematik',max:40},{name:'Sosyal',max:20},{name:'Fen',max:20}] },
     'AYT': { wrongRatio: 4, subjects: [{name:'Matematik',max:40},{name:'Fizik',max:14},{name:'Kimya',max:13},{name:'Biyoloji',max:13},{name:'Edebiyat',max:24},{name:'Tarih-1',max:10},{name:'Coğrafya-1',max:6},{name:'Tarih-2',max:11},{name:'Coğrafya-2',max:11},{name:'Felsefe Gr.',max:12},{name:'Din',max:6}] },
     'YDS': { wrongRatio: 0, subjects: [{name:'Yabancı Dil',max:80}] },
-    'Diger': { wrongRatio: 4, subjects: [] } // Diğer seçeneği dinamik input kullanır
+    'Diger': { wrongRatio: 4, subjects: [] } 
 };
 
 let denemeChartInstance = null;
@@ -97,7 +97,6 @@ async function initializeStudentApp(uid) {
                 enableHeaderIcons();
                 initStudentNotifications(); 
             } else {
-                // Profil eşleştirme hatası veya eksik veri
                 alert("Öğrenci profili bulunamadı.");
                 signOut(auth);
             }
@@ -134,6 +133,7 @@ function enableHeaderIcons() {
     }
 }
 
+// GLOBAL NAVİGASYON FONKSİYONU
 window.navigateToTab = (tabId) => {
     document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
@@ -163,7 +163,7 @@ window.navigateToTab = (tabId) => {
     else if (tabId === 'tab-tracking') { currentWeekOffset=0; renderSoruTakibiGrid(); }
     else if (tabId === 'tab-ajanda') { currentCalDate=new Date(); loadCalendarDataAndDraw(currentCalDate); }
     else if (tabId === 'tab-goals') loadGoalsTab();
-    else if (tabId === 'tab-denemeler') loadDenemelerTab();
+    else if (tabId === 'tab-denemeler') loadDenemelerTab(); // BU FONKSİYON ARTIK TANIMLI
     else if (tabId === 'tab-home') loadDashboardData();
 };
 
@@ -333,7 +333,7 @@ async function loadUpcomingAppointments(db, uid, appId, sid) {
     const snap = await getDocs(q);
     const container = document.getElementById('upcomingAppointmentsList');
     if(!container) return;
-    if (snap.empty) container.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Planlanmış randevu yok.</p>';
+    if (snap.empty) container.innerHTML = '<p class="text-center text-xs text-gray-400 py-4">Planlanmış randevu yok.</p>';
     else container.innerHTML = snap.docs.map(doc => { const a=doc.data(); const isToday=a.tarih===todayStr; return `<div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full ${isToday?'bg-green-100 text-green-600':'bg-indigo-50 text-indigo-600'} flex items-center justify-center font-bold text-sm shrink-0">${a.tarih.split('-')[2]}</div><div><h4 class="text-sm font-bold text-gray-800 leading-none mb-1">${a.baslik||'Görüşme'}</h4><p class="text-xs text-gray-500 flex items-center gap-1"><i class="fa-regular fa-clock text-[10px]"></i> ${a.baslangic} - ${a.bitis}</p></div></div>${isToday?'<span class="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">BUGÜN</span>':''}</div>`; }).join('');
 }
 
@@ -388,25 +388,151 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 });
 
 // =================================================================
-// 7. MODAL YÖNETİMİ & HELPERLAR (DÜZELTİLDİ: Fonksiyon Tanımları)
+// 7. MODÜLLER
 // =================================================================
+
+// --- SORU TAKİBİ ---
+async function renderSoruTakibiGrid() {
+    const container = document.getElementById('weeklyAccordion'); if(!container) return;
+    if(!coachId) { container.innerHTML='<p class="text-center text-red-500">Hata.</p>'; return; }
+    container.innerHTML = '<p class="text-center text-gray-400">Yükleniyor...</p>';
+    const dates = getWeekDates(currentWeekOffset);
+    document.getElementById('weekRangeTitle').textContent = `${dates[0].dateStr} - ${dates[6].dateStr}`;
+    document.getElementById('prevWeekBtn').onclick = () => { currentWeekOffset--; renderSoruTakibiGrid(); };
+    const next = document.getElementById('nextWeekBtn');
+    next.onclick = () => { currentWeekOffset++; renderSoruTakibiGrid(); };
+    next.disabled = currentWeekOffset >= 0;
+
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), where("tarih", ">=", dates[0].dateStr), where("tarih", "<=", dates[6].dateStr));
+    const snap = await getDocs(q);
+    const data = []; snap.forEach(d => data.push({id:d.id, ...d.data()}));
+
+    container.innerHTML = dates.map(day => {
+        const isToday = day.isToday;
+        const createCard = (label, isRoutine = false) => {
+            const r = data.find(d => d.tarih === day.dateStr && d.ders === label);
+            const val = r ? r.adet : '';
+            const isApproved = r && r.onayDurumu === 'onaylandi';
+            const isPending = r && r.onayDurumu === 'bekliyor';
+            let borderClass = 'border-gray-200', bgClass = 'bg-white', textClass = 'text-gray-800', statusIcon = '';
+            if (isApproved) { borderClass = 'border-green-400'; bgClass = 'bg-green-50'; textClass = 'text-green-700'; statusIcon = '<i class="fa-solid fa-check-circle text-green-500 absolute top-1 right-1 text-[10px]"></i>'; } else if (isPending) { borderClass = 'border-orange-300'; bgClass = 'bg-orange-50'; textClass = 'text-orange-700'; statusIcon = '<i class="fa-solid fa-clock text-orange-400 absolute top-1 right-1 text-[10px]"></i>'; }
+            return `<div class="subject-card relative p-2 rounded-lg border ${borderClass} ${bgClass} shadow-sm flex flex-col items-center justify-center transition-all">${statusIcon}<label class="text-[10px] font-bold text-center w-full truncate text-gray-500 mb-1" title="${label}">${label}</label><input type="number" class="text-2xl font-bold text-center w-full outline-none bg-transparent placeholder-gray-300 ${textClass}" placeholder="0" value="${val}" data-tarih="${day.dateStr}" data-ders="${label}" data-doc-id="${r ? r.id : ''}" ${isApproved ? 'disabled' : ''} onblur="saveInput(this)"><span class="text-[9px] text-gray-400">${isRoutine && label === 'Kitap Okuma' ? 'Sayfa' : 'Soru'}</span></div>`;
+        };
+        return `<div class="accordion-item border-b last:border-0"><button class="accordion-header w-full flex justify-between p-4 rounded-xl border mb-2 ${isToday?'bg-purple-50 border-purple-500 text-purple-700':'bg-white border-gray-200'}" onclick="toggleAccordion(this)" aria-expanded="${isToday}"><span class="font-bold">${day.dayNum} ${day.dayName}</span><i class="fa-solid fa-chevron-down transition-transform"></i></button><div class="accordion-content ${isToday?'':'hidden'} px-1 pb-4"><div class="mb-3 bg-gray-50 p-3 rounded-xl border border-gray-100"><h4 class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2 pl-1 flex items-center"><i class="fa-solid fa-star mr-1"></i> Rutinler</h4><div class="grid grid-cols-3 gap-2">${studentRutinler.map(r => createCard(r, true)).join('')}</div></div><div><h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 pl-1 flex items-center"><i class="fa-solid fa-book mr-1"></i> Dersler</h4><div class="grid grid-cols-3 gap-2">${studentDersler.map(d => createCard(d)).join('')}</div></div></div></div>`;
+    }).join('');
+}
+
+// --- ÖDEVLER ---
+function loadHomeworksTab() {
+    const container = document.getElementById('studentOdevList'); if(!container) return;
+    container.innerHTML = `<div class="flex justify-between items-center mb-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100"><button id="btnOdevPrevWeek" class="p-2 hover:bg-gray-100 rounded-full text-gray-600"><i class="fa-solid fa-chevron-left"></i></button><h3 id="odevWeekRangeDisplay" class="font-bold text-gray-800 text-sm">...</h3><button id="btnOdevNextWeek" class="p-2 hover:bg-gray-100 rounded-full text-gray-600"><i class="fa-solid fa-chevron-right"></i></button></div><div id="odevWeeklyGrid" class="space-y-4 pb-20"><p class="text-center text-gray-400 py-8">Yükleniyor...</p></div>`;
+    document.getElementById('btnOdevPrevWeek').onclick = () => { odevWeekOffset--; renderOdevCalendar(); };
+    document.getElementById('btnOdevNextWeek').onclick = () => { odevWeekOffset++; renderOdevCalendar(); };
+    renderOdevCalendar();
+}
+function renderOdevCalendar() {
+    const grid = document.getElementById('odevWeeklyGrid'); const rangeDisplay = document.getElementById('odevWeekRangeDisplay');
+    const today = new Date(); const currentDay = today.getDay(); const diff = today.getDate() - currentDay + (currentDay == 0 ? -6 : 1) + (odevWeekOffset * 7); const startOfWeek = new Date(today.setDate(diff)); const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 6);
+    rangeDisplay.textContent = `${formatDateTR(startOfWeek.toISOString().split('T')[0])} - ${formatDateTR(endOfWeek.toISOString().split('T')[0])}`;
+    listeners.odevler = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler")), (snap) => {
+        const allOdevs = []; snap.forEach(doc => allOdevs.push({id: doc.id, ...doc.data()})); grid.innerHTML = ''; let weeklyTotal = 0; let weeklyDone = 0;
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(startOfWeek); dayDate.setDate(startOfWeek.getDate() + i); const dateStr = dayDate.toISOString().split('T')[0]; const dayName = dayDate.toLocaleDateString('tr-TR', { weekday: 'long' }); const isToday = dateStr === new Date().toISOString().split('T')[0];
+            const dailyOdevs = allOdevs.filter(o => o.bitisTarihi === dateStr); dailyOdevs.forEach(o => { weeklyTotal++; if(o.durum === 'tamamlandi') weeklyDone++; });
+            const dayCard = document.createElement('div'); dayCard.className = `bg-white rounded-xl border ${isToday ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'} overflow-hidden`;
+            let contentHtml = `<div class="p-2 ${isToday ? 'bg-indigo-50' : 'bg-gray-50'} border-b border-gray-100 flex justify-between items-center"><span class="font-bold text-sm ${isToday ? 'text-indigo-700' : 'text-gray-700'}">${dayName}</span><span class="text-xs text-gray-500">${formatDateTR(dateStr)}</span></div><div class="p-2 space-y-2">`;
+            if (dailyOdevs.length === 0) contentHtml += `<p class="text-center text-xs text-gray-400 py-2">Ödev yok.</p>`; else dailyOdevs.forEach(o => { let statusClass = "bg-blue-50 border-blue-100 text-blue-800"; let statusText = "Yapılacak"; let actionBtn = `<button class="w-full mt-2 bg-blue-600 text-white text-xs py-1.5 rounded hover:bg-blue-700 transition-colors" onclick="completeOdev('${o.id}')">Tamamladım</button>`; const todayStr = new Date().toISOString().split('T')[0]; if (o.durum === 'tamamlandi') { if (o.onayDurumu === 'onaylandi') { statusClass = "bg-green-50 border-green-100 text-green-800"; statusText = '<i class="fa-solid fa-check-double"></i> Tamamlandı'; actionBtn = ''; } else { statusClass = "bg-orange-50 border-orange-100 text-orange-800"; statusText = '<i class="fa-solid fa-clock"></i> Onay Bekliyor'; actionBtn = ''; } } else if (o.bitisTarihi < todayStr) { statusClass = "bg-red-50 border-red-100 text-red-800"; statusText = "Gecikti"; } const linkHtml = o.link ? `<a href="${o.link}" target="_blank" class="ml-1 text-indigo-600 hover:text-indigo-800" title="Bağlantıya Git" onclick="event.stopPropagation();"><i class="fa-solid fa-link"></i></a>` : ''; contentHtml += `<div class="border rounded-lg p-3 ${statusClass}"><div class="flex justify-between items-start mb-1"><h4 class="font-bold text-sm leading-tight flex items-center">${o.title}${linkHtml}</h4><span class="text-[10px] font-bold px-1.5 py-0.5 bg-white bg-opacity-50 rounded whitespace-nowrap ml-1">${statusText}</span></div><p class="text-xs opacity-80 mb-1">${o.aciklama || ''}</p>${actionBtn}</div>`; });
+            contentHtml += `</div>`; dayCard.innerHTML = contentHtml; grid.appendChild(dayCard);
+        }
+        const p = weeklyTotal === 0 ? 0 : Math.round((weeklyDone / weeklyTotal) * 100); if(document.getElementById('haftalikIlerlemeText2')) document.getElementById('haftalikIlerlemeText2').textContent = `%${p}`; if(document.getElementById('haftalikIlerlemeBar2')) document.getElementById('haftalikIlerlemeBar2').style.width = `${p}%`;
+    });
+}
+window.completeOdev = async (odevId) => { if(!confirm("Ödevi tamamladın mı?")) return; try { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler", odevId), { durum: 'tamamlandi', onayDurumu: 'bekliyor' }); } catch (e) { console.error(e); alert("Hata oluştu."); } };
+
+// --- HEDEFLER (GÜNCELLENMİŞ) ---
+function loadGoalsTab() {
+    const list = document.getElementById('studentHedefList'); if(!list) return;
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), orderBy("bitisTarihi", "asc"));
+    listeners.hedefler = onSnapshot(q, (snap) => {
+        const goals = []; snap.forEach(doc => goals.push({ id: doc.id, ...doc.data() }));
+        goals.sort((a, b) => { if (a.isPinned && !b.isPinned) return -1; if (!a.isPinned && b.isPinned) return 1; return new Date(a.bitisTarihi) - new Date(b.bitisTarihi); });
+        if (goals.length === 0) list.innerHTML = '<p class="text-center text-gray-400 py-8">Henüz hedef atanmamış.</p>'; else list.innerHTML = goals.map(h => { const isDone = h.durum === 'tamamlandi'; const isPinned = h.isPinned === true; const olusturma = h.olusturmaTarihi ? formatDateTR(h.olusturmaTarihi.toDate().toISOString().split('T')[0]) : '-'; const bitis = formatDateTR(h.bitisTarihi); let cardClass = isDone ? 'border-green-100 bg-green-50 opacity-80' : 'border-gray-100 bg-white'; if (isPinned && !isDone) cardClass = 'border-yellow-300 bg-yellow-50 shadow-md ring-1 ring-yellow-200'; return `<div class="p-4 rounded-xl border shadow-sm mb-3 flex gap-4 relative ${cardClass}">${isPinned ? '<div class="absolute top-0 right-0 bg-yellow-400 text-white rounded-bl-xl rounded-tr-xl w-8 h-8 flex items-center justify-center shadow-sm"><i class="fa-solid fa-thumbtack text-sm"></i></div>' : ''}<div class="w-10 h-10 rounded-full ${isDone ? 'bg-green-100 text-green-600' : (isPinned ? 'bg-yellow-200 text-yellow-700' : 'bg-purple-100 text-purple-600')} flex items-center justify-center text-lg shrink-0"><i class="fa-solid ${isDone ? 'fa-check' : 'fa-bullseye'}"></i></div><div class="flex-1"><div class="flex justify-between items-start pr-6"><h4 class="font-bold text-gray-800 text-sm">${h.title}</h4>${isDone ? '<span class="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold">Tamamlandı</span>' : ''}</div><p class="text-xs text-gray-600 mt-1 leading-relaxed">${h.aciklama || ''}</p><div class="flex items-center gap-3 mt-2 pt-2 border-t border-gray-200/50 text-[10px] text-gray-400"><span title="Veriliş Tarihi" class="flex items-center gap-1"><i class="fa-regular fa-calendar-plus text-purple-400"></i> ${olusturma}</span><span title="Bitiş Tarihi" class="flex items-center gap-1 ${!isDone ? 'text-orange-500 font-bold' : ''}"><i class="fa-regular fa-flag"></i> ${bitis}</span></div></div></div>`; }).join('');
+    });
+}
+
+// --- DENEMELER (EKSİK OLAN KISIM EKLENDİ) ---
+function loadDenemelerTab() {
+    const list = document.getElementById('studentDenemeList'); if(!list) return;
+    const btn = document.getElementById('btnAddNewDeneme');
+    if(btn) { const n=btn.cloneNode(true); btn.parentNode.replaceChild(n,btn); n.onclick=openDenemeModal; }
+    
+    listeners.denemeler = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), orderBy("tarih", "desc")), (snap) => {
+        const data = []; snap.forEach(d => data.push({id:d.id, ...d.data()}));
+        const validData = data.filter(x => x.onayDurumu === 'onaylandi' && x.analizHaric !== true);
+        
+        let totalNet = 0, maxNet = 0;
+        validData.forEach(x => { 
+            const n = parseFloat(x.toplamNet); 
+            totalNet += n; 
+            if(n > maxNet) maxNet = n; 
+        });
+
+        if(document.getElementById('studentKpiAvg')) document.getElementById('studentKpiAvg').textContent = (validData.length ? (totalNet/validData.length) : 0).toFixed(2);
+        if(document.getElementById('studentKpiMax')) document.getElementById('studentKpiMax').textContent = maxNet.toFixed(2);
+        if(document.getElementById('studentKpiTotal')) document.getElementById('studentKpiTotal').textContent = validData.length;
+        
+        const ctx = document.getElementById('studentDenemeChart');
+        if(ctx) {
+            const sorted = [...validData].sort((a,b) => a.tarih.localeCompare(b.tarih)).slice(-10);
+            if(denemeChartInstance) denemeChartInstance.destroy();
+            denemeChartInstance = new Chart(ctx, { type: 'line', data: { labels: sorted.map(d=>d.tarih.slice(5)), datasets: [{ label: 'Net', data: sorted.map(d=>d.toplamNet), borderColor: '#7c3aed', tension: 0.4 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
+        }
+
+        list.innerHTML = data.length === 0 ? '<p class="text-center text-gray-400">Deneme yok.</p>' : data.map(d => {
+            const pending = d.onayDurumu === 'bekliyor'; 
+            const isExcluded = d.analizHaric === true;
+            const net = parseFloat(d.toplamNet) || 0;
+            
+            let detailsHtml = '';
+            if (d.netler) {
+                detailsHtml = '<div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100 hidden animate-fade-in">';
+                for (const [ders, stats] of Object.entries(d.netler)) {
+                    if (stats.d > 0 || stats.y > 0) {
+                        detailsHtml += `<div class="text-[10px] bg-gray-50 p-1 rounded flex justify-between"><span class="font-bold truncate w-16">${ders}</span><span class="text-gray-500">D:${stats.d} Y:${stats.y} N:${stats.net}</span></div>`;
+                    }
+                }
+                detailsHtml += '</div>';
+            } else {
+                detailsHtml = `<div class="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500 hidden animate-fade-in">Soru: ${d.soruSayisi} | D: ${d.dogru} | Y: ${d.yanlis}</div>`;
+            }
+
+            return `
+            <div class="bg-white p-4 rounded-xl border ${isExcluded ? 'border-orange-200 bg-orange-50' : (pending ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200')} shadow-sm mb-2 cursor-pointer" onclick="this.querySelector('.animate-fade-in').classList.toggle('hidden')">
+                <div class="flex justify-between">
+                    <span class="font-bold text-sm text-gray-800">${d.ad} <span class="font-normal text-xs text-gray-500">(${d.tur})</span></span>
+                    ${pending ? '<span class="text-[10px] px-2 py-1 rounded-full bg-yellow-200 text-yellow-800">Bekliyor</span>' : ''}
+                    ${isExcluded ? '<span class="text-[10px] px-2 py-1 rounded-full bg-orange-200 text-orange-800">Analiz Dışı</span>' : ''}
+                </div>
+                <div class="flex justify-between mt-2 text-xs text-gray-500">
+                    <span>${d.tarih}</span>
+                    <span class="font-bold text-indigo-600 text-base">${net.toFixed(2)} Net</span>
+                </div>
+                ${detailsHtml}
+            </div>`;
+        }).join('');
+    });
+}
+
+// --- MODAL YÖNETİMİ & HELPERLAR ---
 document.querySelectorAll('.close-modal').forEach(b => b.onclick=()=>b.closest('.fixed').classList.add('hidden'));
 
-// FONKSİYON OLARAK TANIMLANDI (Identifier error çözümü)
 function openDenemeModal() { 
     document.getElementById('modalDenemeEkle').classList.remove('hidden'); 
-    
-    // Profil kartından sınıf bilgisini al
     const profileClass = document.getElementById('profileClass').textContent;
-    // Sınıf seviyesi kontrolü
     const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(profileClass);
-    
-    // Select seçeneklerini ayarla
     const types = isOrtaokul ? ['LGS', 'Diger'] : ['TYT', 'AYT', 'YDS', 'Diger'];
     const sel = document.getElementById('inpDenemeTur');
     sel.innerHTML = types.map(t => `<option value="${t}">${t}</option>`).join('');
-    
-    // İlk render
     renderDenemeInputs(types[0], isOrtaokul); 
     document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0]; 
 }
@@ -414,22 +540,12 @@ function openDenemeModal() {
 function renderDenemeInputs(tur, isOrtaokul) {
     const c = document.getElementById('denemeDersContainer'); if(!c) return; c.innerHTML='';
     const ratio = isOrtaokul ? 3 : 4;
-    
     if (tur === 'Diger') {
-        c.innerHTML = `
-            <div class="bg-orange-50 p-2 rounded text-xs text-orange-700 mb-2 text-center">Genel analize dahil edilmez. (${ratio}Y 1D götürür)</div>
-            <input type="number" id="inpDigerSoru" placeholder="Soru Sayısı" class="w-full p-2 mb-2 bg-white border rounded">
-            <div class="flex gap-2">
-                <input type="number" id="inpDigerDogru" placeholder="Doğru" class="w-1/2 p-2 bg-white border border-green-200 rounded">
-                <input type="number" id="inpDigerYanlis" placeholder="Yanlış" class="w-1/2 p-2 bg-white border border-red-200 rounded">
-            </div>
-        `;
+        c.innerHTML = `<div class="bg-orange-50 p-2 rounded text-xs text-orange-700 mb-2 text-center">Genel analize dahil edilmez. (${ratio}Y 1D götürür)</div><input type="number" id="inpDigerSoru" placeholder="Soru Sayısı" class="w-full p-2 mb-2 bg-white border rounded"><div class="flex gap-2"><input type="number" id="inpDigerDogru" placeholder="Doğru" class="w-1/2 p-2 bg-white border border-green-200 rounded"><input type="number" id="inpDigerYanlis" placeholder="Yanlış" class="w-1/2 p-2 bg-white border border-red-200 rounded"></div>`;
     } else {
         const config = EXAM_CONFIG[tur] || EXAM_CONFIG['Diger']; 
         c.innerHTML = `<p class="text-xs text-gray-400 mb-2 text-center">${ratio} yanlış 1 doğruyu götürür.</p>`;
-        config.subjects.forEach(sub => {
-            c.innerHTML += `<div class="flex justify-between text-sm py-2 border-b items-center"><span class="w-24 truncate font-bold text-gray-700">${sub.name}</span><div class="flex gap-1"><input type="number" placeholder="D" class="inp-deneme-d w-10 p-1 border-green-200 border rounded text-center text-green-700 font-bold outline-none" data-ders="${sub.name}"><input type="number" placeholder="Y" class="inp-deneme-y w-10 p-1 border-red-200 border rounded text-center text-red-700 font-bold outline-none" data-ders="${sub.name}"></div></div>`;
-        });
+        config.subjects.forEach(sub => { c.innerHTML += `<div class="flex justify-between text-sm py-2 border-b items-center"><span class="w-24 truncate font-bold text-gray-700">${sub.name}</span><div class="flex gap-1"><input type="number" placeholder="D" class="inp-deneme-d w-10 p-1 border-green-200 border rounded text-center text-green-700 font-bold outline-none" data-ders="${sub.name}"><input type="number" placeholder="Y" class="inp-deneme-y w-10 p-1 border-red-200 border rounded text-center text-red-700 font-bold outline-none" data-ders="${sub.name}"></div></div>`; });
     }
 }
 
@@ -439,12 +555,10 @@ document.getElementById('inpDenemeTur').onchange = (e) => {
     renderDenemeInputs(e.target.value, isOrtaokul);
 };
 
-// Kaydet Butonu
 document.getElementById('btnSaveDeneme').onclick = async () => {
     const ad = document.getElementById('inpDenemeAd').value || "Deneme";
     const tur = document.getElementById('inpDenemeTur').value;
     const tarih = document.getElementById('inpDenemeTarih').value;
-    
     const profileClass = document.getElementById('profileClass').textContent;
     const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(profileClass);
     const ratio = isOrtaokul ? 3 : 4;
@@ -464,15 +578,9 @@ document.getElementById('btnSaveDeneme').onclick = async () => {
         let totalNet=0, netler={};
         document.querySelectorAll('.inp-deneme-d').forEach(i => {
             const d=parseInt(i.value)||0, y=parseInt(i.parentElement.querySelector('.inp-deneme-y').value)||0;
-            if(d>0 || y>0) {
-                const n = d - (y/ratio || 0); 
-                totalNet+=n; 
-                netler[i.dataset.ders]={d,y,net:n.toFixed(2)};
-            }
+            if(d>0 || y>0) { const n = d - (y/ratio || 0); totalNet+=n; netler[i.dataset.ders]={d,y,net:n.toFixed(2)}; }
         });
-        payload.toplamNet = totalNet.toFixed(2);
-        payload.netler = netler;
-        payload.analizHaric = false;
+        payload.toplamNet = totalNet.toFixed(2); payload.netler = netler; payload.analizHaric = false;
     }
     
     await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), payload);
@@ -522,5 +630,9 @@ function getWeekDates(offset) {
     const m = new Date(t.getFullYear(), t.getMonth(), t.getDate()-(t.getDay()||7)+1+(offset*7));
     for(let i=0; i<7; i++) { const c=new Date(m); c.setDate(m.getDate()+i); w.push({dateStr:c.toISOString().split('T')[0], dayName:d[i], dayNum:c.getDate(), isToday:c.toDateString()===t.toDateString()}); }
     return w;
+}
+async function loadWeekSoruData(s, e) {
+    const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), where("tarih", ">=", s), where("tarih", "<=", e));
+    const snap = await getDocs(q); const d=[]; snap.forEach(doc=>d.push({id:doc.id, ...doc.data()})); return d;
 }
 document.getElementById('btnLogout').onclick = () => signOut(auth);

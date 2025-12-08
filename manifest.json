@@ -1,0 +1,21 @@
+{
+  "name": "NetKoç",
+  "short_name": "NetKoç",
+  "start_url": "/login.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4F46E5",
+  "description": "Eğitim koçları ve öğrenciler için akıllı takip sistemi.",
+  "icons": [
+    {
+      "src": "public/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "public/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

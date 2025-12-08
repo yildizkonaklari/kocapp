@@ -553,7 +553,7 @@
                             <a href="#" onclick="alert('Çok Yakında!'); return false;"><i class="fa-solid fa-building"></i> Kurum Girişi (Yakında)</a>
                         </div>
                     </div>
-                    <a href="#demo-form" class="btn-primary">15 Gün Ücretsiz Dene</a>
+                    <a href="#demo-form" class="btn-primary">Ücretsiz Dene</a>
                 </div>
 
                 <!-- Mobile Hamburger Button -->
@@ -586,7 +586,7 @@
     <section class="hero fade-in">
         <div class="container hero-content">
             <div class="hero-text">
-                <h1>Koçların öğrenci takibinde <br> <span style="color:var(--secondary)">Net </span>çözüm: NetKoç</h1>
+                <h1>Yüzlerce Öğrenciyi Tek Ekrandan Yönetin, <br> <span style="color:var(--secondary)">Başarı Hikayelerini Birlikte Yazın!</span></h1>
                 <p>Eğitim Koçları, Öğretmenler ve Kurumlar için özel olarak geliştirildi. Yapay zeka destekli analizler ile öğrenci takibini otomatikleştirin, veriye dayalı kararlar alın ve profesyonelliğinizi bir üst seviyeye taşıyın. NetKoç ile tanışma zamanı!</p>
                 <a href="#demo-form" class="btn-primary" style="padding: 16px 40px; font-size: 1.1rem; background: var(--success);">Hemen Başla</a>
             </div>
@@ -918,22 +918,83 @@
 
     <!-- MODALS -->
     <div id="privacyModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
             <span class="close" onclick="closeModal('privacyModal')">&times;</span>
-            <h2>Gizlilik Politikası</h2>
-            <br><p>NetKoç olarak kişisel verilerinizin güvenliğine önem veriyoruz...</p>
+            <h2 style="color:var(--primary); margin-bottom: 20px;">Gizlilik Politikası ve KVKK Aydınlatma Metni</h2>
+            
+            <div style="font-size: 0.95rem; color: #4B5563; line-height: 1.6;">
+                <p><strong>Son Güncelleme:</strong> 08.12.2025</p>
+                <br>
+                <p>NetKoç ("Şirket") olarak, kullanıcılarımızın ("Kullanıcı") kişisel verilerinin korunmasına büyük önem vermekteyiz. İşbu Gizlilik Politikası, NetKoç platformunu kullanırken toplanan verilerinizi nasıl işlediğimizi, sakladığımızı ve koruduğumuzu açıklamaktadır.</p>
+                
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">1. Toplanan Veriler</h4>
+                <p>Hizmetlerimizi sunabilmek adına aşağıdaki veri kategorilerini işlemekteyiz:</p>
+                <ul style="list-style: disc; padding-left: 20px; margin-top: 5px;">
+                    <li><strong>Kimlik Bilgileri:</strong> Ad, soyad.</li>
+                    <li><strong>İletişim Bilgileri:</strong> E-posta adresi, telefon numarası.</li>
+                    <li><strong>Eğitim Verileri:</strong> Öğrenci deneme sonuçları, hedef verileri, ödev durumları, çalışma programları.</li>
+                    <li><strong>İşlem Güvenliği Bilgileri:</strong> IP adresi, giriş-çıkış kayıtları, cihaz bilgileri.</li>
+                </ul>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">2. Verilerin İşlenme Amacı</h4>
+                <p>Kişisel verileriniz aşağıdaki amaçlarla işlenmektedir:</p>
+                <ul style="list-style: disc; padding-left: 20px; margin-top: 5px;">
+                    <li>Üyelik işlemlerinin gerçekleştirilmesi ve hesabın yönetilmesi.</li>
+                    <li>Öğrenci takip ve koçluk hizmetlerinin (analiz, raporlama) sunulması.</li>
+                    <li>İletişim faaliyetlerinin yürütülmesi (Demo talepleri, destek, bildirimler).</li>
+                    <li>Hizmet kalitesinin artırılması ve teknik sorunların giderilmesi.</li>
+                    <li>Yasal yükümlülüklerin yerine getirilmesi.</li>
+                </ul>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">3. Veri Güvenliği ve Saklama</h4>
+                <p>Verileriniz, endüstri standardı güvenlik önlemleri (SSL şifreleme, güvenlik duvarları) ile korunmaktadır. Verileriniz, hizmet süresince veya yasal saklama süreleri boyunca güvenli sunucularda (Firebase/Google Cloud altyapısı) saklanmaktadır.</p>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">4. Üçüncü Taraflarla Paylaşım</h4>
+                <p>Kişisel verileriniz, yasal zorunluluklar dışında veya açık rızanız olmaksızın üçüncü taraflarla paylaşılmaz, satılmaz veya kiralanmaz.</p>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">5. KVKK Kapsamındaki Haklarınız</h4>
+                <p>6698 sayılı Kişisel Verilerin Korunması Kanunu uyarınca; verilerinizin işlenip işlenmediğini öğrenme, işlenmişse bilgi talep etme, verilerin düzeltilmesini veya silinmesini isteme haklarına sahipsiniz. Talepleriniz için bizimle iletişime geçebilirsiniz.</p>
+            </div>
         </div>
     </div>
+
     <div id="termsModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
             <span class="close" onclick="closeModal('termsModal')">&times;</span>
-            <h2>Kullanım Koşulları</h2>
-            <br><p>NetKoç platformunu kullanarak aşağıdaki koşulları kabul etmiş sayılırsınız...</p>
+            <h2 style="color:var(--primary); margin-bottom: 20px;">Kullanım Koşulları</h2>
+            
+            <div style="font-size: 0.95rem; color: #4B5563; line-height: 1.6;">
+                <p><strong>Son Güncelleme:</strong> 08.12.2025</p>
+                <br>
+                <p>NetKoç platformuna ("Platform") erişerek veya kullanarak, aşağıdaki kullanım koşullarını ("Koşullar") kabul etmiş sayılırsınız. Bu koşulları kabul etmiyorsanız, lütfen Platformu kullanmayınız.</p>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">1. Hizmetin Tanımı</h4>
+                <p>NetKoç, eğitim koçları, öğretmenler, kurumlar ve öğrenciler için geliştirilmiş dijital bir öğrenci takip ve analiz sistemidir. Şirket, platformun özelliklerinde dilediği zaman değişiklik yapma hakkını saklı tutar.</p>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">2. Üyelik ve Hesap Güvenliği</h4>
+                <ul style="list-style: disc; padding-left: 20px; margin-top: 5px;">
+                    <li>Kullanıcı, kayıt sırasında verdiği bilgilerin doğru ve güncel olduğunu taahhüt eder.</li>
+                    <li>Hesap şifresinin güvenliğinden Kullanıcı sorumludur. Şirket, yetkisiz erişimlerden doğacak zararlardan sorumlu tutulamaz.</li>
+                    <li>Platform sadece eğitim amaçlı kullanılmalıdır. Kötüye kullanım tespiti halinde hesap askıya alınabilir.</li>
+                </ul>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">3. Fikri Mülkiyet Hakları</h4>
+                <p>Platform üzerindeki tüm yazılım, tasarım, grafikler, logolar ve içerikler NetKoç'a aittir ve telif hakkı kanunları ile korunmaktadır. İzinsiz kopyalanması, çoğaltılması veya ticari amaçla kullanılması yasaktır.</p>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">4. Sorumluluk Reddi</h4>
+                <p>NetKoç, sistemin %100 kesintisiz veya hatasız çalışacağını garanti etmez. Planlı bakım çalışmaları veya teknik aksaklıklar nedeniyle oluşabilecek kesintilerden sorumlu değildir. Platformda sunulan analizler birer öneri niteliğindedir; kesin başarı garantisi vermez.</p>
+
+                <h4 style="color:var(--dark); margin-top:15px; margin-bottom:5px;">5. Değişiklikler</h4>
+                <p>Şirket, işbu Kullanım Koşulları'nı dilediği zaman güncelleme hakkını saklı tutar. Güncel koşullar Platformda yayınlandığı tarihte yürürlüğe girer.</p>
+                
+                <br>
+                <p>Her türlü soru ve görüşünüz için iletişim formunu kullanabilirsiniz.</p>
+            </div>
         </div>
     </div>
 
     <!-- WHATSAPP BUTONU -->
-    <a href="https://wa.me/+905064083637" class="whatsapp-float" target="_blank">
+    <a href="https://wa.me/905555555555" class="whatsapp-float" target="_blank">
         <i class="fa-brands fa-whatsapp"></i>
     </a>
 

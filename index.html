@@ -229,7 +229,7 @@
             box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
         }
 
-        /* --- HERO SECTION --- */
+        /* --- 1. HERO SECTION --- */
         .hero {
             padding-top: 140px;
             padding-bottom: 60px;
@@ -311,46 +311,7 @@
 
         .phone-screen-frame img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 
-        /* --- LOGO BAND (TRUST SECTION) --- */
-        .logo-band {
-            padding: 40px 0;
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            margin-top: 20px;
-        }
-
-        .logo-band p {
-            text-align: center;
-            font-size: 0.9rem;
-            color: var(--gray);
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-        }
-
-        .logos-wrapper {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 40px;
-            opacity: 0.6;
-        }
-
-        .trust-logo {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--gray);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            filter: grayscale(100%);
-            transition: all 0.3s;
-        }
-
-        .trust-logo:hover { filter: grayscale(0%); color: var(--dark); opacity: 1; }
-
-        /* --- ÖZELLİKLER --- */
+        /* --- 2. ÖZELLİKLER --- */
         .features { padding: 100px 0; background: var(--white); }
         .section-header { text-align: center; margin-bottom: 60px; }
         .section-header h2 { font-size: 2.5rem; margin-bottom: 16px; }
@@ -382,7 +343,17 @@
         .feature-card h3 { font-size: 1.25rem; margin-bottom: 12px; color: var(--dark); }
         .feature-card p { font-size: 0.95rem; color: var(--gray); line-height: 1.6; }
 
-        /* --- FAYDALAR --- */
+        /* --- 3. NASIL ÇALIŞIR --- */
+        .how-it-works { padding: 80px 0 120px; background: #ffffff; }
+        .process-steps { display: flex; justify-content: space-between; position: relative; margin-top: 60px; }
+        .process-steps::before { content: ''; position: absolute; top: 30px; left: 50px; right: 50px; height: 2px; background: #E5E7EB; z-index: 0; }
+        .step-item { position: relative; z-index: 1; text-align: center; flex: 1; padding: 0 15px; }
+        .step-icon { width: 64px; height: 64px; background: var(--white); border: 2px solid #E5E7EB; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 24px; color: var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: all 0.3s; }
+        .step-item:hover .step-icon { border-color: var(--primary); background: var(--primary); color: white; transform: scale(1.1); }
+        .step-item h4 { font-size: 1.1rem; margin-bottom: 8px; }
+        .step-item p { font-size: 0.9rem; color: var(--gray); }
+
+        /* --- 4. FAYDALAR --- */
         .benefits-section { padding: 100px 0; background: #F8FAFC; }
         .benefits-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 60px; align-items: center; }
         .benefits-label { color: var(--logo-teal); font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; display: block; }
@@ -399,18 +370,10 @@
         .stat-item h3 { font-size: 2.5rem; font-weight: 700; margin-bottom: 5px; background: linear-gradient(to right, #fff, #27C3C8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .stat-item p { font-size: 0.9rem; opacity: 0.7; line-height: 1.4; }
 
-        /* --- NASIL ÇALIŞIR --- */
-        .how-it-works { padding: 80px 0 120px; background: #ffffff; }
-        .process-steps { display: flex; justify-content: space-between; position: relative; margin-top: 60px; }
-        .process-steps::before { content: ''; position: absolute; top: 30px; left: 50px; right: 50px; height: 2px; background: #E5E7EB; z-index: 0; }
-        .step-item { position: relative; z-index: 1; text-align: center; flex: 1; padding: 0 15px; }
-        .step-icon { width: 64px; height: 64px; background: var(--white); border: 2px solid #E5E7EB; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 24px; color: var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: all 0.3s; }
-        .step-item:hover .step-icon { border-color: var(--primary); background: var(--primary); color: white; transform: scale(1.1); }
-
-        /* --- REFERANSLAR --- */
+        /* --- 5. REFERANSLAR --- */
         #referans { padding: 100px 0; background: linear-gradient(to bottom, #ffffff, #f9fafb); }
 
-        /* --- SSS (FAQ) SECTION - YENİ --- */
+        /* --- 6. SSS (FAQ) --- */
         .faq-section { padding: 100px 0; background: #ffffff; }
         .faq-container { max-width: 800px; margin: 0 auto; }
         .faq-item { border-bottom: 1px solid #E5E7EB; margin-bottom: 15px; }
@@ -425,14 +388,23 @@
         .faq-item.active .faq-answer { max-height: 200px; padding-bottom: 25px; }
         .faq-item.active .faq-question i { transform: rotate(180deg); transition: transform 0.3s; }
 
-        /* --- DEMO TALEP FORMU --- */
+        /* --- 7. DEMO TALEP FORMU --- */
         .demo-section { padding: 100px 0; background: var(--white); position: relative; overflow: hidden; }
         .demo-container { position: relative; z-index: 1; background: var(--hero-gradient); border-radius: 30px; padding: 60px; display: flex; gap: 60px; color: white; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.25); }
+        .demo-text { flex: 1; }
+        .demo-text h2 { font-size: 2.5rem; margin-bottom: 20px; line-height: 1.2; }
+        .demo-text p { font-size: 1.1rem; opacity: 0.9; margin-bottom: 30px; }
+        .demo-features li { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 1.05rem; }
+        .demo-features i { background: rgba(255,255,255,0.2); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+
         .demo-form-wrapper { flex: 0.8; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; color: var(--dark); font-weight: 500; margin-bottom: 8px; font-size: 0.9rem; }
         .form-input { width: 100%; padding: 12px 15px; border: 1px solid #E5E7EB; border-radius: 10px; font-size: 1rem; transition: all 0.3s; }
         .form-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .form-btn { width: 100%; margin-top: 10px; }
 
-        /* --- FOOTER --- */
+        /* --- 8. FOOTER --- */
         footer { background: var(--white); border-top: 1px solid #E5E7EB; padding: 60px 0 30px; }
         .footer-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; font-size: 0.9rem; color: var(--gray); }
         .footer-links a { color: var(--gray); margin-left: 20px; }
@@ -466,10 +438,6 @@
             .benefits-grid { grid-template-columns: 1fr; gap: 40px; }
             .benefits-card { padding: 30px; }
             .stats-grid { grid-template-columns: 1fr; gap: 20px; }
-            
-            /* Logo Band */
-            .logos-wrapper { gap: 20px; }
-            .trust-logo { font-size: 1.1rem; }
         }
     </style>
 </head>
@@ -529,14 +497,13 @@
             <a href="#referans" onclick="closeMobileMenu()">Referanslar</a>
             <a href="#faq" onclick="closeMobileMenu()">Sıkça Sorulan Sorular</a>
             <a href="#demo-form" onclick="closeMobileMenu()" style="color:var(--primary);">İletişim</a>
-            <!-- Mobil için Giriş Linkleri -->
             <hr style="width:50%; margin: 10px auto; border-color:#eee;">
             <a href="/login.html" style="font-weight:400; font-size:1rem;"><i class="fa-solid fa-user-tie"></i> Koç Girişi</a>
             <a href="/student-login" style="font-weight:400; font-size:1rem;"><i class="fa-solid fa-graduation-cap"></i> Öğrenci Girişi</a>
         </div>
     </div>
 
-    <!-- HERO ALANI -->
+    <!-- 1- HERO ALANI -->
     <section class="hero fade-in">
         <div class="container hero-content">
             <div class="hero-text">
@@ -569,21 +536,7 @@
         </div>
     </section>
 
-    <!-- LOGO BAND (SOCIAL PROOF) - YENİ -->
-    <section class="logo-band fade-in">
-        <div class="container">
-            <p>Eğitimde Başarıya Ortak Olduğumuz Kurumlar</p>
-            <div class="logos-wrapper">
-                <div class="trust-logo"><i class="fa-solid fa-building-columns"></i> Atılım Koleji</div>
-                <div class="trust-logo"><i class="fa-solid fa-school"></i> Hedef Etüt</div>
-                <div class="trust-logo"><i class="fa-solid fa-graduation-cap"></i> Fen Bilimleri</div>
-                <div class="trust-logo"><i class="fa-solid fa-book-open"></i> Sınav Kurs</div>
-                <div class="trust-logo"><i class="fa-solid fa-chalkboard-user"></i> Başarı Okulları</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ÖZELLİKLER -->
+    <!-- 2- ÖZELLİKLER -->
     <section id="features" class="features fade-in">
         <div class="container">
             <div class="section-header">
@@ -592,7 +545,7 @@
             </div>
 
             <div class="features-grid">
-                <!-- Kartlar (İçerik aynı, sadece fade-in sınıfı eklendi) -->
+                <!-- Kartlar -->
                 <div class="feature-card">
                     <div class="icon-box icon-indigo-teal"><i class="fa-solid fa-robot"></i></div>
                     <h3>Yapay Zeka Asistanı</h3>
@@ -627,7 +580,36 @@
         </div>
     </section>
 
-    <!-- FAYDALAR -->
+    <!-- 3- NASIL ÇALIŞIR -->
+    <section id="how" class="how-it-works fade-in">
+        <div class="container">
+            <div class="section-header"><h2>Nasıl Çalışır?</h2></div>
+            <div class="process-steps">
+                <div class="step-item">
+                    <div class="step-icon"><i class="fa-solid fa-file-signature"></i></div>
+                    <h4>Kayıt Olun</h4>
+                    <p>NetKoç platformuna hızlıca kaydolun ve hesabınızı oluşturun.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon"><i class="fa-solid fa-user-plus"></i></div>
+                    <h4>Öğrenci Ekleyin</h4>
+                    <p>Koçluk yaptığınız öğrencileri panele ekleyin ve profillerini tamamlayın.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <h4>İlerlemeyi Takip Edin</h4>
+                    <p>Performans verilerini, deneme sonuçlarını ve günlük çalışmaları izleyin.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                    <h4>Başarıya Ulaşın</h4>
+                    <p>Hedeflenen netlere ulaşın ve sınav başarısını garantileyin.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4- FAYDALAR -->
     <section id="benefits" class="benefits-section fade-in">
         <div class="container">
             <div class="benefits-grid">
@@ -664,36 +646,7 @@
         </div>
     </section>
 
-    <!-- NASIL ÇALIŞIR -->
-    <section id="how" class="how-it-works fade-in">
-        <div class="container">
-            <div class="section-header"><h2>Nasıl Çalışır?</h2></div>
-            <div class="process-steps">
-                <div class="step-item">
-                    <div class="step-icon"><i class="fa-solid fa-file-signature"></i></div>
-                    <h4>Kayıt Olun</h4>
-                    <p>NetKoç platformuna hızlıca kaydolun ve hesabınızı oluşturun.</p>
-                </div>
-                <div class="step-item">
-                    <div class="step-icon"><i class="fa-solid fa-user-plus"></i></div>
-                    <h4>Öğrenci Ekleyin</h4>
-                    <p>Koçluk yaptığınız öğrencileri panele ekleyin ve profillerini tamamlayın.</p>
-                </div>
-                <div class="step-item">
-                    <div class="step-icon"><i class="fa-solid fa-chart-line"></i></div>
-                    <h4>İlerlemeyi Takip Edin</h4>
-                    <p>Performans verilerini, deneme sonuçlarını ve günlük çalışmaları izleyin.</p>
-                </div>
-                <div class="step-item">
-                    <div class="step-icon"><i class="fa-solid fa-graduation-cap"></i></div>
-                    <h4>Başarıya Ulaşın</h4>
-                    <p>Hedeflenen netlere ulaşın ve sınav başarısını garantileyin.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- REFERANSLAR -->
+    <!-- 5- REFERANSLAR -->
     <section id="referans" class="features fade-in" style="background: linear-gradient(to bottom, #ffffff, #f9fafb); padding: 80px 0;">
         <div class="container">
             <div class="section-header">
@@ -701,34 +654,34 @@
                 <p>NetKoç'u tercih eden eğitim profesyonellerinin deneyimleri</p>
             </div>
             <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 40px;">
-                <!-- Yorum 1 -->
+                <!-- Yorum 1: Matematik Öğretmeni -->
                 <div class="feature-card" style="border:none; box-shadow: var(--shadow-md); background: white; padding: 35px; align-items: flex-start; border-radius: 16px;">
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
                         <div style="width: 50px; height: 50px; background: #EEF2FF; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid #E0E7FF;">
-                            <i class="fa-solid fa-user-tie" style="color: var(--primary); font-size: 1.4rem;"></i>
+                            <i class="fa-solid fa-calculator" style="color: var(--primary); font-size: 1.4rem;"></i>
+                        </div>
+                        <div>
+                            <strong style="font-size: 1.1rem; color: var(--dark);">Ahmet Yılmaz</strong><br>
+                            <span style="font-size:0.85rem; color:var(--gray);">Matematik Öğretmeni</span>
+                        </div>
+                    </div>
+                    <p style="font-style:italic; font-size: 0.95rem; color: var(--gray); line-height: 1.6; flex-grow: 1;">"Öğrencilerimin deneme analizlerini tek tek yapmak saatlerimi alıyordu. NetKoç ile bu süre dakikalara indi. Artık eksik konulara nokta atışı müdahale edebiliyorum."</p>
+                    <div style="margin-top: 20px; display: flex; align-items: center; gap: 5px; color: #FBBF24; font-size: 0.9rem;">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                </div>
+                <!-- Yorum 2: Profesyonel Eğitim Koçu -->
+                <div class="feature-card" style="border:none; box-shadow: var(--shadow-md); background: white; padding: 35px; align-items: flex-start; border-radius: 16px;">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <div style="width: 50px; height: 50px; background: #F0FDF4; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid #DCFCE7;">
+                            <i class="fa-solid fa-user-tie" style="color: var(--success); font-size: 1.4rem;"></i>
                         </div>
                         <div>
                             <strong style="font-size: 1.1rem; color: var(--dark);">Zeynep Aksoy</strong><br>
                             <span style="font-size:0.85rem; color:var(--gray);">Profesyonel Eğitim Koçu</span>
                         </div>
                     </div>
-                    <p style="font-style:italic; font-size: 0.95rem; color: var(--gray); line-height: 1.6; flex-grow: 1;">"NetKoç, öğrenci takip süreçlerimi tamamen dijitalleştirdi. Artık analizlerle vakit kaybetmiyor, öğrencilerimle birebir seanslarıma odaklanıyorum."</p>
-                    <div style="margin-top: 20px; display: flex; align-items: center; gap: 5px; color: #FBBF24; font-size: 0.9rem;">
-                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-                    </div>
-                </div>
-                <!-- Yorum 2 -->
-                <div class="feature-card" style="border:none; box-shadow: var(--shadow-md); background: white; padding: 35px; align-items: flex-start; border-radius: 16px;">
-                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                        <div style="width: 50px; height: 50px; background: #F0FDF4; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid #DCFCE7;">
-                            <i class="fa-solid fa-graduation-cap" style="color: var(--success); font-size: 1.4rem;"></i>
-                        </div>
-                        <div>
-                            <strong style="font-size: 1.1rem; color: var(--dark);">Ali Yılmaz</strong><br>
-                            <span style="font-size:0.85rem; color:var(--gray);">12. Sınıf Öğrencisi</span>
-                        </div>
-                    </div>
-                    <p style="font-style:italic; font-size: 0.95rem; color: var(--gray); line-height: 1.6; flex-grow: 1;">"Yapay zekanın oluşturduğu kişiselleştirilmiş çalışma planı sayesinde eksik konularımı çok daha hızlı kapattım. Netlerimdeki artış inanılmaz!"</p>
+                    <p style="font-style:italic; font-size: 0.95rem; color: var(--gray); line-height: 1.6; flex-grow: 1;">"NetKoç, öğrenci takip süreçlerimi tamamen dijitalleştirdi. Hem velilerim hem de öğrencilerim sistemin düzenine hayran kaldı. Profesyonelliğime büyük katkı sağladı."</p>
                     <div style="margin-top: 20px; display: flex; align-items: center; gap: 5px; color: #FBBF24; font-size: 0.9rem;">
                         <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                     </div>
@@ -737,7 +690,7 @@
         </div>
     </section>
 
-    <!-- SIKÇA SORULAN SORULAR (SSS) - YENİ -->
+    <!-- 6- SSS (FAQ) -->
     <section id="faq" class="faq-section fade-in">
         <div class="container">
             <div class="section-header">
@@ -764,56 +717,102 @@
         </div>
     </section>
 
-    <!-- DEMO TALEP FORMU (GÜNCELLENDİ) -->
-    <section id="demo-form" class="demo-section fade-in">
+    <!-- 7- DEMO TALEP FORMU -->
+    <section id="demo-form" class="demo-section fade-in" style="background: var(--hero-gradient); padding: 120px 0; position: relative; overflow: hidden;">
+        <!-- Arka Plan Süslemeleri -->
+        <div style="position: absolute; top: -100px; left: -100px; width: 400px; height: 400px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+        <div style="position: absolute; bottom: -50px; right: -50px; width: 300px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+
         <div class="container">
-            <div class="demo-container">
-                <div class="demo-text">
-                    <h2>Öğrencilerinizin Başarı Hikayesini <br>Birlikte Yazalım</h2>
-                    <p>Öğrenci takip süreçlerinizi dijitalleştirin, verimi artırın. Ekibimiz size özel bir demo sunumu yapsın.</p>
-                    <ul class="demo-features">
-                        <li><i class="fa-solid fa-check"></i> Sınırsız Öğrenci Ekleme</li>
-                        <li><i class="fa-solid fa-check"></i> Kurumsal Raporlama</li>
-                        <li><i class="fa-solid fa-check"></i> 7/24 Teknik Destek</li>
-                        <li><i class="fa-solid fa-check"></i> Ücretsiz Kurulum</li>
+            <div class="demo-container" style="display: flex; align-items: center; gap: 80px; position: relative; z-index: 2; background: transparent; box-shadow: none; padding: 0;">
+                
+                <!-- Sol Taraf: Metin -->
+                <div class="demo-text" style="flex: 1; color: white; text-align: left;">
+                    <h2 style="font-size: 3.5rem; font-weight: 800; line-height: 1.1; margin-bottom: 25px; letter-spacing: -1px;">
+                        Öğrencilerinizin Başarı Hikayesini <br> <span style="color: #A5F3FC;">Birlikte Yazalım</span>
+                    </h2>
+                    <p style="font-size: 1.25rem; opacity: 0.95; margin-bottom: 40px; line-height: 1.6; max-width: 90%;">
+                        Özel Ders Öğretmenleri, Profesyonel Eğitim Koçları ve Ailelerin tercihi NetKoç! Hemen ücretsiz demonuzu talep edin.
+                    </p>
+                    
+                    <ul class="demo-features" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 1.1rem; font-weight: 500;">
+                            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-solid fa-check" style="font-size: 0.9rem;"></i>
+                            </div> 
+                            Sınırsız Öğrenci
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 1.1rem; font-weight: 500;">
+                            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-solid fa-chart-pie" style="font-size: 0.9rem;"></i>
+                            </div> 
+                            Kurumsal Raporlama
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 1.1rem; font-weight: 500;">
+                            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-solid fa-headset" style="font-size: 0.9rem;"></i>
+                            </div> 
+                            7/24 Teknik Destek
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 12px; font-size: 1.1rem; font-weight: 500;">
+                            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-solid fa-rocket" style="font-size: 0.9rem;"></i>
+                            </div> 
+                            Ücretsiz Kurulum
+                        </li>
                     </ul>
                 </div>
-                <div class="demo-form-wrapper">
+                
+                <!-- Sağ Taraf: Büyük Form Kartı -->
+                <div class="demo-form-wrapper" style="flex: 0.8; background: white; padding: 50px; border-radius: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.25);">
                     <form id="contactForm">
-                        <h3 style="margin-bottom:20px; color:var(--dark);">Demo Talep Formu</h3>
-                        <div class="form-group">
-                            <label class="form-label">Ad Soyad</label>
-                            <input type="text" class="form-input" id="name" placeholder="Adınız Soyadınız" required>
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h3 style="font-size: 2rem; font-weight: 800; color: var(--dark); margin-bottom: 10px;">Demo Talep Formu</h3>
+                            <p style="color: var(--gray);">Bilgilerinizi bırakın, sizi arayalım.</p>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">E-Posta</label>
-                            <input type="email" class="form-input" id="email" placeholder="ornek@mail.com" required>
+
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label class="form-label" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; display: block; color: var(--dark);">Ad Soyad</label>
+                            <input type="text" class="form-input" id="name" placeholder="Adınız Soyadınız" required style="padding: 16px 20px; font-size: 1.05rem; border-radius: 12px; border: 2px solid #F3F4F6; width: 100%;">
                         </div>
-                        <!-- YENİ TELEFON ALANI -->
-                        <div class="form-group">
-                            <label class="form-label">Telefon Numaranız</label>
-                            <input type="tel" class="form-input" id="phone" placeholder="05XX XXX XX XX" required>
+
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label class="form-label" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; display: block; color: var(--dark);">E-Posta</label>
+                            <input type="email" class="form-input" id="email" placeholder="ornek@mail.com" required style="padding: 16px 20px; font-size: 1.05rem; border-radius: 12px; border: 2px solid #F3F4F6; width: 100%;">
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Kurum / Rol</label>
-                            <select class="form-input" id="role" required>
+
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label class="form-label" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; display: block; color: var(--dark);">Telefon Numaranız</label>
+                            <input type="tel" class="form-input" id="phone" placeholder="05XX XXX XX XX" required style="padding: 16px 20px; font-size: 1.05rem; border-radius: 12px; border: 2px solid #F3F4F6; width: 100%;">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 30px;">
+                            <label class="form-label" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; display: block; color: var(--dark);">Kurum / Rol</label>
+                            <select class="form-input" id="role" required style="padding: 16px 20px; font-size: 1.05rem; border-radius: 12px; border: 2px solid #F3F4F6; width: 100%; background-color: white;">
                                 <option value="" disabled selected>Seçiniz</option>
                                 <option>Bireysel Eğitim Koçu</option>
                                 <option>Öğretmen</option>
                                 <option>Özel Öğretim Kursu</option>
                                 <option>Okul / Kolej</option>
-                                <option>Aile / Veli</option> <!-- EKLENDİ -->
+                                <option>Aile / Veli</option>
                                 <option>Diğer</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn-primary form-btn">Gönder</button>
+
+                        <button type="submit" class="btn-primary form-btn" style="width: 100%; padding: 18px; font-size: 1.2rem; border-radius: 12px; background: var(--primary); box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);">
+                            Hemen Gönder <i class="fa-solid fa-arrow-right" style="margin-left: 10px;"></i>
+                        </button>
+                        
+                        <p style="text-align: center; margin-top: 20px; font-size: 0.85rem; color: #9CA3AF;">
+                            <i class="fa-solid fa-lock"></i> Bilgileriniz 256-bit SSL ile korunmaktadır.
+                        </p>
                     </form>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- FOOTER -->
+    <!-- 8- FOOTER -->
     <footer>
         <div class="container">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
@@ -839,7 +838,6 @@
     </footer>
 
     <!-- MODALS -->
-    <!-- Gizlilik ve Kullanım Koşulları modalları aynı kaldı -->
     <div id="privacyModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('privacyModal')">&times;</span>

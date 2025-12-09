@@ -2,10 +2,12 @@
   "name": "NetKoç",
   "short_name": "NetKoç",
   "start_url": "/login.html",
+  "id": "/login.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4F46E5",
   "description": "Eğitim koçları ve öğrenciler için akıllı takip sistemi.",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "public/icon-192.png",
@@ -16,6 +18,22 @@
       "src": "public/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "public/mockup-phone.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Mobil Öğrenci Paneli"
+    },
+    {
+      "src": "public/mockup-pc.jpg",
+      "sizes": "1920x1080",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Koç Yönetim Paneli"
     }
   ]
 }

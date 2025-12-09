@@ -267,3 +267,59 @@ export function renderPlaceholderSayfasi(sayfaAdi) {
 // renderDersSecimi fonksiyonu artık renderStudentOptions ile değiştirildiği için kaldırıldı veya alias yapılabilir.
 // Geriye dönük uyumluluk için boş bir fonksiyon bırakabiliriz ama app.js'i güncelleyeceğiz.
 export const renderDersSecimi = renderStudentOptions;
+
+// =================================================================
+// MOBİL GERİ TUŞU VE MODAL YÖNETİMİ
+// =================================================================
+
+// 1. Modal Açma Fonksiyonu (History Push Yapar)
+export function openModalWithBackHistory(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex'; // Flex ile ortalama yapıyorduk
+        
+        // Tarayıcı geçmişine sahte bir durum ekle
+        // Bu sayede geri tuşuna basınca uygulama kapanmaz, sadece bu durum silinir
+        window.history.pushState({ modalId: modalId }, '', window.location.href);
+    }
+}
+
+// 2. Modal Kapatma Fonksiyonu (History Back Yapar - Eğer gerekirse)
+export function closeModalWithBackHistory(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        
+        // Eğer modal açıkken kodla kapatılıyorsa (iptal butonu vb.)
+        // History'yi geri almalıyız ki stack şişmesin.
+        // Ancak popstate eventi zaten tetiklendiyse (geri tuşuyla) bunu yapmamalıyız.
+        // Bunu kontrol etmek zor olduğu için basitçe manuel kapatmalarda history.back() yapabiliriz
+        // AMA: Kullanıcı geri tuşuna basmadıysa back() yapmak sayfayı değiştirebilir.
+        // O yüzden en temiz yöntem: Sadece UI'ı kapatmak, history'yi back tuşuna bırakmak.
+        // Veya: window.history.back(); (Dikkatli kullanılmalı)
+    }
+}
+
+// 3. Geri Tuşunu Dinle (Popstate Event)
+window.addEventListener('popstate', (event) => {
+    // Eğer history state içinde bir modal ID varsa veya
+    // Sayfada açık bir modal varsa onu kapat.
+    
+    // Tüm açık modalları bul
+    const openModals = document.querySelectorAll('.fixed.inset-0:not(.hidden)');
+    
+    if (openModals.length > 0) {
+        // En üstteki modalı kapat (Z-index'e göre veya son açılan)
+        openModals.forEach(modal => {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        });
+        // Eventi tüket, başka işlem yapma
+    } else {
+        // Eğer açık modal yoksa ve geri tuşuna basıldıysa:
+        // Sayfa değiştirmek istiyor olabilir veya uygulamadan çıkacak.
+        // Single Page App (SPA) mantığında tab değişimi için de kullanılabilir.
+    }
+});

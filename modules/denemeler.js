@@ -194,36 +194,60 @@ function calculateStatsAndChart(list) {
 
 // --- MODAL VE FORM YÖNETİMİ ---
 function openDenemeModal(db, uid, appId) {
-    // Modalı bul (yoksa oluştur)
-    const modal = document.getElementById('modalDenemeEkle') || createDenemeModalHtml();
-    
-    // YENİ: Modalı "Geri Tuşu Desteğiyle" aç
+    // 1. Modalı Bul
+    const modal = document.getElementById('modalDenemeEkle');
+    if (!modal) {
+        console.error("Modal bulunamadı!");
+        return;
+    }
+
+    // 2. Modalı Geri Tuşu Desteğiyle Aç
     openModalWithBackHistory('modalDenemeEkle');
+
+    // --- YENİ: Kapatma Butonlarını Ayarla (History Back ile) ---
+    // Header'daki X butonu (ikonun üst ebeveyni button olduğu için closest veya direkt parent seçimi)
+    const closeBtnX = modal.querySelector('.fa-xmark').closest('button');
     
-    // 1. Öğrencinin Seviyesini Belirle (Ortaokul / Lise)
+    // Footer'daki İptal butonu (İçeriği 'İptal' olan veya stilden yakalanan)
+    // Genellikle footer'daki ilk butondur.
+    const cancelBtn = modal.querySelector('.border-t button'); 
+
+    // Ortak Kapatma Fonksiyonu: Geçmişte bir geri git (Bu, helpers.js'deki popstate listener'ı tetikler ve modalı kapatır)
+    const handleClose = (e) => {
+        e.preventDefault();
+        window.history.back();
+    };
+
+    if (closeBtnX) closeBtnX.onclick = handleClose;
+    if (cancelBtn) cancelBtn.onclick = handleClose;
+    // -----------------------------------------------------------
+
+    
+    // 3. Öğrencinin Seviyesini Belirle (Ortaokul / Lise)
+    // Not: currentStudentClass değişkeninin yukarıda tanımlı ve dolu olduğundan emin olun.
+    // Eğer undefined geliyorsa, renderDenemelerSayfasi içinde atama yaptığınızdan emin olun.
     const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(currentStudentClass);
     const levelKey = isOrtaokul ? 'ORTAOKUL' : 'LISE';
     const rules = EXAM_RULES[levelKey];
 
-    // 2. Selectbox'ı Doldur
+    // 4. Selectbox'ı Doldur
     const typeSelect = document.getElementById('inpDenemeTur');
     typeSelect.innerHTML = rules.types.map(t => `<option value="${t}">${t}</option>`).join('');
     
-    // 3. Tarihi Ayarla
+    // 5. Tarihi Ayarla
     document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0];
     
-    // 4. Inputları Oluştur (İlk seçenek için)
+    // 6. Inputları Oluştur (İlk seçenek için)
     renderDenemeInputs(rules.types[0], rules.ratio);
 
-    // 5. Change Event
+    // 7. Change Event
     typeSelect.onchange = (e) => {
         renderDenemeInputs(e.target.value, rules.ratio);
     };
 
-    // 6. Kaydet Butonu
+    // 8. Kaydet Butonu
+    // Önemli: onclick = async () => ... şeklinde tanımlıyoruz ki event listener birikmesi olmasın.
     document.getElementById('btnSaveDeneme').onclick = async () => saveDeneme(db, uid, appId, levelKey);
-
-    modal.classList.remove('hidden');
 }
 
 function renderDenemeInputs(tur, ratio) {

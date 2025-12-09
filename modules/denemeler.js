@@ -2,7 +2,7 @@ import {
     collection, query, onSnapshot, updateDoc, deleteDoc, getDoc,
     where, orderBy, getDocs, doc, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { activeListeners, formatDateTR, populateStudentSelect } from './helpers.js';
+import { activeListeners, formatDateTR, populateStudentSelect, openModalWithBackHistory } from './helpers.js';
 
 let currentStudentId = null;
 let currentStudentClass = null; // Seçilen öğrencinin sınıfı

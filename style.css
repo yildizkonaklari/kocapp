@@ -1,6 +1,44 @@
 /* =================================================================
    KOÇLUK TAKİP SİSTEMİ - ANA STİL DOSYASI
    ================================================================= */
+/* --- MOBİL UYGULAMA İYİLEŞTİRMELERİ --- */
+
+:root {
+    /* iPhone Çentik (Notch) Desteği */
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+}
+
+body {
+    /* Sayfayı aşağı çekince yenilenmesini engelle (Pull-to-refresh iptali) */
+    overscroll-behavior-y: none;
+    
+    /* Mobilde tıklayınca çıkan mavi kutucuğu kaldır */
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Metin seçimini engelle (Uygulama hissi için) */
+    user-select: none;
+    -webkit-user-select: none;
+    
+    /* Çentik boşlukları */
+    padding-top: var(--sat);
+    padding-bottom: var(--sab);
+}
+
+/* Form elemanlarında metin seçimine izin ver */
+input, textarea, select {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+/* Kaydırma çubuğunu gizle ama kaydırmaya izin ver */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
 /* --- 1. GENEL YARDIMCI SINIFLAR --- */
 

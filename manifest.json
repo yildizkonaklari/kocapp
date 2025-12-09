@@ -23,14 +23,14 @@
   "screenshots": [
     {
       "src": "public/mockup-phone.jpg",
-      "sizes": "1080x1920",
+      "sizes": "282x499",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Mobil Öğrenci Paneli"
     },
     {
       "src": "public/mockup-pc.jpg",
-      "sizes": "1920x1080",
+      "sizes": "1330x633",
       "type": "image/jpeg",
       "form_factor": "wide",
       "label": "Koç Yönetim Paneli"

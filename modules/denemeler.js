@@ -194,7 +194,11 @@ function calculateStatsAndChart(list) {
 
 // --- MODAL VE FORM YÖNETİMİ ---
 function openDenemeModal(db, uid, appId) {
+    // Modalı bul (yoksa oluştur)
     const modal = document.getElementById('modalDenemeEkle') || createDenemeModalHtml();
+    
+    // YENİ: Modalı "Geri Tuşu Desteğiyle" aç
+    openModalWithBackHistory('modalDenemeEkle');
     
     // 1. Öğrencinin Seviyesini Belirle (Ortaokul / Lise)
     const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(currentStudentClass);

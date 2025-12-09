@@ -108,6 +108,7 @@ async function createStudentAccount(username, password) {
 // =================================================================
 // 1. ÖĞRENCİ DETAY SAYFASI
 // =================================================================
+// === 1. ÖĞRENCİ DETAY SAYFASI (GÜNCELLENDİ) ===
 export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, studentName) {
     document.getElementById("mainContentTitle").textContent = `${studentName} - Detay`;
     const area = document.getElementById("mainContentArea");
@@ -118,10 +119,10 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
                 <i class="fa-solid fa-arrow-left mr-1"></i> Listeye Dön
             </button>
             <div class="flex gap-2">
-                <button id="btnResetAccess" class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-200 transition-colors flex items-center">
+                <button id="btnResetAccess" class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-yellow-200 transition-colors flex items-center shadow-sm border border-yellow-200">
                     <i class="fa-solid fa-key mr-2"></i> Şifre Yenile
                 </button>
-                <button id="btnCreateReport" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-200 transition-colors flex items-center">
+                <button id="btnCreateReport" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-200 transition-colors flex items-center shadow-sm border border-green-200">
                     <i class="fa-brands fa-whatsapp mr-2 text-lg"></i> Rapor Oluştur
                 </button>
             </div>
@@ -140,8 +141,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
                         <span id="studentDetailJoinDate" class="text-gray-400 text-xs"></span>
                     </p>
                     <p id="studentDetailArea" class="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded hidden"></p>
-                    
-                    <p id="studentUsernameDisplay" class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded mt-1 cursor-pointer" title="Tıkla Kopyala">
+                    <p id="studentUsernameDisplay" class="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded mt-1 cursor-pointer hover:bg-indigo-100 transition-colors border border-indigo-100" title="Tıkla Kopyala">
                         <i class="fa-solid fa-user-lock mr-1"></i> <span id="uNameText">Yükleniyor...</span>
                     </p>
                 </div>
@@ -160,23 +160,65 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
             <button data-tab="ozet" class="tab-button active py-3 px-6 text-purple-600 border-b-2 border-purple-600 font-semibold transition-colors">Özet & Analiz</button>
             <button data-tab="notlar" class="tab-button py-3 px-6 text-gray-500 hover:text-purple-600 font-medium transition-colors">Koçluk Notları</button>
         </div>
-        
         <div id="tabContentArea"></div>
         <div class="h-24"></div>
     `;
 
-    // Listenerlar
-    document.getElementById('btnEditStudent').addEventListener('click', () => showEditStudentModal(db, currentUserId, appId, studentId));
-    document.getElementById('btnMsgStudent').addEventListener('click', () => document.getElementById('nav-mesajlar').click());
+    // --- EVENT LISTENERS ---
+
+    // 1. DÜZENLE BUTONU (Show Edit Modal)
+    document.getElementById('btnEditStudent').addEventListener('click', () => {
+function showEditStudentModal(db, currentUserId, appId, studentId) {
+    const modal = document.getElementById('editStudentModal');
+    if (!modal) {
+        alert("Düzenleme penceresi bulunamadı. Lütfen sayfayı yenileyin.");
+        return;
+    }
+
+    getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId)).then(snap => {
+        if(snap.exists()) {
+            const s = snap.data();
+            document.getElementById('editStudentId').value = studentId;
+            document.getElementById('editStudentName').value = s.ad;
+            document.getElementById('editStudentSurname').value = s.soyad;
+            
+            const classSelect = document.getElementById('editStudentClass');
+            classSelect.value = s.sinif;
+            
+            // Sınıf değişince derslerin güncellenmesi
+            classSelect.dispatchEvent(new Event('change'));
+            
+            // Dersleri seçili hale getir (Biraz gecikme ile çünkü dersler render ediliyor)
+            setTimeout(() => {
+                renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
+                if (s.alan) { 
+                    const alanSelect = document.querySelector('#editStudentOptionsContainer select'); 
+                    if (alanSelect) alanSelect.value = s.alan; 
+                }
+                modal.classList.remove('hidden'); // Modalı Göster
+                modal.style.display = 'flex'; // Flex ile ortala
+            }, 100);
+        }
+    });
+}
+
+    // 2. MESAJ GÖNDER BUTONU (Direkt Yönlendirme)
+    document.getElementById('btnMsgStudent').addEventListener('click', () => {
+        // Hedef öğrenci ID'sini global bir değişkene atıyoruz
+        window.targetMessageStudentId = studentId; 
+        // Mesajlar sayfasına git (App.js'deki navigasyonu tetikler)
+        document.getElementById('nav-mesajlar').click();
+    });
     
-    // Şifre Yenileme Butonu
+    // Diğer butonlar...
     document.getElementById('btnResetAccess').addEventListener('click', () => resetStudentAccess(db, currentUserId, appId, studentId, studentName));
     
-    // Kullanıcı Adı Kopyalama
     document.getElementById('studentUsernameDisplay').addEventListener('click', function() {
         const txt = document.getElementById('uNameText').textContent;
-        navigator.clipboard.writeText(txt);
-        alert("Kullanıcı adı kopyalandı: " + txt);
+        if(txt && txt !== 'Yükleniyor...') {
+            navigator.clipboard.writeText(txt);
+            alert("Kullanıcı adı kopyalandı!");
+        }
     });
 
     const btnReport = document.getElementById('btnCreateReport');
@@ -186,7 +228,7 @@ export function renderOgrenciDetaySayfasi(db, currentUserId, appId, studentId, s
         });
     }
 
-    // Tab Geçişleri (Aynı)
+    // Tab Geçişleri
     const tabBtns = document.querySelectorAll('.tab-button');
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {

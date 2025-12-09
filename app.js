@@ -91,7 +91,8 @@ async function main() {
             if (container) container.classList.remove('hidden');
             
             updateUIForLoggedInUser(user);
-            navigateToPage('anasayfa');
+window.history.replaceState({ page: 'anasayfa' }, '', '#anasayfa');
+navigateToPage('anasayfa', false); // false = tekrar push yapma
             
             initNotifications(user.uid); 
             listenUnreadMessages(user.uid);
@@ -184,9 +185,18 @@ if(bottomMenuBtn) bottomMenuBtn.onclick = openMobileMenu;
 if(closeDrawerBtn) closeDrawerBtn.onclick = closeMobileMenu;
 if(overlay) overlay.onclick = closeMobileMenu;
 
-function navigateToPage(pageId) {
+// --- GERİ TUŞU VE NAVİGASYON YÖNETİMİ (GÜNCELLENDİ) ---
+
+// 1. Sayfa Geçiş Fonksiyonu (History Parametresi Eklendi)
+function navigateToPage(pageId, addToHistory = true) {
     cleanUpListeners(); 
     
+    // Geçmişe Ekle (Eğer geri tuşuyla gelmediyse)
+    if (addToHistory) {
+        window.history.pushState({ page: pageId }, '', `#${pageId}`);
+    }
+
+    // Aktif Link Güncellemeleri (Aynı)
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-purple-50', 'text-purple-700', 'font-semibold'));
     const activeLink = document.getElementById(`nav-${pageId}`);
     if(activeLink) activeLink.classList.add('bg-purple-50', 'text-purple-700', 'font-semibold');
@@ -201,6 +211,7 @@ function navigateToPage(pageId) {
         bottomLink.classList.remove('text-gray-500');
     }
 
+    // Sayfa Render İşlemleri (Aynı)
     try {
         switch(pageId) {
             case 'anasayfa': renderAnaSayfa(db, currentUserId, appId); break;
@@ -217,10 +228,30 @@ function navigateToPage(pageId) {
         }
     } catch (err) {
         console.error("Sayfa yüklenirken hata:", err);
-        alert("Sayfa yüklenirken bir hata oluştu: " + err.message);
     }
 }
 
+// 2. Geri Tuşunu Dinle (Popstate)
+window.addEventListener('popstate', (event) => {
+    // Eğer history state içinde bir sayfa ID'si varsa o sayfaya git
+    if (event.state && event.state.page) {
+        // addToHistory: false gönderiyoruz ki tekrar history'e ekleyip döngü yapmasın
+        navigateToPage(event.state.page, false);
+    } else {
+        // State yoksa (örn: ilk giriş), Anasayfa'ya dön veya varsayılan davranışı yap
+        // Ancak genellikle 'Login'e düşmesini istemeyiz.
+        // Eğer kullanıcı App içindeyse ve state bittiyse, muhtemelen çıkmak istiyordur.
+        // Burada özel bir şey yapmazsak tarayıcı login'e döner.
+        // İsterseniz burada "Çıkmak istiyor musunuz?" diye sorabilirsiniz veya Anasayfa'ya zorlayabilirsiniz.
+        // navigateToPage('anasayfa', false); // Örnek: Hep anasayfaya at
+    }
+});
+
+// 3. İlk Yüklemede State Ekle (Login'den sonra geri basınca çıkmaması için)
+// Bu kod main() fonksiyonunun içinde navigateToPage('anasayfa') çağrısından HEMEN ÖNCE çalışmalı veya
+// navigateToPage('anasayfa') zaten pushState yapacağı için sorun olmayabilir.
+// Ancak Login -> Anasayfa geçişinde 'replaceState' kullanmak daha doğru olur ki Login'e geri dönmesin.
+// Bunu main() fonksiyonunda düzelteceğiz.
 // =================================================================
 // BİLDİRİMLER VE MESAJLAR
 // =================================================================

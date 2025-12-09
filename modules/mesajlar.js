@@ -1,37 +1,73 @@
 import { doc, addDoc, collection, collectionGroup, query, onSnapshot, orderBy, serverTimestamp, getDocs, updateDoc, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { activeListeners } from './helpers.js';
 
-export function renderMesajlarSayfasi(db, currentUserId, appId) {
-    document.getElementById("mainContentTitle").textContent = "Mesajlar";
-    const mainContentArea = document.getElementById("mainContentArea");
-    
-    mainContentArea.innerHTML = `
-        <div class="flex flex-col lg:flex-row h-[calc(100vh-8rem)] lg:h-[calc(100vh-140px)] bg-white lg:rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
-            
-            <div id="chatSidebar" class="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col bg-white transition-all duration-300 shrink-0 h-full">
-                
-                <div class="p-3 border-b border-gray-100 bg-gray-50 flex gap-2 items-center justify-between shrink-0 sticky top-0 z-10">
-                    <div class="relative flex-1">
-                        <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i>
-                        <input type="text" id="chatSearchInput" placeholder="Öğrenci Ara..." class="w-full pl-8 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-purple-500 outline-none transition-shadow">
-                    </div>
-                </div>
+// --- ÖĞRENCİ LİSTESİNİ GETİR VE OTOMATİK SEÇİM YAP ---
+    loadMessageStudentList(db, currentUserId, appId);
+}
 
-                <div id="chatStudentList" class="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1 bg-white scroll-smooth pb-20 lg:pb-0">
-                    <p class="text-gray-400 text-center text-sm py-4">Yükleniyor...</p>
-                </div>
-            </div>
+function loadMessageStudentList(db, currentUserId, appId) {
+    const listContainer = document.getElementById('msgStudentList');
+    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
 
-            <div class="w-full lg:w-2/3 flex-1 flex flex-col bg-gray-50 relative min-h-0 hidden lg:flex z-20" id="chatArea">
-                <div class="flex-1 flex flex-col items-center justify-center text-gray-400 p-4 text-center h-full">
-                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 text-gray-300">
-                        <i class="fa-regular fa-comments text-3xl"></i>
-                    </div>
-                    <p class="text-sm font-medium">Mesajlaşmak için listeden bir öğrenci seçin.</p>
+    activeListeners.messageListUnsubscribe = onSnapshot(q, async (snapshot) => {
+        let students = [];
+        // Okunmamış mesaj sayılarını al (Basitleştirilmiş: Her öğrenci için ayrı sorgu yerine UI'da işaretleyeceğiz)
+        // Gerçek zamanlı okundu bilgisi için alt sorgu gerekir, burada basitleştiriyoruz.
+        
+        snapshot.forEach(doc => {
+            students.push({ id: doc.id, ...doc.data() });
+        });
+
+        if (students.length === 0) {
+            listContainer.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Öğrenci bulunamadı.</p>';
+            return;
+        }
+
+        listContainer.innerHTML = students.map(s => `
+            <div class="msg-student-item flex items-center p-3 rounded-lg cursor-pointer hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-100" 
+                 data-id="${s.id}" data-name="${s.ad} ${s.soyad}" data-avatar="${s.avatarIcon || ''}">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 flex items-center justify-center font-bold mr-3 border border-white shadow-sm text-lg">
+                    ${s.avatarIcon || s.ad[0]}
                 </div>
+                <div class="flex-1 min-w-0">
+                    <h4 class="text-sm font-bold text-gray-800 truncate">${s.ad} ${s.soyad}</h4>
+                    <p class="text-xs text-gray-500 truncate" id="lastMsg-${s.id}">Sohbeti aç...</p>
+                </div>
+                <div id="badge-${s.id}" class="hidden w-2 h-2 bg-red-500 rounded-full"></div>
             </div>
-        </div>
-    `;
+        `).join('');
+
+        // Tıklama Olayları
+        const items = document.querySelectorAll('.msg-student-item');
+        items.forEach(item => {
+            item.addEventListener('click', () => {
+                items.forEach(i => i.classList.remove('bg-white', 'shadow-md', 'border-gray-200'));
+                item.classList.add('bg-white', 'shadow-md', 'border-gray-200'); // Seçili stili
+                loadChat(db, currentUserId, appId, item.dataset.id, item.dataset.name, item.dataset.avatar);
+            });
+        });
+
+        // --- OTOMATİK SEÇİM MANTIĞI (DÜZELTME BURADA) ---
+        if (window.targetMessageStudentId) {
+            const targetItem = document.querySelector(`.msg-student-item[data-id="${window.targetMessageStudentId}"]`);
+            if (targetItem) {
+                targetItem.click(); // Tıklamayı simüle et
+                targetItem.scrollIntoView({ block: 'center' }); // Listeyi kaydır
+            }
+            // ID'yi temizle ki tekrar tekrar açılmasın
+            window.targetMessageStudentId = null; 
+        }
+        
+        // Arama Filtresi
+        document.getElementById('msgSearchStudent').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            items.forEach(item => {
+                const name = item.dataset.name.toLowerCase();
+                item.style.display = name.includes(term) ? 'flex' : 'none';
+            });
+        });
+    });
+}
 
     loadChatStudentList(db, currentUserId, appId);
 

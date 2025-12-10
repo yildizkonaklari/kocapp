@@ -251,8 +251,8 @@ function openAddOdevModal() {
     btnSave.onclick = saveGlobalOdev; 
 }
 
-// --- KAYDETME FONKSİYONU ---
-async function saveGlobalOdev() {
+// --- KAYDETME FONKSİYONU (DIŞA AKTARILDI - EXPORT EKLENDİ) ---
+export async function saveGlobalOdev() {
     const db = currentDb;
     const uid = currentUserIdGlobal;
     const appId = currentAppIdGlobal;
@@ -358,7 +358,6 @@ async function saveGlobalOdev() {
         
         // Modalı Kapat (Geri git)
         // NOT: startOdevListener zaten çalıştığı için liste otomatik güncellenir.
-        // Sayfa yenilemeye veya render fonksiyonunu tekrar çağırmaya gerek yoktur.
         window.history.back();
 
     } catch (e) {

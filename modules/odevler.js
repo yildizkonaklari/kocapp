@@ -37,7 +37,7 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
             </div>
 
             <button id="btnAddNewOdev" class="hidden w-full md:w-auto bg-purple-600 text-white px-5 py-2.5 rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-200 flex items-center justify-center transition-transform active:scale-95 text-sm font-medium">
-                <i class="fa-solid fa-plus mr-2"></i> Yeni Ödev Ata
+                <i class="fa-solid fa-plus mr-2"></i> Yeni Ödev Ekle
             </button>
         </div>
 
@@ -124,7 +124,7 @@ function startOdevListener(db, uid, appId, studentId) {
 
     const q = query(
         collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler"),
-        orderBy('bitisTarihi', 'desc') // En yakın tarihli veya yeni eklenen en üstte
+        orderBy('bitisTarihi', 'desc') 
     );
     
     if (activeListeners.odevlerUnsubscribe) activeListeners.odevlerUnsubscribe();
@@ -202,12 +202,19 @@ function renderOdevler(odevler) {
     }).join('');
 }
 
-// --- MODAL AÇMA (DÜZELTİLDİ: CLOSEST HATASI VE YENİ INPUTLAR) ---
+// --- MODAL AÇMA (DÜZELTİLDİ: ID KONTROLÜ) ---
 function openAddOdevModal() {
     const sid = document.getElementById('filterOdevStudentId').value;
     if (!sid) { alert("Lütfen önce öğrenci seçin."); return; }
 
-    // Formu Temizle
+    // HATA ÇÖZÜMÜ: Modal veya Inputlar sayfada yoksa işlemi durdur
+    if (!document.getElementById('addOdevModal') || !document.getElementById('odevTur')) {
+        console.error("Ödev Modalı veya İçeriği Bulunamadı! Lütfen coach-dashboard.html dosyasını güncelleyin.");
+        alert("Sistem Hatası: Ödev penceresi yüklenemedi. Sayfayı yenileyin.");
+        return;
+    }
+
+    // Formu Temizle (Artık elemanların varlığından eminiz)
     document.getElementById('odevTur').value = 'GÜNLÜK';
     document.getElementById('odevBaslik').value = '';
     document.getElementById('odevBaslangic').value = new Date().toISOString().split('T')[0];
@@ -216,10 +223,10 @@ function openAddOdevModal() {
     document.getElementById('odevLink').value = '';
     document.getElementById('currentStudentIdForOdev').value = sid;
     
-    // Modalı Helper üzerinden aç (History Push yapar)
+    // Modalı Aç
     openModalWithBackHistory('addOdevModal');
 
-    // Kapatma butonlarını ayarla - DÜZELTİLDİ: ID ile güvenli seçim
+    // Kapatma butonlarını ayarla
     const btnCloseX = document.getElementById('btnCloseOdevModal'); 
     const btnCancel = document.getElementById('btnCancelOdev'); 
 
@@ -231,17 +238,16 @@ function openAddOdevModal() {
     if(btnCloseX) btnCloseX.onclick = handleClose;
     if(btnCancel) btnCancel.onclick = handleClose;
 
-    // Kaydet Butonu (Event yığılmasını önle)
-    document.getElementById('btnSaveOdev').onclick = async () => saveGlobalOdev(currentDb, firebase.auth().currentUser.uid, "kocluk-sistemi");
+    // Kaydet Butonu
+    const btnSave = document.getElementById('btnSaveOdev');
+    // Önceki listenerları temizlemek için klonlama hilesi veya direkt atama
+    // Basitlik için direkt atama (Modül yapısında güvenlidir)
+    btnSave.onclick = async () => saveGlobalOdev(currentDb, firebase.auth().currentUser.uid, "kocluk-sistemi");
 }
 
-// --- KAYDETME FONKSİYONU (HAFTALIK MANTIĞI EKLENDİ) ---
 export async function saveGlobalOdev(db, uid, appId) {
     let sid = document.getElementById('currentStudentIdForOdev').value;
-    if (!sid) { 
-        // Eğer modal açılırken ID set edilemediyse, hidden inputtan tekrar dene
-        sid = document.getElementById('filterOdevStudentId').value;
-    }
+    if (!sid) sid = document.getElementById('filterOdevStudentId').value;
     
     if (!sid) { alert('Öğrenci seçimi hatası.'); return; }
 
@@ -271,7 +277,6 @@ export async function saveGlobalOdev(db, uid, appId) {
 
     try {
         if (tur === 'GÜNLÜK') {
-            // GÜNLÜK: Tek bir kayıt, bitiş tarihi deadline'dır.
             const newDocRef = doc(collectionRef);
             batch.set(newDocRef, {
                 tur: 'GÜNLÜK',
@@ -279,7 +284,7 @@ export async function saveGlobalOdev(db, uid, appId) {
                 aciklama: desc,
                 link: link,
                 baslangicTarihi: startDateStr,
-                bitisTarihi: endDateStr, // Tek bir teslim tarihi
+                bitisTarihi: endDateStr, 
                 durum: 'devam',
                 onayDurumu: 'bekliyor',
                 kocId: uid,
@@ -287,15 +292,12 @@ export async function saveGlobalOdev(db, uid, appId) {
             });
 
         } else if (tur === 'HAFTALIK') {
-            // HAFTALIK: Aralıktaki her Pazar günü için bir ödev
             let current = new Date(startDateStr);
             const end = new Date(endDateStr);
             let count = 0;
 
-            // Döngü: Başlangıçtan bitişe kadar gün gün git
             while (current <= end) {
-                // 0 = Pazar
-                if (current.getDay() === 0) {
+                if (current.getDay() === 0) { // Pazar
                     const deadlineStr = current.toISOString().split('T')[0];
                     const newDocRef = doc(collectionRef);
                     batch.set(newDocRef, {
@@ -303,8 +305,8 @@ export async function saveGlobalOdev(db, uid, appId) {
                         title: `${title} (Hafta Sonu)`,
                         aciklama: desc,
                         link: link,
-                        baslangicTarihi: startDateStr, // Hepsi aynı gün verilmiş gibi görünebilir veya o haftanın başı yapılabilir
-                        bitisTarihi: deadlineStr,      // Teslim tarihi o Pazar
+                        baslangicTarihi: startDateStr,
+                        bitisTarihi: deadlineStr,
                         durum: 'devam',
                         onayDurumu: 'bekliyor',
                         kocId: uid,
@@ -312,14 +314,10 @@ export async function saveGlobalOdev(db, uid, appId) {
                     });
                     count++;
                 }
-                // Bir sonraki güne geç
                 current.setDate(current.getDate() + 1);
             }
 
             if (count === 0) {
-                // Eğer aralıkta hiç Pazar yoksa, en azından Bitiş Tarihine 1 tane ekleyelim mi?
-                // Kullanıcı "Haftalık" dedi ama aralık çok kısaysa (örn: Pzt-Çarş).
-                // Mantık: Haftalık ödev Pazar biter. Pazar yoksa bitiş tarihine ekle.
                 const newDocRef = doc(collectionRef);
                 batch.set(newDocRef, {
                     tur: 'HAFTALIK',
@@ -337,13 +335,11 @@ export async function saveGlobalOdev(db, uid, appId) {
         }
 
         await batch.commit();
-        
-        // Modalı Kapat (Geri git) -> Liste zaten onSnapshot ile güncellenir
-        window.history.back();
+        window.history.back(); // Modalı kapat
 
     } catch (e) {
         console.error(e);
-        alert("Kayıt sırasında hata oluştu: " + e.message);
+        alert("Kayıt hatası: " + e.message);
     } finally {
         btn.disabled = false;
         btn.textContent = "Kaydet";

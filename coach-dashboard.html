@@ -339,8 +339,68 @@
     <div id="addHedefModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-lg rounded-lg shadow-lg p-6 m-4"><div class="flex justify-between items-center pb-4 border-b"><h3 class="text-xl font-bold">Hedef Ekle</h3><button id="closeHedefModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="mt-4 space-y-4"><input type="hidden" id="currentStudentIdForHedef"><div id="hedefStudentSelectContainer" class="hidden p-3 bg-purple-50 rounded border border-purple-200"><label class="block text-sm font-bold text-purple-700 mb-1">Öğrenci</label><select id="hedefStudentSelect" class="w-full p-2 border rounded bg-white"></select></div><input type="text" id="hedefTitle" placeholder="Hedef Başlığı" class="w-full p-2 border rounded"><p>Hedef bitiş tarihini yazınız.</p><input type="date" id="hedefBitisTarihi" class="w-full p-2 border rounded"><textarea id="hedefAciklama" rows="3" class="w-full p-2 border rounded" placeholder="Açıklama"></textarea></div><div class="flex justify-end pt-4 gap-2"><button id="cancelHedefModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveHedefButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div>
 
     <!-- 6. ÖDEV EKLE -->
-    <div id="addOdevModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-lg rounded-lg shadow-lg p-6 m-4"><div class="flex justify-between items-center pb-3 border-b"><h3 class="text-2xl font-semibold">Ödev Ekle</h3><button id="closeOdevModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="mt-4 space-y-4"><input type="hidden" id="currentStudentIdForOdev"><div id="odevStudentSelectContainer" class="hidden p-3 bg-purple-50 rounded border border-purple-200"><label class="block text-sm font-bold text-purple-700 mb-1">Öğrenci</label><select id="odevStudentSelect" class="w-full p-2 border rounded bg-white"></select></div><div><label class="block text-sm font-medium mb-1">Ödev Türü</label><div class="grid grid-cols-3 gap-2"><label class="border p-2 rounded flex items-center justify-center cursor-pointer hover:bg-gray-50"><input type="radio" name="odevTuru" value="serbest" checked class="mr-2">Serbest</label><label class="border p-2 rounded flex items-center justify-center cursor-pointer hover:bg-gray-50"><input type="radio" name="odevTuru" value="gunluk" class="mr-2">Günlük</label><label class="border p-2 rounded flex items-center justify-center cursor-pointer hover:bg-gray-50"><input type="radio" name="odevTuru" value="haftalik" class="mr-2">Haftalık</label></div></div><input type="text" id="odevTitle" placeholder="Başlık" class="w-full p-2 border rounded"><div class="grid grid-cols-2 gap-4"><p>Ödev başlangıç ve bitiş tarihini yazınız.</p><input type="date" id="odevBaslangicTarihi" class="w-full p-2 border rounded"><input type="date" id="odevBitisTarihi" class="w-full p-2 border rounded"></div><textarea id="odevAciklama" rows="2" placeholder="Açıklama" class="w-full p-2 border rounded"></textarea><input type="url" id="odevLink" placeholder="Link" class="w-full p-2 border rounded"></div><div class="flex justify-end pt-4 gap-2"><button id="cancelOdevModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveOdevButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div>
+    <div id="addOdevModal" class="hidden fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-slide-up">
+        
+        <div class="flex justify-between items-center p-5 border-b border-gray-100">
+            <h3 class="text-xl font-bold text-gray-800">Yeni Ödev Ata</h3>
+            <button id="btnCloseOdevModal" class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto space-y-4 custom-scrollbar">
+            <input type="hidden" id="currentStudentIdForOdev">
+            
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Ödev Türü</label>
+                <select id="odevTur" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer">
+                    <option value="GÜNLÜK">Günlük (Tek Seferlik)</option>
+                    <option value="HAFTALIK">Haftalık (Pazar Teslimli)</option>
+                </select>
+                <p class="text-[10px] text-gray-400 mt-1 ml-1">
+                    <i class="fa-solid fa-circle-info mr-1"></i>
+                    Günlük: Seçilen aralık için tek ödev. Haftalık: Aralıktaki her Pazar için ayrı ödev.
+                </p>
+            </div>
 
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Ödev Başlığı</label>
+                <input type="text" id="odevBaslik" placeholder="Örn: 20 Paragraf Çöz" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Başlangıç</label>
+                    <input type="date" id="odevBaslangic" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <p>Başlangıç ve bitiş tarihini yazınız.</p>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Bitiş (Teslim)</label>
+                    <input type="date" id="odevBitis" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Açıklama / Not</label>
+                <textarea id="odevAciklama" rows="3" placeholder="Detaylar..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Kaynak Linki (Opsiyonel)</label>
+                <div class="relative">
+                    <i class="fa-solid fa-link absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="url" id="odevLink" placeholder="https://..." class="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
+            <button id="btnCancelOdev" class="px-5 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">İptal</button>
+            <button id="btnSaveOdev" class="px-5 py-2.5 text-sm font-bold text-white bg-purple-600 rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all transform active:scale-95">Kaydet</button>
+        </div>
+    </div>
+</div>
     <!-- 7. RANDEVU EKLE -->
     <div id="addRandevuModal" class="hidden fixed inset-0 bg-gray-600/50 z-[80] flex items-center justify-center p-4"><div class="bg-white w-full max-w-lg rounded-lg shadow-lg p-6 m-4"><div id="dailyAppointmentsList" class="mb-4"><h4 class="font-bold mb-2" id="dailyAppointmentsTitle">Günün Planı</h4><div id="dailyAppointmentsContainer" class="max-h-32 overflow-y-auto bg-gray-50 p-2 rounded border"></div></div><div class="flex justify-between items-center pb-3 border-t pt-4"><h3 class="text-xl font-bold">Randevu Ekle</h3><button id="closeRandevuModalButton" class="text-gray-400 text-2xl">&times;</button></div><div class="mt-4 space-y-4"><select id="randevuStudentId" class="w-full p-2 border rounded bg-white"></select><input type="text" id="randevuBaslik" class="w-full p-2 border rounded" placeholder="Başlık"><div class="grid grid-cols-3 gap-2"><input type="date" id="randevuTarih" class="w-full p-2 border rounded"><input type="time" id="randevuBaslangic" class="w-full p-2 border rounded"><input type="time" id="randevuBitis" class="w-full p-2 border rounded"></div><select id="randevuTekrar" class="w-full p-2 border rounded bg-white"><option value="0">Tek Sefer</option><option value="4">4 Hafta</option></select><input type="text" id="randevuNot" class="w-full p-2 border rounded" placeholder="Not"><p id="randevuModalErrorMessage" class="text-red-500 hidden text-sm"></p></div><div class="flex justify-end pt-4 gap-2"><button id="cancelRandevuModalButton" class="px-4 py-2 bg-gray-200 rounded">İptal</button><button id="saveRandevuButton" class="px-4 py-2 bg-purple-600 text-white rounded">Kaydet</button></div></div></div>
 

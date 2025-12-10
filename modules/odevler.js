@@ -6,9 +6,15 @@ import {
 import { activeListeners, formatDateTR, openModalWithBackHistory } from './helpers.js';
 
 let currentDb = null; 
+let currentUserIdGlobal = null;
+let currentAppIdGlobal = null;
 
 export async function renderOdevlerSayfasi(db, currentUserId, appId) {
+    // Global değişkenleri set et (Kaydet fonksiyonu için gerekli)
     currentDb = db;
+    currentUserIdGlobal = currentUserId;
+    currentAppIdGlobal = appId;
+
     document.getElementById("mainContentTitle").textContent = "Ödev Takibi";
     const area = document.getElementById("mainContentArea");
     
@@ -17,10 +23,12 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
             
             <div class="w-full md:w-1/3 relative">
                 <label class="block text-xs font-bold text-gray-500 mb-1 ml-1">Öğrenci Seçin</label>
+                
                 <button id="odevSelectTrigger" class="w-full flex justify-between items-center bg-white border border-gray-300 text-gray-700 py-2.5 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-sm">
                     <span id="odevSelectedStudentText">Bir öğrenci seçin...</span>
                     <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
                 </button>
+
                 <input type="hidden" id="filterOdevStudentId">
 
                 <div id="odevSelectDropdown" class="hidden absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 animate-fade-in overflow-hidden">
@@ -202,19 +210,18 @@ function renderOdevler(odevler) {
     }).join('');
 }
 
-// --- MODAL AÇMA (DÜZELTİLDİ: ID KONTROLÜ) ---
+// --- MODAL AÇMA ---
 function openAddOdevModal() {
     const sid = document.getElementById('filterOdevStudentId').value;
     if (!sid) { alert("Lütfen önce öğrenci seçin."); return; }
 
-    // HATA ÇÖZÜMÜ: Modal veya Inputlar sayfada yoksa işlemi durdur
-    if (!document.getElementById('addOdevModal') || !document.getElementById('odevTur')) {
-        console.error("Ödev Modalı veya İçeriği Bulunamadı! Lütfen coach-dashboard.html dosyasını güncelleyin.");
-        alert("Sistem Hatası: Ödev penceresi yüklenemedi. Sayfayı yenileyin.");
+    const modal = document.getElementById('addOdevModal');
+    if (!modal) {
+        alert("Ödev penceresi yüklenemedi. Sayfayı yenileyin.");
         return;
     }
 
-    // Formu Temizle (Artık elemanların varlığından eminiz)
+    // Formu Temizle
     document.getElementById('odevTur').value = 'GÜNLÜK';
     document.getElementById('odevBaslik').value = '';
     document.getElementById('odevBaslangic').value = new Date().toISOString().split('T')[0];
@@ -223,7 +230,7 @@ function openAddOdevModal() {
     document.getElementById('odevLink').value = '';
     document.getElementById('currentStudentIdForOdev').value = sid;
     
-    // Modalı Aç
+    // Modalı Helper üzerinden aç (History Push yapar)
     openModalWithBackHistory('addOdevModal');
 
     // Kapatma butonlarını ayarla
@@ -240,12 +247,23 @@ function openAddOdevModal() {
 
     // Kaydet Butonu
     const btnSave = document.getElementById('btnSaveOdev');
-    // Önceki listenerları temizlemek için klonlama hilesi veya direkt atama
-    // Basitlik için direkt atama (Modül yapısında güvenlidir)
-    btnSave.onclick = async () => saveGlobalOdev(currentDb, firebase.auth().currentUser.uid, "kocluk-sistemi");
+    // onclick kullanıyoruz, addEventListener değil (çift kaydı önlemek için)
+    btnSave.onclick = saveGlobalOdev; 
 }
 
-export async function saveGlobalOdev(db, uid, appId) {
+// --- KAYDETME FONKSİYONU ---
+async function saveGlobalOdev() {
+    const db = currentDb;
+    const uid = currentUserIdGlobal;
+    const appId = currentAppIdGlobal;
+
+    if (!db || !uid) {
+        console.error("Veritabanı bağlantısı koptu.");
+        alert("Bağlantı hatası. Sayfayı yenileyin.");
+        return;
+    }
+
+    // Öğrenci ID Kontrolü (Modal inputundan veya listeden)
     let sid = document.getElementById('currentStudentIdForOdev').value;
     if (!sid) sid = document.getElementById('filterOdevStudentId').value;
     
@@ -297,7 +315,8 @@ export async function saveGlobalOdev(db, uid, appId) {
             let count = 0;
 
             while (current <= end) {
-                if (current.getDay() === 0) { // Pazar
+                // 0 = Pazar
+                if (current.getDay() === 0) { 
                     const deadlineStr = current.toISOString().split('T')[0];
                     const newDocRef = doc(collectionRef);
                     batch.set(newDocRef, {
@@ -318,6 +337,7 @@ export async function saveGlobalOdev(db, uid, appId) {
             }
 
             if (count === 0) {
+                // Aralıkta pazar yoksa bitiş tarihine ekle
                 const newDocRef = doc(collectionRef);
                 batch.set(newDocRef, {
                     tur: 'HAFTALIK',
@@ -335,7 +355,11 @@ export async function saveGlobalOdev(db, uid, appId) {
         }
 
         await batch.commit();
-        window.history.back(); // Modalı kapat
+        
+        // Modalı Kapat (Geri git)
+        // NOT: startOdevListener zaten çalıştığı için liste otomatik güncellenir.
+        // Sayfa yenilemeye veya render fonksiyonunu tekrar çağırmaya gerek yoktur.
+        window.history.back();
 
     } catch (e) {
         console.error(e);
@@ -346,6 +370,7 @@ export async function saveGlobalOdev(db, uid, appId) {
     }
 }
 
+// Global Erişim İçin
 window.toggleGlobalOdevStatus = async (path, current) => {
     if (!currentDb) return;
     await updateDoc(doc(currentDb, path), { durum: current === 'tamamlandi' ? 'devam' : 'tamamlandi' });

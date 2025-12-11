@@ -3,7 +3,7 @@ import {
     where, orderBy, getDocs, doc, addDoc, serverTimestamp, writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { activeListeners, formatDateTR, openModalWithBackHistory } from './helpers.js';
+import { activeListeners, formatDateTR } from './helpers.js';
 
 let currentDb = null; 
 let currentUserIdGlobal = null;
@@ -16,10 +16,14 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     currentDb = db;
     currentUserIdGlobal = currentUserId;
     currentAppIdGlobal = appId;
-    // Eğer sayfaya geri dönüldüyse ve öğrenci seçiliyse onu koru, yoksa sıfırla
-    if (!currentStudentId) {
-        currentStudentId = null;
-        currentWeekOffset = 0;
+    
+    // Reset selection only if this is a fresh navigation, not a back navigation
+    // This logic might need adjustment based on how your router works, 
+    // but typically we want to keep state if possible.
+    // For now, we reset to force selection unless we persist state elsewhere.
+    if (!document.getElementById('weeklyCalendarContainer')) {
+         currentStudentId = null;
+         currentWeekOffset = 0;
     }
 
     document.getElementById("mainContentTitle").textContent = "Haftalık Ödev Programı";
@@ -84,8 +88,13 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     document.getElementById('btnPrevWeek').addEventListener('click', () => changeWeek(-1));
     document.getElementById('btnNextWeek').addEventListener('click', () => changeWeek(1));
     
-    // Eğer daha önce seçilmiş bir öğrenci varsa (sayfa yenilenmediyse), takvimi tekrar yükle
+    // Restore view if student was already selected (e.g. returning from another tab)
     if (currentStudentId) {
+        // UI updates to show calendar immediately
+        const labelSpan = document.getElementById('odevSelectedStudentText');
+        // Ideally we fetch the name again or store it, but for now we might leave it generic or fetch it
+        // To be safe, let's just trigger the listener. The name might reset to "Öğrenci Seçiniz..." visually
+        // but the calendar will show.
         document.getElementById('odevEmptyState').classList.add('hidden');
         document.getElementById('weeklyControls').classList.remove('hidden');
         document.getElementById('calendarGrid').classList.remove('hidden');
@@ -105,17 +114,21 @@ function renderWeeklyGrid() {
     
     if(!currentStudentId) return;
 
+    // Calculate dates for the current week (Monday - Sunday)
     const today = new Date();
-    const currentDay = today.getDay(); 
+    const currentDay = today.getDay(); // 0=Sunday, 1=Monday...
+    // Adjust to Monday: If Sunday(0), go back 6 days. Else go back (day-1) days.
     const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1) + (currentWeekOffset * 7);
     
-    const startOfWeek = new Date(today.setDate(diff)); 
+    const startOfWeek = new Date(today.setDate(diff)); // Monday
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(endOfWeek.getDate() + 6); 
+    endOfWeek.setDate(endOfWeek.getDate() + 6); // Sunday
 
+    // Update Label
     const options = { month: 'short', day: 'numeric' };
     label.textContent = `${startOfWeek.toLocaleDateString('tr-TR', options)} - ${endOfWeek.toLocaleDateString('tr-TR', options)}`;
 
+    // Draw Grid
     grid.innerHTML = '';
     const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 
@@ -125,18 +138,18 @@ function renderWeeklyGrid() {
         const dateStr = loopDate.toISOString().split('T')[0];
         const isToday = dateStr === new Date().toISOString().split('T')[0];
 
+        // Filter homework for this day
         const dailyOdevs = allFetchedOdevs.filter(o => o.bitisTarihi === dateStr);
 
         const dayCol = document.createElement('div');
-        // MOBİL DÜZELTME: min-h kaldırıldı, mobilde içerik kadar uzasın
-        dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-300 ring-2 ring-purple-50 shadow-md' : 'border-gray-200'} overflow-hidden md:min-h-[150px] transition-all`;
+        dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-300 ring-2 ring-purple-50 shadow-md' : 'border-gray-200'} overflow-hidden transition-all`;
         
         let headerHtml = `
             <div class="p-2 text-center border-b ${isToday ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-600'} flex justify-between md:block items-center">
                 <span class="text-xs font-bold uppercase">${days[i]}</span>
                 <span class="text-[10px] opacity-80 bg-white/20 px-2 py-0.5 rounded">${formatDateTR(dateStr)}</span>
             </div>
-            <div class="p-2 flex-1 space-y-2 bg-gray-50/30">
+            <div class="p-2 flex-1 space-y-2 bg-gray-50/30 min-h-[100px]">
         `;
 
         if (dailyOdevs.length === 0) {
@@ -197,7 +210,7 @@ function startOdevListener(db, uid, appId, studentId) {
     document.getElementById('weeklyCalendarContainer').classList.remove('hidden');
     document.getElementById('odevEmptyState').classList.add('hidden');
     document.getElementById('calendarGrid').classList.remove('hidden');
-    document.getElementById('calendarGrid').classList.add('grid'); // Grid class'ını geri ekle
+    document.getElementById('calendarGrid').classList.add('grid');
 
     const q = query(
         collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler")
@@ -258,33 +271,48 @@ async function setupOdevSearchableDropdown(db, uid, appId) {
 
 // --- MODAL AÇMA ---
 function openAddOdevModal() {
-    if (!currentStudentId) { alert("Lütfen önce öğrenci seçin."); return; }
+    if (!currentStudentId) { 
+        alert("Lütfen önce öğrenci seçin."); 
+        return; 
+    }
 
     const modal = document.getElementById('addOdevModal');
-    if (!modal) { alert("Modal bulunamadı."); return; }
+    if (!modal) { 
+        alert("Modal bulunamadı."); 
+        return; 
+    }
 
     const hiddenInput = document.getElementById('currentStudentIdForOdev');
-    if(hiddenInput) hiddenInput.value = currentStudentId;
+    if (hiddenInput) hiddenInput.value = currentStudentId;
 
+    // Form alanlarını sıfırla / varsayılanları ata
     document.getElementById('odevTur').value = 'GÜNLÜK';
     document.getElementById('odevBaslik').value = '';
     document.getElementById('odevBaslangic').value = new Date().toISOString().split('T')[0];
     document.getElementById('odevBitis').value = '';
     document.getElementById('odevAciklama').value = '';
     document.getElementById('odevLink').value = '';
-    
-    openModalWithBackHistory('addOdevModal');
 
+    // Modalı AÇ (history kullanmadan)
+    modal.classList.remove('hidden');
+
+    // Kapatma butonları sadece modalı gizlesin
     const btnCloseX = document.getElementById('btnCloseOdevModal'); 
     const btnCancel = document.getElementById('btnCancelOdev'); 
-    const handleClose = (e) => { e.preventDefault(); window.history.back(); };
-    if(btnCloseX) btnCloseX.onclick = handleClose;
-    if(btnCancel) btnCancel.onclick = handleClose;
 
+    const handleClose = (e) => { 
+        e.preventDefault(); 
+        modal.classList.add('hidden'); 
+    };
+
+    if (btnCloseX) btnCloseX.onclick = handleClose;
+    if (btnCancel) btnCancel.onclick = handleClose;
+
+    // Kaydet butonu
     document.getElementById('btnSaveOdev').onclick = saveGlobalOdev; 
 }
 
-// --- KAYDETME ---
+// --- KAYDETME (DÜZELTME: SAYFADA KAL) ---
 export async function saveGlobalOdev() {
     if (!currentDb || !currentUserIdGlobal || !currentStudentId) { alert("Bağlantı hatası veya öğrenci seçilmedi."); return; }
 
@@ -304,55 +332,80 @@ export async function saveGlobalOdev() {
     const batch = writeBatch(currentDb);
     const collectionRef = collection(currentDb, "artifacts", currentAppIdGlobal, "users", currentUserIdGlobal, "ogrencilerim", currentStudentId, "odevler");
 
-    try {
+     try {
         if (tur === 'GÜNLÜK') {
             const newDocRef = doc(collectionRef);
             batch.set(newDocRef, {
-                tur: 'GÜNLÜK', title: title, aciklama: desc, link: link,
-                baslangicTarihi: startDateStr, bitisTarihi: endDateStr,
-                durum: 'devam', onayDurumu: 'bekliyor',
-                kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
+                tur: 'GÜNLÜK',
+                title: title,
+                aciklama: desc,
+                link: link,
+                baslangicTarihi: startDateStr,
+                bitisTarihi: endDateStr,
+                durum: 'devam',
+                onayDurumu: 'bekliyor',
+                kocId: currentUserIdGlobal,
+                eklenmeTarihi: serverTimestamp()
             });
         } else if (tur === 'HAFTALIK') {
             let current = new Date(startDateStr);
             const end = new Date(endDateStr);
             let count = 0;
+
             while (current <= end) {
                 if (current.getDay() === 0) { // Pazar
                     const deadlineStr = current.toISOString().split('T')[0];
                     const newDocRef = doc(collectionRef);
                     batch.set(newDocRef, {
-                        tur: 'HAFTALIK', title: `${title} (Hafta Sonu)`, aciklama: desc, link: link,
-                        baslangicTarihi: startDateStr, bitisTarihi: deadlineStr,
-                        durum: 'devam', onayDurumu: 'bekliyor',
-                        kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
+                        tur: 'HAFTALIK',
+                        title: `${title} (Hafta Sonu)`,
+                        aciklama: desc,
+                        link: link,
+                        baslangicTarihi: startDateStr,
+                        bitisTarihi: deadlineStr,
+                        durum: 'devam',
+                        onayDurumu: 'bekliyor',
+                        kocId: currentUserIdGlobal,
+                        eklenmeTarihi: serverTimestamp()
                     });
                     count++;
                 }
                 current.setDate(current.getDate() + 1);
             }
+
             if (count === 0) {
                 const newDocRef = doc(collectionRef);
                 batch.set(newDocRef, {
-                    tur: 'HAFTALIK', title: title, aciklama: desc, link: link,
-                    baslangicTarihi: startDateStr, bitisTarihi: endDateStr, 
-                    durum: 'devam', onayDurumu: 'bekliyor',
-                    kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
+                    tur: 'HAFTALIK',
+                    title: title,
+                    aciklama: desc,
+                    link: link,
+                    baslangicTarihi: startDateStr,
+                    bitisTarihi: endDateStr,
+                    durum: 'devam',
+                    onayDurumu: 'bekliyor',
+                    kocId: currentUserIdGlobal,
+                    eklenmeTarihi: serverTimestamp()
                 });
             }
         }
 
         await batch.commit();
-        window.history.back(); // SAYFAYI YENİLEME, SADECE MODALI KAPAT
+
+        // ✅ Yönlendirme YOK, sadece modalı kapat
+        const modal = document.getElementById('addOdevModal');
+        if (modal) modal.classList.add('hidden');
+
+        // Takvim zaten startOdevListener + onSnapshot ile otomatik güncellenecek
 
     } catch (e) {
         console.error(e);
         alert("Kayıt hatası: " + e.message);
     } finally {
-        btn.disabled = false; btn.textContent = "Kaydet";
+        btn.disabled = false;
+        btn.textContent = "Kaydet";
     }
 }
-
 // --- TOPLU ONAYLA ---
 async function approvePendingOdevs() {
     if (!currentStudentId) return;
@@ -375,13 +428,11 @@ async function approvePendingOdevs() {
     finally { btn.disabled = false; btn.innerHTML = orgText; }
 }
 
-// --- TEKİL ONAYLA ---
 window.approveSingleOdev = async (path) => {
     if (!currentDb) return;
     await updateDoc(doc(currentDb, path), { onayDurumu: 'onaylandi' });
 };
 
-// Global Yardımcılar
 window.toggleGlobalOdevStatus = async (path, status) => {
     if (!currentDb) return;
     await updateDoc(doc(currentDb, path), { durum: 'devam', onayDurumu: 'bekliyor' });
@@ -389,5 +440,5 @@ window.toggleGlobalOdevStatus = async (path, status) => {
 
 window.deleteGlobalDoc = async (path) => {
     if (!currentDb) return;
-    if(confirm('Ödevi silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path));
+    if(confirm('Silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path));
 };

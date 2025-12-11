@@ -57,7 +57,7 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
                 </div>
 
                 <div class="flex gap-2 w-full sm:w-auto">
-                    <button id="btnApproveAllOdev" class="flex-1 sm:flex-none bg-green-100 text-green-700 px-4 py-2.5 rounded-xl hover:bg-green-200 text-xs font-bold border border-green-200 flex items-center justify-center transition-colors shadow-sm whitespace-nowrap" title="Sadece öğrencinin tamamladığı ödevleri onaylar">
+                    <button id="btnApproveAllOdev" class="flex-1 sm:flex-none bg-green-100 text-green-700 px-4 py-2.5 rounded-xl hover:bg-green-200 text-xs font-bold border border-green-200 flex items-center justify-center transition-colors shadow-sm whitespace-nowrap">
                         <i class="fa-solid fa-check-double mr-2"></i> Onayla
                     </button>
                     <button id="btnAddNewOdev" class="flex-1 sm:flex-none bg-purple-600 text-white px-5 py-2.5 rounded-xl hover:bg-purple-700 shadow-md flex items-center justify-center text-xs font-bold transition-transform active:scale-95 whitespace-nowrap">
@@ -73,21 +73,18 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
                 <p>Programı görüntülemek için lütfen öğrenci seçin.</p>
             </div>
             
-            <div id="calendarGrid" class="hidden grid grid-cols-1 lg:grid-cols-7 gap-4"></div>
+            <div id="calendarGrid" class="hidden grid grid-cols-1 xl:grid-cols-7 gap-4"></div>
         </div>
     `;
 
     await setupOdevSearchableDropdown(db, currentUserId, appId);
 
-    // Event Listeners
     document.getElementById('btnAddNewOdev').addEventListener('click', openAddOdevModal);
     document.getElementById('btnApproveAllOdev').addEventListener('click', approvePendingOdevs);
     document.getElementById('btnPrevWeek').addEventListener('click', () => changeWeek(-1));
     document.getElementById('btnNextWeek').addEventListener('click', () => changeWeek(1));
     
-    // Eğer daha önce seçilmiş bir öğrenci varsa (sayfa yenilenmediyse), takvimi tekrar yükle
     if (currentStudentId) {
-        // UI'yı güncelle (Eğer label boşaldıysa tekrar doldurmaya çalışmıyoruz, çünkü ID var)
         document.getElementById('odevEmptyState').classList.add('hidden');
         document.getElementById('weeklyControls').classList.remove('hidden');
         document.getElementById('calendarGrid').classList.remove('hidden');
@@ -95,7 +92,100 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     }
 }
 
-// --- HAFTALIK TAKVİM MANTIĞI ---
+// --- MODAL OLUŞTURMA (GARANTİ YÖNTEM) ---
+function ensureModalExists() {
+    if (!document.getElementById('addOdevModal')) {
+        const modalHtml = `
+        <div id="addOdevModal" class="hidden fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-slide-up">
+                <div class="flex justify-between items-center p-5 border-b border-gray-100">
+                    <h3 class="text-xl font-bold text-gray-800">Yeni Ödev Ekle</h3>
+                    <button id="btnCloseOdevModal" class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto space-y-4 custom-scrollbar">
+                    <input type="hidden" id="currentStudentIdForOdev">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Ödev Türü</label>
+                        <select id="odevTur" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer">
+                            <option value="GÜNLÜK">Günlük (Tek Seferlik)</option>
+                            <option value="HAFTALIK">Haftalık (Pazar Teslimli)</option>
+                        </select>
+                        <p class="text-[10px] text-gray-400 mt-1 ml-1"><i class="fa-solid fa-circle-info mr-1"></i>Günlük: Tek tarihli. Haftalık: Aralıktaki her Pazar için.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Ödev Başlığı</label>
+                        <input type="text" id="odevBaslik" placeholder="Örn: 20 Paragraf Çöz" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Başlangıç</label>
+                            <input type="date" id="odevBaslangic" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Bitiş (Teslim)</label>
+                            <input type="date" id="odevBitis" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Açıklama / Not</label>
+                        <textarea id="odevAciklama" rows="3" placeholder="Detaylar..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Kaynak Linki (Opsiyonel)</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-link absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="url" id="odevLink" placeholder="https://..." class="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+                </div>
+                <div class="p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
+                    <button id="btnCancelOdev" class="px-5 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">İptal</button>
+                    <button id="btnSaveOdev" class="px-5 py-2.5 text-sm font-bold text-white bg-purple-600 rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all transform active:scale-95">Kaydet</button>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+}
+
+// --- MODAL AÇMA (DÜZELTİLDİ: GARANTİ HTML) ---
+function openAddOdevModal() {
+    if (!currentStudentId) { alert("Lütfen önce öğrenci seçin."); return; }
+
+    // Modalı oluştur (yoksa)
+    ensureModalExists();
+
+    const modal = document.getElementById('addOdevModal');
+    
+    // Değerleri Ata
+    const hiddenInput = document.getElementById('currentStudentIdForOdev');
+    if(hiddenInput) hiddenInput.value = currentStudentId;
+
+    document.getElementById('odevTur').value = 'GÜNLÜK';
+    document.getElementById('odevBaslik').value = '';
+    document.getElementById('odevBaslangic').value = new Date().toISOString().split('T')[0];
+    document.getElementById('odevBitis').value = '';
+    document.getElementById('odevAciklama').value = '';
+    document.getElementById('odevLink').value = '';
+    
+    openModalWithBackHistory('addOdevModal');
+
+    // Kapatma Butonları
+    const btnCloseX = document.getElementById('btnCloseOdevModal'); 
+    const btnCancel = document.getElementById('btnCancelOdev'); 
+    const handleClose = (e) => { e.preventDefault(); window.history.back(); };
+
+    if(btnCloseX) btnCloseX.onclick = handleClose;
+    if(btnCancel) btnCancel.onclick = handleClose;
+
+    // Kaydet Butonu
+    const btnSave = document.getElementById('btnSaveOdev');
+    btnSave.onclick = saveGlobalOdev; 
+}
+
+// --- DİĞER FONKSİYONLAR (Takvim, Kaydet vb.) ---
 function changeWeek(offset) {
     currentWeekOffset += offset;
     renderWeeklyGrid();
@@ -104,14 +194,11 @@ function changeWeek(offset) {
 function renderWeeklyGrid() {
     const grid = document.getElementById('calendarGrid');
     const label = document.getElementById('weekLabel');
-    
     if(!currentStudentId) return;
 
-    // Tarih Hesaplama (Pazartesi - Pazar)
     const today = new Date();
-    const currentDay = today.getDay(); // 0=Pazar, 1=Pzt...
+    const currentDay = today.getDay(); 
     const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1) + (currentWeekOffset * 7);
-    
     const startOfWeek = new Date(today.setDate(diff)); 
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(endOfWeek.getDate() + 6); 
@@ -127,37 +214,29 @@ function renderWeeklyGrid() {
         loopDate.setDate(startOfWeek.getDate() + i);
         const dateStr = loopDate.toISOString().split('T')[0];
         const isToday = dateStr === new Date().toISOString().split('T')[0];
-
-        // O günün ödevlerini filtrele
         const dailyOdevs = allFetchedOdevs.filter(o => o.bitisTarihi === dateStr);
 
         const dayCol = document.createElement('div');
-        // RESPONSIVE CLASSLAR:
-        // lg:min-h-[150px] -> Masaüstünde yükseklik var
-        // Mobilde yükseklik içeriğe göre (min-h yok)
-        dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-400 ring-4 ring-purple-50 shadow-lg z-10' : 'border-gray-200'} overflow-hidden lg:min-h-[150px] transition-all`;
+        // RESPONSIVE: Mobilde min-h yok, içerik kadar. Masaüstünde sabit yükseklik.
+        dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-300 ring-2 ring-purple-50 shadow-md' : 'border-gray-200'} overflow-hidden xl:min-h-[150px] transition-all`;
         
-        // Header (Tarih ve Gün)
         let headerHtml = `
-            <div class="p-3 lg:p-2 flex justify-between lg:block items-center border-b ${isToday ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-700'}">
-                <div class="flex items-center gap-2 lg:justify-center">
-                    <span class="text-sm lg:text-xs font-bold uppercase tracking-wide">${days[i]}</span>
-                    ${isToday ? '<span class="lg:hidden text-[10px] bg-white/20 px-2 py-0.5 rounded font-medium">BUGÜN</span>' : ''}
+            <div class="p-3 xl:p-2 flex justify-between xl:block items-center border-b ${isToday ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-600'}">
+                <div class="flex items-center gap-2 xl:justify-center">
+                    <span class="text-sm xl:text-xs font-bold uppercase">${days[i]}</span>
+                    ${isToday ? '<span class="xl:hidden text-[10px] bg-white/20 px-2 py-0.5 rounded font-medium">BUGÜN</span>' : ''}
                 </div>
-                <div class="text-xs lg:text-[10px] opacity-80 font-mono lg:text-center lg:mt-1 bg-white/10 px-2 py-0.5 rounded">
+                <div class="text-xs xl:text-[10px] opacity-80 font-mono xl:text-center xl:mt-1 bg-white/10 px-2 py-0.5 rounded">
                     ${formatDateTR(dateStr)}
                 </div>
             </div>
-            <div class="p-3 lg:p-2 flex-1 space-y-3 lg:space-y-2 bg-gray-50/30">
+            <div class="p-3 xl:p-2 flex-1 space-y-3 xl:space-y-2 bg-gray-50/30">
         `;
 
         if (dailyOdevs.length === 0) {
-            // Mobilde boş günleri daha az yer kaplayacak şekilde göster
-            headerHtml += `<div class="flex items-center justify-center py-2 lg:h-full lg:py-0"><p class="text-xs text-gray-300 italic">Boş</p></div>`;
+            headerHtml += `<div class="flex items-center justify-center py-2 xl:h-full xl:py-0"><p class="text-xs text-gray-300 italic">Boş</p></div>`;
         } else {
-            dailyOdevs.forEach(o => {
-                headerHtml += createOdevCard(o);
-            });
+            dailyOdevs.forEach(o => { headerHtml += createOdevCard(o); });
         }
 
         headerHtml += `</div>`;
@@ -171,8 +250,6 @@ function createOdevCard(o) {
     let icon = "";
     let buttons = "";
 
-    // Mobilde yazı boyutlarını biraz büyüttük (text-xs yerine text-sm olabilir)
-    
     if (o.durum === 'tamamlandi') {
         if (o.onayDurumu === 'onaylandi') {
             statusClass = "border-l-4 border-green-500 bg-green-50/50 opacity-80";
@@ -188,25 +265,22 @@ function createOdevCard(o) {
                 </div>`;
         }
     } else {
-        statusClass = "border-l-4 border-blue-500 bg-white shadow-sm hover:shadow-md transition-shadow";
+        statusClass = "border-l-4 border-blue-500 bg-white shadow-sm";
         icon = `<i class="fa-solid fa-spinner text-blue-400"></i>`;
         buttons = `<button onclick="deleteGlobalDoc('${o.path}')" class="text-xs text-gray-300 hover:text-red-500 ml-auto p-1"><i class="fa-solid fa-trash"></i></button>`;
     }
 
     return `
-    <div class="p-3 lg:p-2 rounded-lg border border-gray-100 text-left relative group ${statusClass}">
+    <div class="p-3 xl:p-2 rounded-lg border border-gray-100 text-left relative group ${statusClass}">
         <div class="flex justify-between items-start mb-1.5">
-            <span class="text-xs lg:text-[10px] font-bold text-gray-800 line-clamp-2 leading-snug w-full pr-1">${o.title}</span>
-            <div class="text-sm lg:text-xs shrink-0">${icon}</div>
+            <span class="text-xs xl:text-[10px] font-bold text-gray-800 line-clamp-2 leading-snug w-full pr-1">${o.title}</span>
+            <div class="text-sm xl:text-xs shrink-0">${icon}</div>
         </div>
-        ${o.aciklama ? `<p class="text-xs lg:text-[9px] text-gray-500 line-clamp-2 mb-2 leading-relaxed">${o.aciklama}</p>` : ''}
-        <div class="flex justify-between items-center w-full">
-            ${buttons}
-        </div>
+        ${o.aciklama ? `<p class="text-xs xl:text-[9px] text-gray-500 line-clamp-2 mb-2 leading-relaxed">${o.aciklama}</p>` : ''}
+        <div class="flex justify-between items-center w-full">${buttons}</div>
     </div>`;
 }
 
-// --- VERİ ÇEKME & DİNLEME ---
 function startOdevListener(db, uid, appId, studentId) {
     document.getElementById('weeklyControls').classList.remove('hidden');
     document.getElementById('weeklyCalendarContainer').classList.remove('hidden');
@@ -214,24 +288,16 @@ function startOdevListener(db, uid, appId, studentId) {
     document.getElementById('calendarGrid').classList.remove('hidden');
     document.getElementById('calendarGrid').classList.add('grid');
 
-    const q = query(
-        collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler")
-    );
-    
+    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler"));
     if (activeListeners.odevlerUnsubscribe) activeListeners.odevlerUnsubscribe();
     
     activeListeners.odevlerUnsubscribe = onSnapshot(q, (snap) => {
         allFetchedOdevs = [];
-        snap.forEach(doc => {
-            allFetchedOdevs.push({ id: doc.id, ...doc.data(), path: doc.ref.path });
-        });
+        snap.forEach(doc => { allFetchedOdevs.push({ id: doc.id, ...doc.data(), path: doc.ref.path }); });
         renderWeeklyGrid(); 
-    }, (error) => {
-        console.error("Hata:", error);
-    });
+    }, (error) => { console.error("Hata:", error); });
 }
 
-// --- ÖĞRENCİ SEÇİMİ ---
 async function setupOdevSearchableDropdown(db, uid, appId) {
     const triggerBtn = document.getElementById('odevSelectTrigger');
     const dropdown = document.getElementById('odevSelectDropdown');
@@ -259,7 +325,6 @@ async function setupOdevSearchableDropdown(db, uid, appId) {
                 labelSpan.textContent = s.name;
                 labelSpan.classList.add('font-bold', 'text-purple-700');
                 dropdown.classList.add('hidden'); 
-                
                 startOdevListener(db, uid, appId, s.id);
             };
             listContainer.appendChild(item);
@@ -271,35 +336,6 @@ async function setupOdevSearchableDropdown(db, uid, appId) {
     document.addEventListener('click', (e) => { if (!triggerBtn.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden'); });
 }
 
-// --- MODAL AÇMA ---
-function openAddOdevModal() {
-    if (!currentStudentId) { alert("Lütfen önce öğrenci seçin."); return; }
-
-    const modal = document.getElementById('addOdevModal');
-    if (!modal) { alert("Modal bulunamadı."); return; }
-
-    const hiddenInput = document.getElementById('currentStudentIdForOdev');
-    if(hiddenInput) hiddenInput.value = currentStudentId;
-
-    document.getElementById('odevTur').value = 'GÜNLÜK';
-    document.getElementById('odevBaslik').value = '';
-    document.getElementById('odevBaslangic').value = new Date().toISOString().split('T')[0];
-    document.getElementById('odevBitis').value = '';
-    document.getElementById('odevAciklama').value = '';
-    document.getElementById('odevLink').value = '';
-    
-    openModalWithBackHistory('addOdevModal');
-
-    const btnCloseX = document.getElementById('btnCloseOdevModal'); 
-    const btnCancel = document.getElementById('btnCancelOdev'); 
-    const handleClose = (e) => { e.preventDefault(); window.history.back(); };
-    if(btnCloseX) btnCloseX.onclick = handleClose;
-    if(btnCancel) btnCancel.onclick = handleClose;
-
-    document.getElementById('btnSaveOdev').onclick = saveGlobalOdev; 
-}
-
-// --- KAYDETME (DÜZELTME: SAYFADA KAL) ---
 export async function saveGlobalOdev() {
     if (!currentDb || !currentUserIdGlobal || !currentStudentId) { alert("Bağlantı hatası veya öğrenci seçilmedi."); return; }
 
@@ -322,43 +358,28 @@ export async function saveGlobalOdev() {
     try {
         if (tur === 'GÜNLÜK') {
             const newDocRef = doc(collectionRef);
-            batch.set(newDocRef, {
-                tur: 'GÜNLÜK', title: title, aciklama: desc, link: link,
-                baslangicTarihi: startDateStr, bitisTarihi: endDateStr,
-                durum: 'devam', onayDurumu: 'bekliyor',
-                kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
-            });
+            batch.set(newDocRef, { tur: 'GÜNLÜK', title: title, aciklama: desc, link: link, baslangicTarihi: startDateStr, bitisTarihi: endDateStr, durum: 'devam', onayDurumu: 'bekliyor', kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp() });
         } else if (tur === 'HAFTALIK') {
             let current = new Date(startDateStr);
             const end = new Date(endDateStr);
             let count = 0;
             while (current <= end) {
-                if (current.getDay() === 0) { // Pazar
+                if (current.getDay() === 0) { 
                     const deadlineStr = current.toISOString().split('T')[0];
                     const newDocRef = doc(collectionRef);
-                    batch.set(newDocRef, {
-                        tur: 'HAFTALIK', title: `${title} (Hafta Sonu)`, aciklama: desc, link: link,
-                        baslangicTarihi: startDateStr, bitisTarihi: deadlineStr,
-                        durum: 'devam', onayDurumu: 'bekliyor',
-                        kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
-                    });
+                    batch.set(newDocRef, { tur: 'HAFTALIK', title: `${title} (Hafta Sonu)`, aciklama: desc, link: link, baslangicTarihi: startDateStr, bitisTarihi: deadlineStr, durum: 'devam', onayDurumu: 'bekliyor', kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp() });
                     count++;
                 }
                 current.setDate(current.getDate() + 1);
             }
             if (count === 0) {
                 const newDocRef = doc(collectionRef);
-                batch.set(newDocRef, {
-                    tur: 'HAFTALIK', title: title, aciklama: desc, link: link,
-                    baslangicTarihi: startDateStr, bitisTarihi: endDateStr, 
-                    durum: 'devam', onayDurumu: 'bekliyor',
-                    kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
-                });
+                batch.set(newDocRef, { tur: 'HAFTALIK', title: title, aciklama: desc, link: link, baslangicTarihi: startDateStr, bitisTarihi: endDateStr, durum: 'devam', onayDurumu: 'bekliyor', kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp() });
             }
         }
 
         await batch.commit();
-        window.history.back(); // Modalı kapat
+        window.history.back(); // Sadece modalı kapat
 
     } catch (e) {
         console.error(e);
@@ -368,11 +389,9 @@ export async function saveGlobalOdev() {
     }
 }
 
-// --- TOPLU ONAYLA ---
 async function approvePendingOdevs() {
     if (!currentStudentId) return;
     const pendingOdevs = allFetchedOdevs.filter(o => o.durum === 'tamamlandi' && o.onayDurumu === 'bekliyor');
-
     if (pendingOdevs.length === 0) { alert("Onay bekleyen (öğrencinin tamamladığı) ödev bulunamadı."); return; }
     if (!confirm(`${pendingOdevs.length} adet tamamlanmış ödevi onaylamak istiyor musunuz?`)) return;
 
@@ -390,17 +409,6 @@ async function approvePendingOdevs() {
     finally { btn.disabled = false; btn.innerHTML = orgText; }
 }
 
-window.approveSingleOdev = async (path) => {
-    if (!currentDb) return;
-    await updateDoc(doc(currentDb, path), { onayDurumu: 'onaylandi' });
-};
-
-window.toggleGlobalOdevStatus = async (path, status) => {
-    if (!currentDb) return;
-    await updateDoc(doc(currentDb, path), { durum: 'devam', onayDurumu: 'bekliyor' });
-};
-
-window.deleteGlobalDoc = async (path) => {
-    if (!currentDb) return;
-    if(confirm('Silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path));
-};
+window.approveSingleOdev = async (path) => { if (!currentDb) return; await updateDoc(doc(currentDb, path), { onayDurumu: 'onaylandi' }); };
+window.toggleGlobalOdevStatus = async (path, status) => { if (!currentDb) return; await updateDoc(doc(currentDb, path), { durum: 'devam', onayDurumu: 'bekliyor' }); };
+window.deleteGlobalDoc = async (path) => { if (!currentDb) return; if(confirm('Silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path)); };

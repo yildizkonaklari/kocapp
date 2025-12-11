@@ -585,22 +585,25 @@
     </div>
 </div>
         <!-- 6. ÖDEV EKLE -->
-<div id="addOdevModal" class="hidden fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-slide-up">
+<div id="addOdevModal"
+     class="hidden fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md sm:max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-slide-up">
         
-        <div class="flex justify-between items-center p-5 border-b border-gray-100">
-            <h3 class="text-xl font-bold text-gray-800">Yeni Ödev Ekle</h3>
-            <button id="btnCloseOdevModal" class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
-                <i class="fa-solid fa-xmark text-xl"></i>
+        <div class="flex justify-between items-center p-4 sm:p-5 border-b border-gray-100">
+            <h3 class="text-lg sm:text-xl font-bold text-gray-800">Yeni Ödev Ekle</h3>
+            <button id="btnCloseOdevModal"
+                    class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                <i class="fa-solid fa-xmark text-lg sm:text-xl"></i>
             </button>
         </div>
         
-        <div class="p-6 overflow-y-auto space-y-4 custom-scrollbar">
+        <div class="p-4 sm:p-6 overflow-y-auto space-y-4 custom-scrollbar">
             <input type="hidden" id="currentStudentIdForOdev">
             
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Ödev Türü</label>
-                <select id="odevTur" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer">
+                <select id="odevTur"
+                        class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer text-sm">
                     <option value="GÜNLÜK">Günlük (Tek Seferlik)</option>
                     <option value="HAFTALIK">Haftalık (Pazar Teslimli)</option>
                 </select>
@@ -612,37 +615,48 @@
 
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Ödev Başlığı</label>
-                <input type="text" id="odevBaslik" placeholder="Örn: 20 Paragraf Çöz" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all">
+                <input type="text" id="odevBaslik" placeholder="Örn: 20 Paragraf Çöz"
+                       class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-sm">
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Başlangıç</label>
-                    <input type="date" id="odevBaslangic" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <input type="date" id="odevBaslangic"
+                           class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Bitiş (Teslim)</label>
-                    <input type="date" id="odevBitis" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <input type="date" id="odevBitis"
+                           class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
                 </div>
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Açıklama / Not</label>
-                <textarea id="odevAciklama" rows="3" placeholder="Detaylar..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"></textarea>
+                <textarea id="odevAciklama" rows="3" placeholder="Detaylar..."
+                          class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"></textarea>
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Kaynak Linki (Opsiyonel)</label>
                 <div class="relative">
-                    <i class="fa-solid fa-link absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    <input type="url" id="odevLink" placeholder="https://..." class="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <i class="fa-solid fa-link absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="url" id="odevLink" placeholder="https://..."
+                           class="w-full pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
                 </div>
             </div>
         </div>
 
-        <div class="p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
-            <button id="btnCancelOdev" class="px-5 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">İptal</button>
-            <button id="btnSaveOdev" class="px-5 py-2.5 text-sm font-bold text-white bg-purple-600 rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all transform active:scale-95">Kaydet</button>
+        <div class="p-4 sm:p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
+            <button id="btnCancelOdev"
+                    class="px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
+                İptal
+            </button>
+            <button id="btnSaveOdev"
+                    class="px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-white bg-purple-600 rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all transform active:scale-95">
+                Kaydet
+            </button>
         </div>
     </div>
 </div>

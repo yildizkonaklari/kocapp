@@ -57,7 +57,7 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
                 </div>
 
                 <div class="flex gap-2 w-full sm:w-auto">
-                    <button id="btnApproveAllOdev" class="flex-1 sm:flex-none bg-green-100 text-green-700 px-4 py-2.5 rounded-xl hover:bg-green-200 text-xs font-bold border border-green-200 flex items-center justify-center transition-colors shadow-sm whitespace-nowrap">
+                    <button id="btnApproveAllOdev" class="flex-1 sm:flex-none bg-green-100 text-green-700 px-4 py-2.5 rounded-xl hover:bg-green-200 text-xs font-bold border border-green-200 flex items-center justify-center transition-colors shadow-sm whitespace-nowrap" title="Sadece öğrencinin tamamladığı ödevleri onaylar">
                         <i class="fa-solid fa-check-double mr-2"></i> Onayla
                     </button>
                     <button id="btnAddNewOdev" class="flex-1 sm:flex-none bg-purple-600 text-white px-5 py-2.5 rounded-xl hover:bg-purple-700 shadow-md flex items-center justify-center text-xs font-bold transition-transform active:scale-95 whitespace-nowrap">
@@ -67,18 +67,19 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
             </div>
         </div>
 
-        <div id="weeklyCalendarContainer" class="relative z-10 pb-24">
+        <div id="weeklyCalendarContainer" class="relative z-10 pb-24 w-full overflow-hidden">
             <div id="odevEmptyState" class="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-100 border-dashed">
                 <i class="fa-regular fa-calendar-days text-5xl mb-4 opacity-20"></i>
                 <p>Programı görüntülemek için lütfen öğrenci seçin.</p>
             </div>
             
-            <div id="calendarGrid" class="hidden grid grid-cols-1 xl:grid-cols-7 gap-4"></div>
+            <div id="calendarGrid" class="hidden w-full"></div>
         </div>
     `;
 
     await setupOdevSearchableDropdown(db, currentUserId, appId);
 
+    // Event Listeners
     document.getElementById('btnAddNewOdev').addEventListener('click', openAddOdevModal);
     document.getElementById('btnApproveAllOdev').addEventListener('click', approvePendingOdevs);
     document.getElementById('btnPrevWeek').addEventListener('click', () => changeWeek(-1));
@@ -150,42 +151,7 @@ function ensureModalExists() {
     }
 }
 
-// --- MODAL AÇMA (DÜZELTİLDİ: GARANTİ HTML) ---
-function openAddOdevModal() {
-    if (!currentStudentId) { alert("Lütfen önce öğrenci seçin."); return; }
-
-    // Modalı oluştur (yoksa)
-    ensureModalExists();
-
-    const modal = document.getElementById('addOdevModal');
-    
-    // Değerleri Ata
-    const hiddenInput = document.getElementById('currentStudentIdForOdev');
-    if(hiddenInput) hiddenInput.value = currentStudentId;
-
-    document.getElementById('odevTur').value = 'GÜNLÜK';
-    document.getElementById('odevBaslik').value = '';
-    document.getElementById('odevBaslangic').value = new Date().toISOString().split('T')[0];
-    document.getElementById('odevBitis').value = '';
-    document.getElementById('odevAciklama').value = '';
-    document.getElementById('odevLink').value = '';
-    
-    openModalWithBackHistory('addOdevModal');
-
-    // Kapatma Butonları
-    const btnCloseX = document.getElementById('btnCloseOdevModal'); 
-    const btnCancel = document.getElementById('btnCancelOdev'); 
-    const handleClose = (e) => { e.preventDefault(); window.history.back(); };
-
-    if(btnCloseX) btnCloseX.onclick = handleClose;
-    if(btnCancel) btnCancel.onclick = handleClose;
-
-    // Kaydet Butonu
-    const btnSave = document.getElementById('btnSaveOdev');
-    btnSave.onclick = saveGlobalOdev; 
-}
-
-// --- DİĞER FONKSİYONLAR (Takvim, Kaydet vb.) ---
+// --- HAFTALIK TAKVİM MANTIĞI ---
 function changeWeek(offset) {
     currentWeekOffset += offset;
     renderWeeklyGrid();
@@ -195,6 +161,10 @@ function renderWeeklyGrid() {
     const grid = document.getElementById('calendarGrid');
     const label = document.getElementById('weekLabel');
     if(!currentStudentId) return;
+
+    // Grid CSS Yapısı (Mobil: Block / Masaüstü: Grid)
+    // Bu yapı kesin olarak mobilde alt alta, PC'de yan yana olmasını sağlar.
+    grid.className = "w-full grid grid-cols-1 xl:grid-cols-7 gap-4";
 
     const today = new Date();
     const currentDay = today.getDay(); 
@@ -217,8 +187,8 @@ function renderWeeklyGrid() {
         const dailyOdevs = allFetchedOdevs.filter(o => o.bitisTarihi === dateStr);
 
         const dayCol = document.createElement('div');
-        // RESPONSIVE: Mobilde min-h yok, içerik kadar. Masaüstünde sabit yükseklik.
-        dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-300 ring-2 ring-purple-50 shadow-md' : 'border-gray-200'} overflow-hidden xl:min-h-[150px] transition-all`;
+        // MOBİL DÜZELTME: Mobilde genişlik %100, yükseklik esnek. Masaüstünde min-h-150px
+        dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-300 ring-2 ring-purple-50 shadow-md' : 'border-gray-200'} overflow-hidden xl:min-h-[150px] transition-all w-full`;
         
         let headerHtml = `
             <div class="p-3 xl:p-2 flex justify-between xl:block items-center border-b ${isToday ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-600'}">
@@ -265,7 +235,7 @@ function createOdevCard(o) {
                 </div>`;
         }
     } else {
-        statusClass = "border-l-4 border-blue-500 bg-white shadow-sm";
+        statusClass = "border-l-4 border-blue-500 bg-white shadow-sm hover:shadow-md transition-shadow";
         icon = `<i class="fa-solid fa-spinner text-blue-400"></i>`;
         buttons = `<button onclick="deleteGlobalDoc('${o.path}')" class="text-xs text-gray-300 hover:text-red-500 ml-auto p-1"><i class="fa-solid fa-trash"></i></button>`;
     }
@@ -286,18 +256,25 @@ function startOdevListener(db, uid, appId, studentId) {
     document.getElementById('weeklyCalendarContainer').classList.remove('hidden');
     document.getElementById('odevEmptyState').classList.add('hidden');
     document.getElementById('calendarGrid').classList.remove('hidden');
-    document.getElementById('calendarGrid').classList.add('grid');
 
-    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler"));
+    const q = query(
+        collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler")
+    );
+    
     if (activeListeners.odevlerUnsubscribe) activeListeners.odevlerUnsubscribe();
     
     activeListeners.odevlerUnsubscribe = onSnapshot(q, (snap) => {
         allFetchedOdevs = [];
-        snap.forEach(doc => { allFetchedOdevs.push({ id: doc.id, ...doc.data(), path: doc.ref.path }); });
+        snap.forEach(doc => {
+            allFetchedOdevs.push({ id: doc.id, ...doc.data(), path: doc.ref.path });
+        });
         renderWeeklyGrid(); 
-    }, (error) => { console.error("Hata:", error); });
+    }, (error) => {
+        console.error("Hata:", error);
+    });
 }
 
+// --- ÖĞRENCİ SEÇİMİ ---
 async function setupOdevSearchableDropdown(db, uid, appId) {
     const triggerBtn = document.getElementById('odevSelectTrigger');
     const dropdown = document.getElementById('odevSelectDropdown');
@@ -325,6 +302,7 @@ async function setupOdevSearchableDropdown(db, uid, appId) {
                 labelSpan.textContent = s.name;
                 labelSpan.classList.add('font-bold', 'text-purple-700');
                 dropdown.classList.add('hidden'); 
+                
                 startOdevListener(db, uid, appId, s.id);
             };
             listContainer.appendChild(item);
@@ -334,6 +312,41 @@ async function setupOdevSearchableDropdown(db, uid, appId) {
     triggerBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); if(!dropdown.classList.contains('hidden')) searchInput.focus(); };
     searchInput.oninput = (e) => { renderList(e.target.value); };
     document.addEventListener('click', (e) => { if (!triggerBtn.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden'); });
+}
+
+// --- MODAL AÇMA (DÜZELTİLDİ: GARANTİ HTML + EVENT) ---
+function openAddOdevModal() {
+    if (!currentStudentId) { alert("Lütfen önce öğrenci seçin."); return; }
+
+    // Modalı oluştur (yoksa)
+    ensureModalExists();
+
+    const modal = document.getElementById('addOdevModal');
+    
+    // Değerleri Ata
+    const hiddenInput = document.getElementById('currentStudentIdForOdev');
+    if(hiddenInput) hiddenInput.value = currentStudentId;
+
+    document.getElementById('odevTur').value = 'GÜNLÜK';
+    document.getElementById('odevBaslik').value = '';
+    document.getElementById('odevBaslangic').value = new Date().toISOString().split('T')[0];
+    document.getElementById('odevBitis').value = '';
+    document.getElementById('odevAciklama').value = '';
+    document.getElementById('odevLink').value = '';
+    
+    openModalWithBackHistory('addOdevModal');
+
+    // Kapatma Butonları
+    const btnCloseX = document.getElementById('btnCloseOdevModal'); 
+    const btnCancel = document.getElementById('btnCancelOdev'); 
+    const handleClose = (e) => { e.preventDefault(); window.history.back(); };
+
+    if(btnCloseX) btnCloseX.onclick = handleClose;
+    if(btnCancel) btnCancel.onclick = handleClose;
+
+    // Kaydet Butonu
+    const btnSave = document.getElementById('btnSaveOdev');
+    btnSave.onclick = saveGlobalOdev; 
 }
 
 export async function saveGlobalOdev() {
@@ -358,28 +371,43 @@ export async function saveGlobalOdev() {
     try {
         if (tur === 'GÜNLÜK') {
             const newDocRef = doc(collectionRef);
-            batch.set(newDocRef, { tur: 'GÜNLÜK', title: title, aciklama: desc, link: link, baslangicTarihi: startDateStr, bitisTarihi: endDateStr, durum: 'devam', onayDurumu: 'bekliyor', kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp() });
+            batch.set(newDocRef, {
+                tur: 'GÜNLÜK', title: title, aciklama: desc, link: link,
+                baslangicTarihi: startDateStr, bitisTarihi: endDateStr,
+                durum: 'devam', onayDurumu: 'bekliyor',
+                kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
+            });
         } else if (tur === 'HAFTALIK') {
             let current = new Date(startDateStr);
             const end = new Date(endDateStr);
             let count = 0;
             while (current <= end) {
-                if (current.getDay() === 0) { 
+                if (current.getDay() === 0) { // Pazar
                     const deadlineStr = current.toISOString().split('T')[0];
                     const newDocRef = doc(collectionRef);
-                    batch.set(newDocRef, { tur: 'HAFTALIK', title: `${title} (Hafta Sonu)`, aciklama: desc, link: link, baslangicTarihi: startDateStr, bitisTarihi: deadlineStr, durum: 'devam', onayDurumu: 'bekliyor', kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp() });
+                    batch.set(newDocRef, {
+                        tur: 'HAFTALIK', title: `${title} (Hafta Sonu)`, aciklama: desc, link: link,
+                        baslangicTarihi: startDateStr, bitisTarihi: deadlineStr,
+                        durum: 'devam', onayDurumu: 'bekliyor',
+                        kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
+                    });
                     count++;
                 }
                 current.setDate(current.getDate() + 1);
             }
             if (count === 0) {
                 const newDocRef = doc(collectionRef);
-                batch.set(newDocRef, { tur: 'HAFTALIK', title: title, aciklama: desc, link: link, baslangicTarihi: startDateStr, bitisTarihi: endDateStr, durum: 'devam', onayDurumu: 'bekliyor', kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp() });
+                batch.set(newDocRef, {
+                    tur: 'HAFTALIK', title: title, aciklama: desc, link: link,
+                    baslangicTarihi: startDateStr, bitisTarihi: endDateStr, 
+                    durum: 'devam', onayDurumu: 'bekliyor',
+                    kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
+                });
             }
         }
 
         await batch.commit();
-        window.history.back(); // Sadece modalı kapat
+        window.history.back(); // Modalı kapat (Liste yenilenmez, yerinde kalır)
 
     } catch (e) {
         console.error(e);

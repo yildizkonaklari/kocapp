@@ -76,7 +76,8 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
                 <p>Programı görüntülemek için lütfen öğrenci seçin.</p>
             </div>
             
-            <div id="calendarGrid" class="hidden grid grid-cols-1 md:grid-cols-7 gap-3"></div>
+            <div id="calendarGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3"></div>
+
         </div>
     `;
 

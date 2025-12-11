@@ -76,8 +76,7 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
                 <p>Programı görüntülemek için lütfen öğrenci seçin.</p>
             </div>
             
-            <div id="calendarGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3"></div>
-
+            <div id="calendarGrid" class="hidden grid grid-cols-1 md:grid-cols-7 gap-3"></div>
         </div>
     `;
 
@@ -142,8 +141,8 @@ function renderWeeklyGrid() {
         // Filter homework for this day
         const dailyOdevs = allFetchedOdevs.filter(o => o.bitisTarihi === dateStr);
 
-
-const dayCol = document.createElement('div');
+        const dayCol = document.createElement('div');
+        dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-300 ring-2 ring-purple-50 shadow-md' : 'border-gray-200'} overflow-hidden transition-all`;
         
         let headerHtml = `
             <div class="p-2 text-center border-b ${isToday ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-600'} flex justify-between md:block items-center">
@@ -211,7 +210,7 @@ function startOdevListener(db, uid, appId, studentId) {
     document.getElementById('weeklyCalendarContainer').classList.remove('hidden');
     document.getElementById('odevEmptyState').classList.add('hidden');
     document.getElementById('calendarGrid').classList.remove('hidden');
-
+    document.getElementById('calendarGrid').classList.add('grid');
 
     const q = query(
         collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler")

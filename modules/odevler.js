@@ -143,7 +143,6 @@ function renderWeeklyGrid() {
 
 
 const dayCol = document.createElement('div');
-dayCol.className = `w-full flex flex-col bg-white rounded-xl border ${isToday ? ...}`;
         
         let headerHtml = `
             <div class="p-2 text-center border-b ${isToday ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-600'} flex justify-between md:block items-center">

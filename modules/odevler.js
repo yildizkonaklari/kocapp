@@ -141,8 +141,9 @@ function renderWeeklyGrid() {
         // Filter homework for this day
         const dailyOdevs = allFetchedOdevs.filter(o => o.bitisTarihi === dateStr);
 
-        const dayCol = document.createElement('div');
-        dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-300 ring-2 ring-purple-50 shadow-md' : 'border-gray-200'} overflow-hidden transition-all`;
+
+const dayCol = document.createElement('div');
+dayCol.className = `w-full flex flex-col bg-white rounded-xl border ${isToday ? ...}`;
         
         let headerHtml = `
             <div class="p-2 text-center border-b ${isToday ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-600'} flex justify-between md:block items-center">
@@ -210,7 +211,7 @@ function startOdevListener(db, uid, appId, studentId) {
     document.getElementById('weeklyCalendarContainer').classList.remove('hidden');
     document.getElementById('odevEmptyState').classList.add('hidden');
     document.getElementById('calendarGrid').classList.remove('hidden');
-    document.getElementById('calendarGrid').classList.add('grid');
+
 
     const q = query(
         collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler")

@@ -2,55 +2,121 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Koç Giriş Ekranı</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NetKoç - Koç Girişi</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="public/favicon.png">
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
 </head>
-<body class="bg-gray-100 flex justify-center items-center min-h-screen">
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
-        <h2 class="text-3xl font-bold text-center text-gray-800 mb-2">Koç Paneli</h2>
-        <p class="text-center text-gray-500 mb-6">Lütfen giriş yapın.</p>
+<body class="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+
+    <div class="absolute top-0 left-0 w-64 h-64 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
+    <div class="absolute bottom-0 right-0 w-96 h-96 bg-purple-400 opacity-20 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl"></div>
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 animate-fade-in-up">
         
-        <div class="space-y-4">
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">E-posta</label>
-                <input type="email" id="email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+        <div class="pt-10 pb-6 px-8 text-center">
+            <div class="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm transform rotate-3">
+                <i class="fa-solid fa-user-tie text-4xl text-indigo-600"></i>
             </div>
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Şifre</label>
-                <input type="password" id="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+            <h1 class="text-2xl font-bold text-gray-800">Koç Paneli</h1>
+            <p class="text-gray-500 text-sm mt-1">Hoş geldiniz, lütfen giriş yapın.</p>
+        </div>
+
+        <div class="px-8 pb-8">
+            <div id="errorMessage" class="hidden bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r text-sm flex items-start gap-2">
+                <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+                <span>Hata mesajı burada görünecek.</span>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">E-Posta Adresi</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-regular fa-envelope"></i>
+                        </div>
+                        <input type="email" id="email" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white" placeholder="ornek@mail.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Şifre</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="password" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="rememberMe" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
+                        <span class="ml-2 text-gray-600">Beni Hatırla</span>
+                    </label>
+                    <a href="#" onclick="alert('Şifre sıfırlama için admin ile iletişime geçin.'); return false;" class="text-indigo-600 hover:text-indigo-800 font-medium transition-colors">Şifremi Unuttum?</a>
+                </div>
+
+                <button id="loginButton" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>Giriş Yap</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+            </div>
+
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-500">
+                    Hesabınız yok mu? 
+                    <a href="signup.html" class="text-indigo-600 font-bold hover:underline">Hemen Kaydolun</a>
+                </p>
             </div>
         </div>
-        
-        <p id="errorMessage" class="text-sm text-red-600 mt-4 text-center hidden"></p>
-        
-        <button id="loginButton" class="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 mt-6 font-semibold">
-            Giriş Yap
-        </button>
-        
-        <p class="text-sm text-gray-600 text-center mt-4">
-            Hesabınız yok mu? 
-            <a href="signup.html" class="font-medium text-purple-600 hover:text-purple-500">
-                Hemen kaydolun
+
+        <div class="bg-gray-50 px-8 py-5 border-t border-gray-100 text-center">
+            <p class="text-xs text-gray-500 mb-3 font-medium uppercase tracking-wider">Öğrenci misiniz?</p>
+            <a href="student-login.html" class="w-full inline-flex items-center justify-center gap-2 bg-white border-2 border-indigo-100 text-indigo-700 font-bold py-3 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-colors shadow-sm">
+                <i class="fa-solid fa-graduation-cap text-xl"></i>
+                <span>Öğrenci Girişi'ne Git</span>
             </a>
-        </p>
+        </div>
     </div>
+
+    <div class="mt-8 text-center text-indigo-200 text-xs relative z-10">
+        <p>&copy; 2025 NetKoç Takip Sistemi</p>
+        <p class="opacity-60 mt-1">Tüm Hakları Saklıdır.</p>
+    </div>
+
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+    </style>
+
     <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then((registration) => {
-          console.log('Service Worker başarıyla kaydedildi:', registration.scope);
-        })
-        .catch((error) => {
-          console.log('Service Worker kaydı başarısız:', error);
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js');
         });
-    });
-  }
-</script>
-    <!-- Bu sayfanın JS'i (auth.js) -->
+      }
+    </script>
+
     <script type="module" src="auth.js"></script>
 </body>
 </html>

@@ -466,7 +466,7 @@ async function renderSoruTakibiGrid() {
 }
 
 function getWeekDates(offset) {
-    const d=['Paz','Sal','Çar','Per','Cum','Cmt','Paz'], w=[], t=new Date();
+    const d=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'], w=[], t=new Date();
     const m = new Date(t.getFullYear(), t.getMonth(), t.getDate()-(t.getDay()||7)+1+(offset*7));
     for(let i=0; i<7; i++) { const c=new Date(m); c.setDate(m.getDate()+i); w.push({dateStr:c.toISOString().split('T')[0], dayName:d[i], dayNum:c.getDate(), isToday:c.toDateString()===t.toDateString()}); }
     return w;

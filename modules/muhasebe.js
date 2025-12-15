@@ -1,9 +1,7 @@
-// === MUHASEBE MODÜLÜ (GÜNCELLENMİŞ) ===
+// === MODULES/MUHASEBE.JS (GÜNCELLENMİŞ & GÜVENLİ) ===
 
 import { 
     doc, 
-    addDoc, 
-    updateDoc, 
     collection, 
     query, 
     onSnapshot, 
@@ -11,7 +9,7 @@ import {
     serverTimestamp,
     increment,
     limit,
-    getDocs 
+    writeBatch // EKLENDİ: Toplu işlem için
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { 
@@ -54,13 +52,13 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
             </div>
         </div>
 
-        <div id="muhasebeListContainer" class="bg-white rounded-lg shadow border border-gray-100">
+        <div id="muhasebeListContainer" class="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
             <p class="text-gray-500 text-center py-8">Veriler yükleniyor...</p>
         </div>
 
         <div class="mt-8">
             <h3 class="text-lg font-semibold text-gray-700 mb-4">Son İşlem Geçmişi</h3>
-            <div id="transactionLogContainer" class="bg-white rounded-lg shadow border border-gray-100">
+            <div id="transactionLogContainer" class="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
                 <p class="text-gray-500 text-center py-4">Geçmiş yükleniyor...</p>
             </div>
         </div>
@@ -111,7 +109,6 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
 function loadMuhasebeVerileri(db, currentUserId, appId) {
     const listContainer = document.getElementById("muhasebeListContainer");
     
-    // Verileri çekmeye çalış
     try {
         const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
         
@@ -175,7 +172,7 @@ function renderMuhasebeList(students) {
                         else durumBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 whitespace-nowrap">Hesap Kapalı</span>';
 
                         return `
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${s.ad} ${s.soyad}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">${formatCurrency(borc)}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">${formatCurrency(odenen)}</td>
@@ -195,9 +192,7 @@ function renderMuhasebeList(students) {
 function loadIslemGecmisi(db, currentUserId, appId) {
     const container = document.getElementById("transactionLogContainer");
     
-    // HATA DÜZELTME: Sıralama kriteri değiştirildi. 'eklenmeZamani' daha güvenilir.
-    // Eğer bu da hata verirse, Firestore konsolunda bu sorgu için indeks oluşturmanız gerektiğine dair
-    // konsolda (F12) bir link çıkacaktır. O linke tıklamanız gerekebilir.
+    // İşlem geçmişini "eklenmeZamani"na göre sırala
     const q = query(
         collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), 
         orderBy("eklenmeZamani", "desc"), 
@@ -229,7 +224,7 @@ function loadIslemGecmisi(db, currentUserId, appId) {
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         ${transactions.map(t => `
-                            <tr>
+                            <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${t.tarih}</td>
                                 <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${t.ogrenciAd}</td>
                                 <td class="px-6 py-3 whitespace-nowrap text-sm">
@@ -254,7 +249,7 @@ function loadIslemGecmisi(db, currentUserId, appId) {
 }
 
 
-// --- 3. EXPORT EDİLEN MODAL KAYDETME FONKSİYONLARI ---
+// --- 3. GÜVENLİ & ATOMİK KAYDETME FONKSİYONLARI ---
 
 export async function saveNewBorc(db, currentUserId, appId) {
     const studentId = document.getElementById("borcStudentId").value;
@@ -276,7 +271,12 @@ export async function saveNewBorc(db, currentUserId, appId) {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
 
-        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), {
+        // BATCH İŞLEMİ (Atomik)
+        const batch = writeBatch(db);
+
+        // 1. İşlem Kaydını Oluştur
+        const transactionRef = doc(collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"));
+        batch.set(transactionRef, {
             ogrenciId: studentId,
             ogrenciAd: studentName,
             tur: 'borc',
@@ -286,10 +286,14 @@ export async function saveNewBorc(db, currentUserId, appId) {
             eklenmeZamani: serverTimestamp()
         });
 
+        // 2. Öğrenci Bakiyesini Güncelle
         const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
-        await updateDoc(studentRef, {
+        batch.update(studentRef, {
             toplamBorc: increment(tutar)
         });
+
+        // Hepsini aynı anda uygula
+        await batch.commit();
 
         document.getElementById("addBorcModal").style.display = "none";
     } catch (error) {
@@ -322,7 +326,12 @@ export async function saveNewTahsilat(db, currentUserId, appId) {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
 
-        await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), {
+        // BATCH İŞLEMİ (Atomik)
+        const batch = writeBatch(db);
+
+        // 1. İşlem Kaydını Oluştur
+        const transactionRef = doc(collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"));
+        batch.set(transactionRef, {
             ogrenciId: studentId,
             ogrenciAd: studentName,
             tur: 'tahsilat',
@@ -332,10 +341,14 @@ export async function saveNewTahsilat(db, currentUserId, appId) {
             eklenmeZamani: serverTimestamp()
         });
 
+        // 2. Öğrenci Bakiyesini Güncelle
         const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
-        await updateDoc(studentRef, {
+        batch.update(studentRef, {
             toplamOdenen: increment(tutar)
         });
+
+        // Hepsini aynı anda uygula
+        await batch.commit();
 
         document.getElementById("addTahsilatModal").style.display = "none";
     } catch (error) {

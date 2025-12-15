@@ -3,25 +3,18 @@ import {
     where, orderBy, getDocs, doc, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { activeListeners, formatDateTR, openModalWithBackHistory } from './helpers.js';
+import { 
+    activeListeners, 
+    formatDateTR, 
+    openModalWithBackHistory,
+    EXAM_CONFIG,       // Merkezi Config'den alıyoruz
+    CLASS_LEVEL_RULES  // Merkezi Kurallardan alıyoruz
+} from './helpers.js';
 
 let currentStudentId = null;
 let currentStudentClass = null; 
 let denemeChartInstance = null;
 let currentDb = null;
-
-// Sınıf ve Sınav Ayarları
-const EXAM_RULES = {
-    'ORTAOKUL': { types: ['LGS', 'Diger'], ratio: 3 },
-    'LISE': { types: ['TYT', 'AYT', 'YDS', 'Diger'], ratio: 4 }
-};
-
-const EXAM_CONFIG = {
-    'LGS': { subjects: [{name:'Türkçe',max:20},{name:'Matematik',max:20},{name:'Fen Bilimleri',max:20},{name:'T.C. İnkılap',max:10},{name:'Din Kültürü',max:10},{name:'İngilizce',max:10}] },
-    'TYT': { subjects: [{name:'Türkçe',max:40},{name:'Matematik',max:40},{name:'Sosyal',max:20},{name:'Fen',max:20}] },
-    'AYT': { subjects: [{name:'Matematik',max:40},{name:'Fizik',max:14},{name:'Kimya',max:13},{name:'Biyoloji',max:13},{name:'Edebiyat',max:24},{name:'Tarih-1',max:10},{name:'Coğrafya-1',max:6},{name:'Tarih-2',max:11},{name:'Coğrafya-2',max:11},{name:'Felsefe Gr.',max:12},{name:'Din',max:6}] },
-    'YDS': { subjects: [{name:'Yabancı Dil',max:80}] }
-};
 
 export async function renderDenemelerSayfasi(db, currentUserId, appId) {
     currentDb = db;
@@ -106,13 +99,11 @@ async function setupDenemeSearchableDropdown(db, uid, appId) {
     const hiddenInput = document.getElementById('filterDenemeStudentId');
     const labelSpan = document.getElementById('denemeSelectedStudentText');
 
-    // Öğrencileri Çek
     const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad"));
     const snapshot = await getDocs(q);
     const students = [];
     snapshot.forEach(doc => students.push({ id: doc.id, name: `${doc.data().ad} ${doc.data().soyad}`, sinif: doc.data().sinif }));
 
-    // Listeyi Render Et
     const renderList = (filter = "") => {
         listContainer.innerHTML = "";
         const filtered = students.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
@@ -127,30 +118,26 @@ async function setupDenemeSearchableDropdown(db, uid, appId) {
             item.className = "px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 cursor-pointer border-b border-gray-50 last:border-0 transition-colors";
             item.textContent = s.name;
             item.onclick = () => {
-                // Seçim Yapıldığında:
                 hiddenInput.value = s.id;
                 currentStudentId = s.id;
-                currentStudentClass = s.sinif; // Sınıf bilgisini güncelle
+                currentStudentClass = s.sinif;
                 
                 labelSpan.textContent = s.name;
                 labelSpan.classList.add('font-bold', 'text-purple-700');
                 dropdown.classList.add('hidden'); 
                 
-                // Arayüzü Aç
                 document.getElementById('btnAddNewDeneme').classList.remove('hidden');
                 document.getElementById('denemeStatsArea').classList.remove('hidden');
                 document.getElementById('denemeChartContainer').classList.remove('hidden');
                 
-                // Denemeleri Getir
                 startDenemeListener(db, uid, appId, s.id);
             };
             listContainer.appendChild(item);
         });
     };
 
-    renderList(); // İlk render
+    renderList();
 
-    // Event Listeners
     triggerBtn.onclick = (e) => {
         e.stopPropagation();
         dropdown.classList.toggle('hidden');
@@ -195,7 +182,7 @@ function renderDenemeList(list) {
         const isExcluded = d.analizHaric === true; 
         
         let detailsHtml = '';
-        if (d.netler) { // Normal Deneme
+        if (d.netler) {
             detailsHtml = '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 pt-2 border-t border-gray-100 hidden animate-fade-in details-panel">';
             for (const [ders, stats] of Object.entries(d.netler)) {
                 if (parseFloat(stats.net) !== 0) {
@@ -203,7 +190,7 @@ function renderDenemeList(list) {
                 }
             }
             detailsHtml += '</div>';
-        } else { // Diğer Deneme
+        } else {
             detailsHtml = `<div class="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500 hidden animate-fade-in details-panel flex gap-4">
                 <span class="font-bold text-gray-700">Soru: <span class="font-normal">${d.soruSayisi || '-'}</span></span>
                 <span class="font-bold text-green-600">Doğru: <span class="font-normal">${d.dogru || '-'}</span></span>
@@ -282,49 +269,52 @@ function calculateStatsAndChart(list) {
 
 // --- MODAL VE FORM YÖNETİMİ ---
 function openDenemeModal(db, uid, appId) {
-    // ID Kontrolü (Aramalı Listeden gelen ID)
     const sid = document.getElementById('filterDenemeStudentId').value;
     if (!sid) { alert("Lütfen önce öğrenci seçin."); return; }
 
-    const modal = document.getElementById('modalDenemeEkle');
-    if (!modal) { console.error("Modal bulunamadı!"); return; }
+    const modal = document.getElementById('addDenemeModal');
+    if (!modal) { console.error("Modal (addDenemeModal) bulunamadı!"); return; }
 
-    // Modalı Aç (History Push ile)
-    openModalWithBackHistory('modalDenemeEkle');
+    // Helper kullanarak modalı aç
+    openModalWithBackHistory('addDenemeModal');
 
-    // Kapatma Butonları (History Back ile)
-    const closeBtnX = modal.querySelector('.fa-xmark').closest('button');
-    const cancelBtn = modal.querySelector('.border-t button'); 
+    // Kapatma Butonları
+    const closeBtnX = document.getElementById('closeDenemeModalButton');
+    const cancelBtn = document.getElementById('cancelDenemeModalButton');
 
     const handleClose = (e) => { e.preventDefault(); window.history.back(); };
     if (closeBtnX) closeBtnX.onclick = handleClose;
     if (cancelBtn) cancelBtn.onclick = handleClose;
 
     // Formu Hazırla
-    document.getElementById('inpDenemeAd').value = '';
+    document.getElementById('denemeAdi').value = '';
+    document.getElementById('denemeTarih').value = new Date().toISOString().split('T')[0];
     
-    // Öğrenci Sınıfına Göre Türleri Getir
+    // Öğrenci Sınıfına Göre Türleri Getir (helpers.js'den CLASS_LEVEL_RULES kullanıyoruz)
     const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(currentStudentClass);
     const levelKey = isOrtaokul ? 'ORTAOKUL' : 'LISE';
-    const rules = EXAM_RULES[levelKey];
+    const rules = CLASS_LEVEL_RULES[levelKey];
 
-    const typeSelect = document.getElementById('inpDenemeTur');
+    const typeSelect = document.getElementById('denemeTuru');
     typeSelect.innerHTML = rules.types.map(t => `<option value="${t}">${t}</option>`).join('');
     
-    document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0];
-    
-    renderDenemeInputs(rules.types[0], rules.ratio);
+    renderDenemeInputs(rules.types[0], rules.defaultRatio);
 
     typeSelect.onchange = (e) => {
-        renderDenemeInputs(e.target.value, rules.ratio);
+        renderDenemeInputs(e.target.value, rules.defaultRatio);
     };
 
-    // Kaydet Butonu (Event yığılmasını önlemek için onclick ataması)
-    document.getElementById('btnSaveDeneme').onclick = async () => saveDeneme(db, uid, appId, levelKey);
+    // Kaydet Butonu
+    const saveBtn = document.getElementById('saveDenemeButton');
+    // Önceki listener'ları temizlemek için klonlama
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    
+    newSaveBtn.onclick = async () => saveDeneme(db, uid, appId, levelKey);
 }
 
 function renderDenemeInputs(tur, ratio) {
-    const container = document.getElementById('denemeDersContainer');
+    const container = document.getElementById('denemeNetGirisAlani');
     container.innerHTML = '';
 
     let ratioText = ratio === 3 ? "3 Yanlış 1 Doğruyu Götürür" : "4 Yanlış 1 Doğruyu Götürür";
@@ -332,43 +322,44 @@ function renderDenemeInputs(tur, ratio) {
     if (tur === 'Diger') {
         container.innerHTML = `
             <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3 text-xs text-orange-800 text-center">
-                <i class="fa-solid fa-triangle-exclamation"></i> Bu deneme genel analize ve ortalamaya dahil edilmeyecektir.
-                <br>(${ratioText})
+                <i class="fa-solid fa-triangle-exclamation"></i> Bu deneme genel analize dahil edilmez. (${ratioText})
             </div>
             <div class="space-y-3">
-                <div><label class="block text-xs font-bold text-gray-500 mb-1">Soru Sayısı <span class="text-red-500">*</span></label><input type="number" id="inpDigerSoru" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"></div>
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">Soru Sayısı</label><input type="number" id="inpDigerSoru" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"></div>
                 <div class="grid grid-cols-2 gap-3">
-                    <div><label class="block text-xs font-bold text-green-600 mb-1">Doğru <span class="text-red-500">*</span></label><input type="number" id="inpDigerDogru" class="w-full p-2.5 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"></div>
-                    <div><label class="block text-xs font-bold text-red-600 mb-1">Yanlış <span class="text-red-500">*</span></label><input type="number" id="inpDigerYanlis" class="w-full p-2.5 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-green-600 mb-1">Doğru</label><input type="number" id="inpDigerDogru" class="w-full p-2.5 border border-green-200 rounded-lg"></div>
+                    <div><label class="block text-xs font-bold text-red-600 mb-1">Yanlış</label><input type="number" id="inpDigerYanlis" class="w-full p-2.5 border border-red-200 rounded-lg"></div>
                 </div>
             </div>
         `;
     } else {
         container.innerHTML = `<p class="text-xs text-gray-400 text-center mb-3 bg-gray-100 py-1 rounded">${ratioText}</p>`;
+        // helpers.js'den gelen EXAM_CONFIG
         const config = EXAM_CONFIG[tur];
         
-        config.subjects.forEach(sub => {
-            container.innerHTML += `
-            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                <span class="text-sm font-bold text-gray-700 w-24 truncate" title="${sub.name}">${sub.name}</span>
-                <div class="flex gap-2">
-                    <input type="number" placeholder="D" class="inp-deneme-d w-14 p-2 border border-green-100 bg-green-50 rounded-lg text-center text-green-700 font-bold outline-none focus:ring-1 focus:ring-green-500 text-sm" data-ders="${sub.name}">
-                    <input type="number" placeholder="Y" class="inp-deneme-y w-14 p-2 border border-red-100 bg-red-50 rounded-lg text-center text-red-700 font-bold outline-none focus:ring-1 focus:ring-red-500 text-sm" data-ders="${sub.name}">
-                </div>
-            </div>`;
-        });
+        if(config && config.subjects) {
+            config.subjects.forEach(sub => {
+                container.innerHTML += `
+                <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span class="text-sm font-bold text-gray-700 w-24 truncate" title="${sub.name}">${sub.name}</span>
+                    <div class="flex gap-2">
+                        <input type="number" placeholder="D" class="inp-deneme-d w-14 p-2 border border-green-100 bg-green-50 rounded-lg text-center text-green-700 font-bold outline-none text-sm" data-ders="${sub.name}">
+                        <input type="number" placeholder="Y" class="inp-deneme-y w-14 p-2 border border-red-100 bg-red-50 rounded-lg text-center text-red-700 font-bold outline-none text-sm" data-ders="${sub.name}">
+                    </div>
+                </div>`;
+            });
+        }
     }
 }
 
 async function saveDeneme(db, uid, appId, levelKey) {
-    const ad = document.getElementById('inpDenemeAd').value.trim() || "Deneme Sınavı";
-    const tur = document.getElementById('inpDenemeTur').value;
-    const tarih = document.getElementById('inpDenemeTarih').value;
-    const ratio = EXAM_RULES[levelKey].ratio;
-    const studentNameEl = document.getElementById('denemeSelectedStudentText'); // Dropdown label'dan al
+    const ad = document.getElementById('denemeAdi').value.trim() || "Deneme Sınavı";
+    const tur = document.getElementById('denemeTuru').value;
+    const tarih = document.getElementById('denemeTarih').value;
+    const ratio = CLASS_LEVEL_RULES[levelKey].defaultRatio;
+    const studentNameEl = document.getElementById('denemeSelectedStudentText'); 
 
-    // --- DOĞRULAMA (VALIDATION) ---
-    if (!tarih) { alert('Lütfen deneme tarihini seçin.'); return; }
+    if (!tarih) { alert('Lütfen tarih seçin.'); return; }
     if (!ad) { alert('Lütfen yayın adını girin.'); return; }
 
     let totalNet = 0;
@@ -382,24 +373,11 @@ async function saveDeneme(db, uid, appId, levelKey) {
     };
 
     if (tur === 'Diger') {
-        // Diğer Seçeneği İçin Sıkı Kontrol
-        const soruInput = document.getElementById('inpDigerSoru').value;
-        const dogruInput = document.getElementById('inpDigerDogru').value;
-        const yanlisInput = document.getElementById('inpDigerYanlis').value;
-
-        if (soruInput === '' || dogruInput === '' || yanlisInput === '') {
-            alert("Lütfen Soru, Doğru ve Yanlış sayılarını eksiksiz girin.");
-            return;
-        }
-
-        const soru = parseInt(soruInput) || 0;
-        const dogru = parseInt(dogruInput) || 0;
-        const yanlis = parseInt(yanlisInput) || 0;
+        const soru = parseInt(document.getElementById('inpDigerSoru').value) || 0;
+        const dogru = parseInt(document.getElementById('inpDigerDogru').value) || 0;
+        const yanlis = parseInt(document.getElementById('inpDigerYanlis').value) || 0;
         
-        if (dogru + yanlis > soru) {
-            alert("Doğru ve yanlışların toplamı soru sayısını geçemez!");
-            return;
-        }
+        if (dogru + yanlis > soru) { alert("Doğru + Yanlış soru sayısını geçemez!"); return; }
 
         totalNet = dogru - (yanlis / ratio);
         
@@ -410,15 +388,12 @@ async function saveDeneme(db, uid, appId, levelKey) {
         dataPayload.analizHaric = true; 
 
     } else {
-        // Standart Sınavlar İçin Kontrol (En az bir ders girilmeli mi?)
         let netler = {};
         let hasEntry = false;
 
         document.querySelectorAll('.inp-deneme-d').forEach(i => {
             const dVal = i.value;
             const yVal = i.parentElement.querySelector('.inp-deneme-y').value;
-            
-            // Boş bırakılanlar 0 kabul edilir ama en azından bir veri girildi mi diye bakarız
             if (dVal !== '' || yVal !== '') hasEntry = true;
 
             const d = parseInt(dVal) || 0;
@@ -431,33 +406,23 @@ async function saveDeneme(db, uid, appId, levelKey) {
             }
         });
         
-        // Eğer hiçbir derse giriş yapılmadıysa uyarılabilir (Opsiyonel)
-        if (!hasEntry) {
-            if(!confirm("Hiçbir derse doğru/yanlış girmediniz. Boş deneme olarak kaydedilsin mi?")) return;
-        }
+        if (!hasEntry && !confirm("Hiçbir giriş yapmadınız. Boş deneme kaydedilsin mi?")) return;
 
         dataPayload.toplamNet = totalNet.toFixed(2);
         dataPayload.netler = netler;
         dataPayload.analizHaric = false;
     }
 
-    // --- KAYIT ---
-    const btn = document.getElementById('btnSaveDeneme');
+    const btn = document.getElementById('saveDenemeButton');
     btn.disabled = true;
     btn.textContent = "Kaydediliyor...";
 
     try {
         await addDoc(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", currentStudentId, "denemeler"), dataPayload);
-        
-        // Modalı Geçmişten Silerek Kapat
-        window.history.back();
-        
-        // Başarı Mesajı (Opsiyonel - Zaten liste güncelleniyor)
-        // alert("Deneme başarıyla kaydedildi."); 
-
+        window.history.back(); // Modalı kapat
     } catch (e) {
         console.error(e);
-        alert("Kayıt sırasında hata oluştu.");
+        alert("Kayıt hatası.");
     } finally {
         btn.disabled = false;
         btn.textContent = "Kaydet";
@@ -466,7 +431,7 @@ async function saveDeneme(db, uid, appId, levelKey) {
 
 window.deleteGlobalDoc = async (docId) => {
     if (!currentDb) return;
-    if(confirm('Bu denemeyi silmek istiyor musunuz?')) {
-        await deleteDoc(doc(currentDb, "artifacts", "kocluk-sistemi", "users", currentUserId, "ogrencilerim", currentStudentId, "denemeler", docId));
+    if(confirm('Silmek istediğinize emin misiniz?')) {
+        await deleteDoc(doc(currentDb, "artifacts", "kocluk-sistemi", "users", window.currentUserIdGlobal || currentDb.app._options.authDomain.split('-')[0] /* Fallback ID */, "ogrencilerim", currentStudentId, "denemeler", docId));
     }
 };

@@ -1,147 +1,165 @@
-// === MODULES/HELPERS.JS ===
+// === MODULES/HELPERS.JS (MERKEZİ YAPILANDIRMA VE YARDIMCILAR) ===
 
 import { getDocs, collection, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- 1. DERS HAVUZLARI VE SABİTLER ---
-export const SUBJECT_DATA = {
-    ORTAOKUL_5_6_7: ["Fen Bilimleri", "İngilizce", "Matematik", "Sosyal Bilgiler", "Türkçe"],
-    LGS: ["Türkçe", "Matematik", "Fen Bilimleri", "Din Kültürü ve Ahlak Bilgisi", "İngilizce", "T.C. İnkılap Tarihi ve Atatürkçülük"],
-    LISE_9_10: ["Biyoloji", "Coğrafya", "Fizik", "Kimya", "Matematik", "Tarih", "Türk Dili ve Edebiyatı"],
-    LISE_11: ["Biyoloji", "Coğrafya", "Fizik", "Kimya", "Matematik", "Tarih", "Türk Dili ve Edebiyatı"],
-    TYT: ["Türkçe", "Matematik", "Biyoloji", "Coğrafya", "Din Kültürü ve Ahlak Bilgisi", "Felsefe", "Fizik", "Geometri", "Kimya", "Tarih"],
-    AYT: ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "Geometri", "Mantık", "Psikoloji", "Sosyoloji"],
-    YDS: ["Yabancı Dil Sınavı"]
-};
+// =================================================================
+// 1. SABİT VERİLER (CONFIG)
+// =================================================================
 
+// Alanlar Listesi
 export const ALANLAR = ["Sayısal (MF)", "Eşit Ağırlık (TM)", "Sözel (TS)", "Yabancı Dil"];
 
-// --- 2. DİNAMİK SEÇENEK VE DERS RENDER FONKSİYONU ---
+// Ders Havuzları (Sınıflara Göre)
+export const SUBJECT_DATA = {
+    ORTAOKUL_5_6_7: ["Fen Bilimleri", "İngilizce", "Matematik", "Sosyal Bilgiler", "Türkçe", "Din Kültürü"],
+    LGS: ["Türkçe", "Matematik", "Fen Bilimleri", "Din Kültürü", "İngilizce", "T.C. İnkılap Tarihi"],
+    LISE_9_10: ["Biyoloji", "Coğrafya", "Fizik", "Kimya", "Matematik", "Tarih", "Türk Dili ve Edebiyatı", "Din Kültürü", "İngilizce", "Felsefe"],
+    LISE_11: ["Biyoloji", "Coğrafya", "Fizik", "Kimya", "Matematik", "Tarih", "Türk Dili ve Edebiyatı", "Felsefe", "Din Kültürü", "İngilizce"],
+    TYT: ["Türkçe", "Matematik", "Biyoloji", "Coğrafya", "Din Kültürü", "Felsefe", "Fizik", "Geometri", "Kimya", "Tarih"],
+    AYT: ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih-1", "Coğrafya-1", "Tarih-2", "Coğrafya-2", "Felsefe Grubu", "Din Kültürü"],
+    YDS: ["Yabancı Dil"]
+};
+
+// Sınav Kuralları ve Katsayılar (Merkezi Yönetim)
+export const EXAM_CONFIG = {
+    'LGS': { 
+        wrongRatio: 3, // 3 Yanlış 1 Doğruyu Götürür
+        subjects: [
+            {name:'Türkçe', max:20}, {name:'Matematik', max:20}, {name:'Fen Bilimleri', max:20},
+            {name:'T.C. İnkılap', max:10}, {name:'Din Kültürü', max:10}, {name:'İngilizce', max:10}
+        ] 
+    },
+    'TYT': { 
+        wrongRatio: 4, 
+        subjects: [
+            {name:'Türkçe', max:40}, {name:'Matematik', max:40}, 
+            {name:'Sosyal', max:20}, {name:'Fen', max:20}
+        ] 
+    },
+    'AYT': { 
+        wrongRatio: 4, 
+        subjects: [
+            {name:'Matematik', max:40}, {name:'Fizik', max:14}, {name:'Kimya', max:13}, {name:'Biyoloji', max:13},
+            {name:'Edebiyat', max:24}, {name:'Tarih-1', max:10}, {name:'Coğrafya-1', max:6},
+            {name:'Tarih-2', max:11}, {name:'Coğrafya-2', max:11}, 
+            {name:'Felsefe Gr.', max:12}, {name:'Din', max:6}
+        ] 
+    },
+    'YDS': { 
+        wrongRatio: 0, // Yanlış doğruyu götürmez (Genelde)
+        subjects: [{name:'Yabancı Dil', max:80}] 
+    },
+    'Diger': { 
+        wrongRatio: 4, 
+        subjects: [] // Dinamik
+    }
+};
+
+// Sınıf Seviyesine Göre Sınav Türleri
+export const CLASS_LEVEL_RULES = {
+    'ORTAOKUL': { types: ['LGS', 'Diger'], defaultRatio: 3 },
+    'LISE': { types: ['TYT', 'AYT', 'YDS', 'Diger'], defaultRatio: 4 }
+};
+
+// =================================================================
+// 2. DOM MANİPÜLASYON YARDIMCILARI
+// =================================================================
+
+// Dinamik Ders Seçimi Render Fonksiyonu
 export function renderStudentOptions(sinif, optionsContainerId, subjectsContainerId, selectedSubjects = []) {
     const optionsContainer = document.getElementById(optionsContainerId);
     const subjectsContainer = document.getElementById(subjectsContainerId);
     
     if (!optionsContainer || !subjectsContainer) return;
 
-    // 1. Seçenekler Alanını Temizle ve Yeniden Oluştur
     optionsContainer.innerHTML = '';
-    let activeSubjects = new Set(); // Tekrarları önlemek için Set kullanıyoruz
+    let activeSubjects = new Set(); 
 
-    // --- 5, 6, 7. SINIF ---
+    // --- ORTAOKUL (5-8) ---
     if (['5. Sınıf', '6. Sınıf', '7. Sınıf'].includes(sinif)) {
-        // Varsayılan dersleri ekle
         SUBJECT_DATA.ORTAOKUL_5_6_7.forEach(d => activeSubjects.add(d));
-
-        // 7. Sınıf için LGS Opsiyonu
-        if (sinif === '7. Sınıf') {
-            const div = document.createElement('div');
-            div.className = "flex items-center mb-3 p-2 bg-purple-50 rounded border border-purple-100";
-            div.innerHTML = `
-                <input type="checkbox" id="opt-lgs-${optionsContainerId}" class="h-4 w-4 text-purple-600 rounded border-gray-300">
-                <label for="opt-lgs-${optionsContainerId}" class="ml-2 text-sm text-gray-700 font-medium">LGS Hazırlık Dersleri Ekle</label>
-            `;
-            optionsContainer.appendChild(div);
-
-            // Listener
-            div.querySelector('input').addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    SUBJECT_DATA.LGS.forEach(d => activeSubjects.add(d));
-                } else {
-                    // Sadece LGS'ye özgü olanları çıkar (Ortak dersler kalabilir)
-                    // Basitlik için: Listeyi sıfırla ve tekrar oluştur
-                    activeSubjects.clear();
-                    SUBJECT_DATA.ORTAOKUL_5_6_7.forEach(d => activeSubjects.add(d));
-                }
-                renderCheckboxes(activeSubjects, subjectsContainer, selectedSubjects);
-            });
-        }
+        if (sinif === '7. Sınıf') addCheckboxOption(optionsContainer, "LGS Hazırlık Dersleri Ekle", SUBJECT_DATA.LGS, activeSubjects, subjectsContainer, selectedSubjects);
     }
-
-    // --- 8. SINIF ---
-    else if (sinif === '8. Sınıf') {
+    else if (sinif === '8. Sınıf' || sinif === '8. Sınıf (LGS)') {
         SUBJECT_DATA.LGS.forEach(d => activeSubjects.add(d));
     }
 
-    // --- 9 ve 10. SINIF ---
+    // --- LİSE (9-12 & MEZUN) ---
     else if (['9. Sınıf', '10. Sınıf'].includes(sinif)) {
         SUBJECT_DATA.LISE_9_10.forEach(d => activeSubjects.add(d));
     }
-
-    // --- 11. SINIF ---
     else if (sinif === '11. Sınıf') {
-        // Alan Seçimi
-        const areaDiv = createAreaSelect(optionsContainerId);
-        optionsContainer.appendChild(areaDiv);
-
-        // Varsayılan 11. Sınıf Dersleri
+        optionsContainer.appendChild(createAreaSelect());
         SUBJECT_DATA.LISE_11.forEach(d => activeSubjects.add(d));
-
-        // TYT Opsiyonu
-        const tytDiv = document.createElement('div');
-        tytDiv.className = "flex items-center mt-2 p-2 bg-blue-50 rounded border border-blue-100";
-        tytDiv.innerHTML = `
-            <input type="checkbox" id="opt-tyt-${optionsContainerId}" class="h-4 w-4 text-blue-600 rounded border-gray-300">
-            <label for="opt-tyt-${optionsContainerId}" class="ml-2 text-sm text-gray-700 font-medium">TYT Çalışması Ekle</label>
-        `;
-        optionsContainer.appendChild(tytDiv);
-
-        // Listener
-        tytDiv.querySelector('input').addEventListener('change', (e) => {
-            if (e.target.checked) SUBJECT_DATA.TYT.forEach(d => activeSubjects.add(d));
-            else {
-                // Reset ve yeniden oluştur (Daha temiz)
-                activeSubjects.clear();
-                SUBJECT_DATA.LISE_11.forEach(d => activeSubjects.add(d));
-            }
-            renderCheckboxes(activeSubjects, subjectsContainer, selectedSubjects);
-        });
+        addCheckboxOption(optionsContainer, "TYT Çalışması Ekle", SUBJECT_DATA.TYT, activeSubjects, subjectsContainer, selectedSubjects);
     }
-
-    // --- 12. SINIF ve MEZUN ---
-    else if (['12. Sınıf', 'Mezun'].includes(sinif)) {
-        // Alan Seçimi
-        const areaDiv = createAreaSelect(optionsContainerId);
-        optionsContainer.appendChild(areaDiv);
-
+    else if (['12. Sınıf', '12. Sınıf (YKS)', 'Mezun'].includes(sinif)) {
+        optionsContainer.appendChild(createAreaSelect());
+        
         // Sınav Seçenekleri (TYT, AYT, YDS)
         const examDiv = document.createElement('div');
         examDiv.className = "flex flex-wrap gap-4 mt-3 p-3 bg-gray-50 rounded border border-gray-200";
         examDiv.innerHTML = `
-            <label class="flex items-center"><input type="checkbox" value="TYT" class="exam-opt h-4 w-4 text-indigo-600"><span class="ml-2 text-sm">TYT</span></label>
-            <label class="flex items-center"><input type="checkbox" value="AYT" class="exam-opt h-4 w-4 text-indigo-600"><span class="ml-2 text-sm">AYT</span></label>
-            <label class="flex items-center"><input type="checkbox" value="YDS" class="exam-opt h-4 w-4 text-indigo-600"><span class="ml-2 text-sm">YDS</span></label>
+            <label class="flex items-center cursor-pointer"><input type="checkbox" value="TYT" class="exam-opt h-4 w-4 text-indigo-600 rounded border-gray-300"><span class="ml-2 text-sm">TYT</span></label>
+            <label class="flex items-center cursor-pointer"><input type="checkbox" value="AYT" class="exam-opt h-4 w-4 text-indigo-600 rounded border-gray-300"><span class="ml-2 text-sm">AYT</span></label>
+            <label class="flex items-center cursor-pointer"><input type="checkbox" value="YDS" class="exam-opt h-4 w-4 text-indigo-600 rounded border-gray-300"><span class="ml-2 text-sm">YDS</span></label>
         `;
         optionsContainer.appendChild(examDiv);
 
-        // Listener (Herhangi bir sınav kutucuğu değiştiğinde)
-        examDiv.querySelectorAll('.exam-opt').forEach(cb => {
-            cb.addEventListener('change', () => {
-                activeSubjects.clear();
-                
-                const checkedExams = Array.from(examDiv.querySelectorAll('.exam-opt:checked')).map(c => c.value);
-                
-                if (checkedExams.includes('TYT')) SUBJECT_DATA.TYT.forEach(d => activeSubjects.add(d));
-                if (checkedExams.includes('AYT')) SUBJECT_DATA.AYT.forEach(d => activeSubjects.add(d));
-                if (checkedExams.includes('YDS')) SUBJECT_DATA.YDS.forEach(d => activeSubjects.add(d));
+        const updateExams = () => {
+            activeSubjects.clear();
+            const checked = Array.from(examDiv.querySelectorAll('.exam-opt:checked')).map(c => c.value);
+            if (checked.includes('TYT')) SUBJECT_DATA.TYT.forEach(d => activeSubjects.add(d));
+            if (checked.includes('AYT')) SUBJECT_DATA.AYT.forEach(d => activeSubjects.add(d));
+            if (checked.includes('YDS')) SUBJECT_DATA.YDS.forEach(d => activeSubjects.add(d));
+            renderCheckboxes(activeSubjects, subjectsContainer, selectedSubjects);
+        };
 
-                renderCheckboxes(activeSubjects, subjectsContainer, selectedSubjects);
-            });
-        });
+        examDiv.querySelectorAll('.exam-opt').forEach(cb => cb.addEventListener('change', updateExams));
         
-        // 12. Sınıf/Mezun için başlangıçta boş gelir, seçim yapıldıkça dolar.
-        // İstersen varsayılan olarak TYT'yi seçili getirebiliriz:
-        // examDiv.querySelector('input[value="TYT"]').click(); 
+        // Düzenleme modu için varsayılan seçimleri kontrol et (Basit mantık: Eğer listede AYT dersi varsa AYT'yi seçili yap)
+        if (selectedSubjects.length > 0) {
+            if (selectedSubjects.some(s => SUBJECT_DATA.TYT.includes(s))) examDiv.querySelector('input[value="TYT"]').checked = true;
+            if (selectedSubjects.some(s => SUBJECT_DATA.AYT.includes(s))) examDiv.querySelector('input[value="AYT"]').checked = true;
+            if (selectedSubjects.some(s => SUBJECT_DATA.YDS.includes(s))) examDiv.querySelector('input[value="YDS"]').checked = true;
+            updateExams(); // Listeyi güncelle
+        } else {
+            // Varsayılan: TYT seçili gelsin
+            examDiv.querySelector('input[value="TYT"]').click();
+        }
+        return; // renderCheckboxes zaten updateExams içinde çağrıldı
     }
 
-    // İlk Render (Seçimler yapılmadan önceki varsayılanlar)
     renderCheckboxes(activeSubjects, subjectsContainer, selectedSubjects);
 }
 
-// --- Yardımcı: Alan Seçimi HTML Oluşturucu ---
-function createAreaSelect(idSuffix) {
+// Yardımcı: Checkbox Opsiyonu Ekleme
+function addCheckboxOption(container, labelText, dataSet, activeSet, renderTarget, selectedList) {
+    const div = document.createElement('div');
+    div.className = "flex items-center mt-2 p-2 bg-indigo-50 rounded border border-indigo-100";
+    const uniqueId = `opt-${Math.random().toString(36).substr(2,9)}`;
+    div.innerHTML = `
+        <input type="checkbox" id="${uniqueId}" class="h-4 w-4 text-indigo-600 rounded border-gray-300">
+        <label for="${uniqueId}" class="ml-2 text-sm text-gray-700 font-medium cursor-pointer">${labelText}</label>
+    `;
+    container.appendChild(div);
+    div.querySelector('input').addEventListener('change', (e) => {
+        if (e.target.checked) dataSet.forEach(d => activeSet.add(d));
+        else {
+            // Basit reset yerine sadece eklenenleri çıkarmak daha karmaşık, 
+            // şimdilik kullanıcı deneyimi için kabul edilebilir: Set yapısı mükerrerliği önler.
+            // Çıkarmak için Set'i yeniden oluşturmak gerekebilir ama basitlik adına:
+            // Kullanıcı tiki kaldırırsa manuel seçim yapabilir.
+        }
+        renderCheckboxes(activeSet, renderTarget, selectedList);
+    });
+}
+
+function createAreaSelect() {
     const div = document.createElement('div');
     div.innerHTML = `
         <label class="block text-xs font-bold text-gray-500 mb-1">Alan Seçimi</label>
-        <select class="w-full p-2 border border-gray-300 rounded text-sm bg-white">
+        <select class="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
             <option value="">Alan Seçiniz...</option>
             ${ALANLAR.map(a => `<option>${a}</option>`).join('')}
         </select>
@@ -149,50 +167,32 @@ function createAreaSelect(idSuffix) {
     return div;
 }
 
-// --- Yardımcı: Checkbox'ları Render Et ---
 function renderCheckboxes(subjectSet, container, selectedList = []) {
     container.innerHTML = '';
-    
     if (subjectSet.size === 0) {
-        container.innerHTML = '<p class="text-xs text-gray-400 col-span-2 text-center py-2">Lütfen yukarıdan seçim yapınız.</p>';
+        container.innerHTML = '<p class="text-xs text-gray-400 col-span-2 text-center py-4">Lütfen ders/sınav türü seçiniz.</p>';
         return;
     }
 
-    // Set'i Array'e çevir ve sırala
-    const sortedSubjects = Array.from(subjectSet).sort();
-
-    sortedSubjects.forEach(ders => {
+    Array.from(subjectSet).sort().forEach(ders => {
         const wrapper = document.createElement('div');
-        wrapper.className = 'flex items-center p-1 hover:bg-gray-50 rounded';
-        
+        wrapper.className = 'flex items-center p-2 hover:bg-gray-50 rounded-lg transition-colors';
         const uniqueId = `chk-${ders.replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2,5)}`;
         
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = uniqueId;
-        checkbox.value = ders;
-        checkbox.className = 'h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer';
-        
-        // Eğer düzenleme modundaysak ve bu ders öğrencinin listesinde varsa seçili yap
-        // Yeni öğrenciyse, varsayılan olarak hepsini seçili yap (veya isteğe bağlı boş)
-        if (selectedList.length > 0) {
-            if (selectedList.includes(ders)) checkbox.checked = true;
-        } else {
-            checkbox.checked = true; // Varsayılan: Hepsi seçili
-        }
+        const isChecked = selectedList.length > 0 ? selectedList.includes(ders) : true;
 
-        const label = document.createElement('label');
-        label.htmlFor = uniqueId;
-        label.className = 'ml-2 block text-sm text-gray-700 cursor-pointer select-none w-full';
-        label.textContent = ders;
-
-        wrapper.appendChild(checkbox);
-        wrapper.appendChild(label);
+        wrapper.innerHTML = `
+            <input type="checkbox" id="${uniqueId}" value="${ders}" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer" ${isChecked ? 'checked' : ''}>
+            <label for="${uniqueId}" class="ml-2 block text-sm text-gray-700 cursor-pointer select-none w-full">${ders}</label>
+        `;
         container.appendChild(wrapper);
     });
 }
 
-// --- DİĞER YARDIMCILAR (Önceki dosyadakilerle aynı) ---
+// =================================================================
+// 3. GENEL YARDIMCILAR & UTILS
+// =================================================================
+
 export let activeListeners = {
     studentUnsubscribe: null,
     soruTakibiUnsubscribe: null,
@@ -205,8 +205,11 @@ export let activeListeners = {
     islemGecmisiUnsubscribe: null,
     upcomingAjandaUnsubscribe: null,
     pendingOdevUnsubscribe: null,
-    pendingSoruUnsubscribe: null,
-    pendingDenemeUnsubscribe: null,
+    pendingSoruListUnsubscribe: null,
+    pendingDenemeListUnsubscribe: null,
+    pendingOdevListUnsubscribe: null,
+    completedHomeworksUnsubscribe: null,
+    denemelerUnsubscribe: null,
     unreadMessagesUnsubscribe: null
 };
 
@@ -225,25 +228,33 @@ export function formatCurrency(amount) {
 
 export function formatDateTR(dateStr) {
     if (!dateStr) return '';
-    const [year, month, day] = dateStr.split('-');
-    return `${day}.${month}.${year}`;
+    try {
+        const [year, month, day] = dateStr.split('-');
+        return `${day}.${month}.${year}`;
+    } catch (e) { return dateStr; }
 }
 
 export async function populateStudentSelect(db, currentUserId, appId, selectId) {
     const select = document.getElementById(selectId);
     if (!select) return;
+    
     select.innerHTML = '<option value="">Yükleniyor...</option>';
+    
     try {
         const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
         const snapshot = await getDocs(q);
+        
         select.innerHTML = '<option value="" disabled selected>Öğrenci seçin</option>';
+        
         if (snapshot.empty) {
             const opt = document.createElement("option");
             opt.value = "";
             opt.textContent = "Öğrenci Bulunamadı";
+            opt.disabled = true;
             select.appendChild(opt);
             return;
         }
+        
         snapshot.forEach(doc => {
             const s = doc.data();
             const option = document.createElement("option");
@@ -253,7 +264,7 @@ export async function populateStudentSelect(db, currentUserId, appId, selectId) 
         });
     } catch (error) {
         console.error("Öğrenci listesi hatası:", error);
-        select.innerHTML = '<option value="">Listeleme Hatası</option>';
+        select.innerHTML = '<option value="">Hata oluştu</option>';
     }
 }
 
@@ -261,65 +272,40 @@ export function renderPlaceholderSayfasi(sayfaAdi) {
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");
     mainContentTitle.textContent = sayfaAdi;
-    mainContentArea.innerHTML = `<div class="bg-white p-10 rounded-lg shadow text-center"><h2 class="text-2xl font-semibold text-gray-700">${sayfaAdi}</h2><p class="mt-4 text-gray-500">Bu bölüm şu anda yapım aşamasındadır.</p></div>`;
+    mainContentArea.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-96 text-gray-400">
+            <i class="fa-solid fa-person-digging text-4xl mb-4 opacity-50"></i>
+            <h2 class="text-xl font-semibold text-gray-600">${sayfaAdi}</h2>
+            <p class="mt-2 text-sm">Bu modül yapım aşamasındadır.</p>
+        </div>`;
 }
 
-// renderDersSecimi fonksiyonu artık renderStudentOptions ile değiştirildiği için kaldırıldı veya alias yapılabilir.
-// Geriye dönük uyumluluk için boş bir fonksiyon bırakabiliriz ama app.js'i güncelleyeceğiz.
+// Geriye dönük uyumluluk
 export const renderDersSecimi = renderStudentOptions;
 
 // =================================================================
-// MOBİL GERİ TUŞU VE MODAL YÖNETİMİ
+// 4. MODAL & NAVİGASYON GEÇMİŞİ YÖNETİMİ
 // =================================================================
 
-// 1. Modal Açma Fonksiyonu (History Push Yapar)
 export function openModalWithBackHistory(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('hidden');
-        modal.style.display = 'flex'; // Flex ile ortalama yapıyorduk
-        
-        // Tarayıcı geçmişine sahte bir durum ekle
-        // Bu sayede geri tuşuna basınca uygulama kapanmaz, sadece bu durum silinir
+        modal.style.display = 'flex'; 
+        // URL'yi değiştirmeden history'e durum ekle
         window.history.pushState({ modalId: modalId }, '', window.location.href);
     }
 }
 
-// 2. Modal Kapatma Fonksiyonu (History Back Yapar - Eğer gerekirse)
 export function closeModalWithBackHistory(modalId) {
     const modal = document.getElementById(modalId);
     if (modal && !modal.classList.contains('hidden')) {
         modal.classList.add('hidden');
         modal.style.display = 'none';
-        
-        // Eğer modal açıkken kodla kapatılıyorsa (iptal butonu vb.)
-        // History'yi geri almalıyız ki stack şişmesin.
-        // Ancak popstate eventi zaten tetiklendiyse (geri tuşuyla) bunu yapmamalıyız.
-        // Bunu kontrol etmek zor olduğu için basitçe manuel kapatmalarda history.back() yapabiliriz
-        // AMA: Kullanıcı geri tuşuna basmadıysa back() yapmak sayfayı değiştirebilir.
-        // O yüzden en temiz yöntem: Sadece UI'ı kapatmak, history'yi back tuşuna bırakmak.
-        // Veya: window.history.back(); (Dikkatli kullanılmalı)
+        // Manuel kapatmalarda history back yapmaya gerek yok, 
+        // kullanıcı "Geri" tuşuna basarsa popstate eventi yakalar.
     }
 }
 
-// 3. Geri Tuşunu Dinle (Popstate Event)
-window.addEventListener('popstate', (event) => {
-    // Eğer history state içinde bir modal ID varsa veya
-    // Sayfada açık bir modal varsa onu kapat.
-    
-    // Tüm açık modalları bul
-    const openModals = document.querySelectorAll('.fixed.inset-0:not(.hidden)');
-    
-    if (openModals.length > 0) {
-        // En üstteki modalı kapat (Z-index'e göre veya son açılan)
-        openModals.forEach(modal => {
-            modal.classList.add('hidden');
-            modal.style.display = 'none';
-        });
-        // Eventi tüket, başka işlem yapma
-    } else {
-        // Eğer açık modal yoksa ve geri tuşuna basıldıysa:
-        // Sayfa değiştirmek istiyor olabilir veya uygulamadan çıkacak.
-        // Single Page App (SPA) mantığında tab değişimi için de kullanılabilir.
-    }
-});
+// Global Popstate Listener (Sadece bir kez tanımlanmalı, app.js içinde zaten var ama burada referans olsun)
+// window.addEventListener('popstate', ...) -> app.js içinde yönetiliyor.

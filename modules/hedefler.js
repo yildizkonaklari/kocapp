@@ -7,6 +7,7 @@ import { activeListeners, formatDateTR, openModalWithBackHistory } from './helpe
 
 let currentDb = null; 
 
+// Fonksiyonun dışa aktarıldığından (export) eminiz
 export async function renderHedeflerSayfasi(db, currentUserId, appId) {
     currentDb = db;
     document.getElementById("mainContentTitle").textContent = "Hedef Yönetimi";
@@ -55,9 +56,13 @@ export async function renderHedeflerSayfasi(db, currentUserId, appId) {
 
     await setupSearchableDropdown(db, currentUserId, appId);
 
-    document.getElementById('btnAddNewGoal').addEventListener('click', () => {
-        openAddModal();
-    });
+    const btnAdd = document.getElementById('btnAddNewGoal');
+    if(btnAdd) {
+        // Event listener temizliği (cloneNode ile)
+        const newBtn = btnAdd.cloneNode(true);
+        btnAdd.parentNode.replaceChild(newBtn, btnAdd);
+        newBtn.addEventListener('click', openAddModal);
+    }
 }
 
 // --- ARAMALI DROPDOWN MANTIĞI ---
@@ -201,18 +206,13 @@ function renderGoals(goals) {
     }).join('');
 }
 
-// --- MODAL AÇMA (DÜZELTİLDİ: ERROR GİDERİLDİ) ---
+// --- MODAL AÇMA ---
 function openAddModal() {
     const sid = document.getElementById('filterGoalStudentId').value;
     if (!sid) { alert("Lütfen önce öğrenci seçin."); return; }
 
-    // Modalı bul
     const modal = document.getElementById('addHedefModal');
-    if (!modal) {
-        console.error("Hedef Modalı (addHedefModal) HTML içinde bulunamadı!");
-        alert("Sistem hatası: Hedef penceresi yüklenemedi.");
-        return;
-    }
+    if (!modal) { console.error("Modal bulunamadı!"); return; }
 
     // Formu Temizle
     document.getElementById('hedefTitle').value = '';
@@ -220,20 +220,14 @@ function openAddModal() {
     document.getElementById('hedefBitisTarihi').value = '';
     document.getElementById('currentStudentIdForHedef').value = sid;
     
-    // Helper ile aç
     openModalWithBackHistory('addHedefModal');
 
-    // DÜZELTME: Butonları daha güvenli seç
-    const closeBtnIcon = modal.querySelector('.fa-xmark');
-    const closeBtnX = closeBtnIcon ? closeBtnIcon.closest('button') : null;
-    const cancelBtn = modal.querySelector('.border-t button'); // Footer'daki İptal
+    // Kapatma butonu listener'ı (Manuel ekleme)
+    const closeBtn = document.getElementById('closeHedefModalButton');
+    const cancelBtn = document.getElementById('cancelHedefModalButton');
+    const handleClose = (e) => { e.preventDefault(); window.history.back(); };
 
-    const handleClose = (e) => {
-        e.preventDefault();
-        window.history.back(); 
-    };
-
-    if(closeBtnX) closeBtnX.onclick = handleClose;
+    if(closeBtn) closeBtn.onclick = handleClose;
     if(cancelBtn) cancelBtn.onclick = handleClose;
 }
 
@@ -256,10 +250,9 @@ window.toggleGoalPin = async (path, currentStatus) => {
 // --- KAYDETME FONKSİYONU ---
 export async function saveGlobalHedef(db, uid, appId) {
     let sid = document.getElementById('currentStudentIdForHedef').value;
-    // Eğer ID boşsa (Hata durumu), hidden input'tan almayı dene
     if (!sid) sid = document.getElementById('filterGoalStudentId').value;
     
-    if (!sid) { alert('Öğrenci seçimi hatası. Lütfen sayfayı yenileyin.'); return; }
+    if (!sid) { alert('Öğrenci seçimi hatası.'); return; }
 
     const title = document.getElementById('hedefTitle').value.trim();
     const date = document.getElementById('hedefBitisTarihi').value;
@@ -280,13 +273,7 @@ export async function saveGlobalHedef(db, uid, appId) {
             kocId: uid,
             olusturmaTarihi: serverTimestamp()
         });
-        
-        // Modalı Kapat (Geri git)
         window.history.back();
-        
-        // Listeyi Yenileme İhtiyacı Yok: 
-        // startGoalListener zaten açık olduğu için liste otomatik güncellenecek.
-        
     } catch (e) {
         console.error(e);
         alert("Hata oluştu.");

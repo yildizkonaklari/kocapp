@@ -1,6 +1,6 @@
 import { 
     doc, getDoc, addDoc, updateDoc, deleteDoc, getDocs, getCountFromServer, writeBatch, setDoc,
-    collection, query, orderBy, onSnapshot, serverTimestamp, where, collectionGroup 
+    collection, query, orderBy, onSnapshot, serverTimestamp, where, collectionGroup, limit 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // İkincil App (Secondary App) Başlatma Fonksiyonları (Auth için)
@@ -333,7 +333,7 @@ function renderKpiCard(title, valueId, colorClass, icon, id) {
     </div>`; 
 }
 
-// --- ISTATISTIK FONKSIYONLARI ---
+// --- ISTATISTIK FONKSİYONLARI ---
 function generateAIAnalysis(stats) { 
     let advice = []; 
     const hwRate = stats.totalHomework > 0 ? (stats.completedHomework / stats.totalHomework) : 0; 
@@ -649,10 +649,17 @@ export async function deleteStudentFull(db, currentUserId, appId) {
     try {
         const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
         const subCollections = ['odevler', 'denemeler', 'hedefler', 'soruTakibi', 'koclukNotlari', 'mesajlar'];
+        
         for (const subColName of subCollections) {
             const subColRef = collection(studentRef, subColName);
-            const snapshot = await getDocs(subColRef);
-            if (!snapshot.empty) {
+            
+            while (true) {
+                // 400'erlik paketler halinde sil (Limit: 500)
+                const q = query(subColRef, limit(400));
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) break;
+                
                 const batch = writeBatch(db);
                 snapshot.docs.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();

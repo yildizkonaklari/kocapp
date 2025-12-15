@@ -1,4 +1,4 @@
-// === AJANDA MODÜLÜ (DÜZELTİLMİŞ) ===
+// === MODULES/AJANDA.JS (GÜNCELLENMİŞ & MOBİL UYUMLU) ===
 
 import { 
     doc, 
@@ -18,7 +18,8 @@ import {
 import { 
     activeListeners, 
     formatDateTR, 
-    populateStudentSelect
+    populateStudentSelect,
+    openModalWithBackHistory // Geri tuşu desteği için
 } from './helpers.js';
 
 // Global Değişkenler
@@ -38,40 +39,43 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
     mainContentTitle.textContent = "Ajandam";
     
     mainContentArea.innerHTML = `
-        <div class="bg-white rounded-lg shadow border border-gray-200 mb-6">
-            <div class="flex flex-col sm:flex-row justify-between items-center p-4 border-b border-gray-200 gap-2">
-                <div class="flex items-center gap-2">
-                    <button id="prevMonth" class="p-2 text-gray-500 hover:text-purple-600 rounded-full bg-gray-50 hover:bg-gray-100"><i class="fa-solid fa-chevron-left"></i></button>
-                    <h2 id="currentMonthYear" class="text-lg font-bold text-gray-800 w-40 text-center">Yükleniyor...</h2>
-                    <button id="nextMonth" class="p-2 text-gray-500 hover:text-purple-600 rounded-full bg-gray-50 hover:bg-gray-100"><i class="fa-solid fa-chevron-right"></i></button>
-                    <button id="goToday" class="ml-2 px-3 py-1 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full hover:bg-purple-200">Bugün</button>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-center p-4 border-b border-gray-200 gap-3 bg-gray-50">
+                <div class="flex items-center gap-2 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+                    <button id="prevMonth" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-gray-50 rounded-md transition-colors"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 id="currentMonthYear" class="text-sm font-bold text-gray-800 w-32 text-center select-none">Yükleniyor...</h2>
+                    <button id="nextMonth" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-gray-50 rounded-md transition-colors"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
-                <button id="btnOpenRandevuModal" class="w-full sm:w-auto bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Yeni Seans
-                </button>
+                
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button id="goToday" class="px-4 py-2 text-xs font-bold text-purple-700 bg-purple-100 rounded-lg hover:bg-purple-200 transition-colors border border-purple-200">Bugün</button>
+                    <button id="btnOpenRandevuModal" class="flex-1 sm:flex-none bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 flex items-center justify-center gap-2 shadow-md shadow-purple-200 active:scale-95 transition-transform">
+                        <i class="fa-solid fa-plus"></i> Yeni Seans
+                    </button>
+                </div>
             </div>
             
-            <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-center">
-                <div class="py-2 text-xs font-semibold text-gray-500">Pzt</div>
-                <div class="py-2 text-xs font-semibold text-gray-500">Sal</div>
-                <div class="py-2 text-xs font-semibold text-gray-500">Çar</div>
-                <div class="py-2 text-xs font-semibold text-gray-500">Per</div>
-                <div class="py-2 text-xs font-semibold text-gray-500">Cum</div>
-                <div class="py-2 text-xs font-semibold text-gray-500 text-red-500">Cmt</div>
-                <div class="py-2 text-xs font-semibold text-gray-500 text-red-500">Paz</div>
+            <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-100 text-center">
+                <div class="py-2 text-[10px] sm:text-xs font-bold text-gray-500 uppercase">Pzt</div>
+                <div class="py-2 text-[10px] sm:text-xs font-bold text-gray-500 uppercase">Sal</div>
+                <div class="py-2 text-[10px] sm:text-xs font-bold text-gray-500 uppercase">Çar</div>
+                <div class="py-2 text-[10px] sm:text-xs font-bold text-gray-500 uppercase">Per</div>
+                <div class="py-2 text-[10px] sm:text-xs font-bold text-gray-500 uppercase">Cum</div>
+                <div class="py-2 text-[10px] sm:text-xs font-bold text-red-400 uppercase">Cmt</div>
+                <div class="py-2 text-[10px] sm:text-xs font-bold text-red-400 uppercase">Paz</div>
             </div>
 
             <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr bg-gray-200 gap-px border-b border-gray-200">
-                <div class="col-span-7 bg-white p-8 text-center text-gray-400">Takvim yükleniyor...</div>
+                <div class="col-span-7 bg-white p-8 text-center text-gray-400 text-sm">Takvim yükleniyor...</div>
             </div>
         </div>
         
         <div>
-            <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2 uppercase tracking-wider">
                 <i class="fa-regular fa-calendar-check text-purple-600"></i> Gelecek 7 Gün
             </h3>
-            <div id="upcomingListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <p class="text-gray-500 text-sm col-span-full text-center py-4">Randevular yükleniyor...</p>
+            <div id="upcomingListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <p class="text-gray-500 text-xs col-span-full text-center py-4">Randevular yükleniyor...</p>
             </div>
         </div>
     `;
@@ -85,7 +89,17 @@ export function renderAjandaSayfasi(db, currentUserId, appId) {
     document.getElementById('btnOpenRandevuModal').addEventListener('click', async () => {
         await populateStudentSelect(currentDb, currentUid, currentAppId, 'randevuStudentId');
         resetRandevuForm();
-        document.getElementById('addRandevuModal').style.display = 'block';
+        
+        // Helper fonksiyonu ile modal aç (Geri tuşu desteği)
+        openModalWithBackHistory('addRandevuModal');
+        
+        // Kapatma butonu listener'ı (Sadece burada tanımlıyoruz)
+        const closeBtn = document.getElementById('closeRandevuModalButton');
+        const cancelBtn = document.getElementById('cancelRandevuModalButton');
+        const handleClose = () => window.history.back(); // History back ile kapat
+        
+        if(closeBtn) closeBtn.onclick = handleClose;
+        if(cancelBtn) cancelBtn.onclick = handleClose;
     });
 
     // Düzenleme Modalı Butonları
@@ -103,8 +117,12 @@ function resetRandevuForm(dateStr = null) {
     document.getElementById('randevuBitis').value = '10:00';
     document.getElementById('randevuTekrar').value = "0";
     document.getElementById('randevuNot').value = '';
-    document.getElementById('randevuModalErrorMessage').classList.add('hidden');
-    document.getElementById('dailyAppointmentsList').innerHTML = ''; // Temizle
+    
+    const errEl = document.getElementById('randevuModalErrorMessage');
+    if(errEl) errEl.classList.add('hidden');
+    
+    const dailyList = document.getElementById('dailyAppointmentsList');
+    if(dailyList) dailyList.innerHTML = ''; 
 }
 
 // --- TAKVİM MANTIĞI ---
@@ -137,7 +155,7 @@ function loadCalendarDataAndDraw(date) {
         drawCalendarGrid(year, month, allMonthAppointments);
     }, (error) => {
         console.error("Takvim hatası:", error);
-        document.getElementById('calendarGrid').innerHTML = `<div class="col-span-7 p-4 text-center text-red-500">Veri yüklenemedi.</div>`;
+        document.getElementById('calendarGrid').innerHTML = `<div class="col-span-7 p-4 text-center text-red-500 text-sm">Veri yüklenemedi.</div>`;
     });
 }
 
@@ -153,7 +171,7 @@ function drawCalendarGrid(year, month, appointments) {
 
     // Boş günler
     for (let i = 0; i < offset; i++) {
-        grid.innerHTML += `<div class="bg-gray-50 min-h-[100px]"></div>`;
+        grid.innerHTML += `<div class="bg-gray-50 min-h-[80px] md:min-h-[100px]"></div>`;
     }
 
     // Günler
@@ -163,22 +181,25 @@ function drawCalendarGrid(year, month, appointments) {
         const isToday = dateStr === todayStr;
         
         const dayEl = document.createElement('div');
-        dayEl.className = `bg-white min-h-[100px] p-1 relative hover:bg-purple-50 transition-colors cursor-pointer group`;
+        // Mobil için min-height düşürüldü (80px), masaüstünde 100px
+        dayEl.className = `bg-white min-h-[80px] md:min-h-[100px] p-1 relative hover:bg-purple-50 transition-colors cursor-pointer group flex flex-col items-center`;
         
         // Gün numarası
-        let dayNumHtml = `<span class="text-sm font-medium text-gray-700 p-1">${day}</span>`;
-        if(isToday) dayNumHtml = `<span class="text-xs font-bold text-white bg-purple-600 rounded-full w-6 h-6 flex items-center justify-center">${day}</span>`;
+        let dayNumHtml = `<span class="text-xs sm:text-sm font-medium text-gray-700 p-1">${day}</span>`;
+        if(isToday) dayNumHtml = `<span class="text-xs font-bold text-white bg-purple-600 rounded-full w-6 h-6 flex items-center justify-center shadow-sm">${day}</span>`;
         
         // Noktalar
-        let dotsHtml = `<div class="flex flex-wrap gap-1 mt-1 px-1">`;
-        dayAppts.forEach(a => {
+        let dotsHtml = `<div class="flex flex-wrap gap-1 mt-1 px-1 justify-center w-full">`;
+        // Mobilde sadece ilk 4 noktayı göster, gerisi sığmazsa gizli kalsın
+        dayAppts.slice(0, 6).forEach(a => {
             const color = a.durum === 'tamamlandi' ? 'bg-green-500' : (a.tarih < todayStr ? 'bg-red-400' : 'bg-blue-500');
             dotsHtml += `<div class="h-1.5 w-1.5 rounded-full ${color}" title="${a.ogrenciAd}"></div>`;
         });
+        if(dayAppts.length > 6) dotsHtml += `<div class="h-1.5 w-1.5 rounded-full bg-gray-400 text-[5px] flex items-center justify-center text-white">+</div>`;
         dotsHtml += `</div>`;
 
         dayEl.innerHTML = `
-            <div class="flex justify-between items-start">${dayNumHtml}</div>
+            <div class="flex justify-between items-start w-full px-1">${dayNumHtml}</div>
             ${dotsHtml}
         `;
 
@@ -187,7 +208,7 @@ function drawCalendarGrid(year, month, appointments) {
     }
 }
 
-// --- GELECEK 7 GÜN LİSTESİ (DÜZELTİLDİ) ---
+// --- GELECEK 7 GÜN LİSTESİ ---
 function loadUpcomingWeek(db, uid, appId) {
     const listContainer = document.getElementById('upcomingListContainer');
     const today = new Date();
@@ -212,36 +233,35 @@ function loadUpcomingWeek(db, uid, appId) {
         snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
         
         if(list.length === 0) {
-            listContainer.innerHTML = '<div class="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200 text-gray-400">Önümüzdeki 7 gün boş.</div>';
+            listContainer.innerHTML = '<div class="col-span-full text-center py-8 bg-white rounded-lg border border-gray-200 text-gray-400 text-sm">Önümüzdeki 7 gün boş.</div>';
             return;
         }
 
         listContainer.innerHTML = list.map(r => {
             const isDone = r.durum === 'tamamlandi';
             return `
-            <div class="bg-white p-3 rounded-lg border-l-4 ${isDone ? 'border-green-500' : 'border-blue-500'} shadow-sm hover:shadow-md transition-shadow cursor-pointer randevu-card" data-id="${r.id}">
+            <div class="bg-white p-3 rounded-xl border-l-4 ${isDone ? 'border-green-500' : 'border-blue-500'} shadow-sm hover:shadow-md transition-shadow cursor-pointer randevu-card group" data-id="${r.id}">
                 <div class="flex justify-between items-center mb-1">
-                    <span class="font-bold text-gray-800 text-sm">${r.ogrenciAd}</span>
-                    <span class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">${formatDateTR(r.tarih)}</span>
+                    <span class="font-bold text-gray-800 text-sm truncate">${r.ogrenciAd}</span>
+                    <span class="text-[10px] font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">${formatDateTR(r.tarih)}</span>
                 </div>
-                <div class="flex justify-between text-xs text-gray-600">
-                    <span>${r.baslangic} - ${r.bitis}</span>
-                    <span class="${isDone ? 'text-green-600 font-bold' : 'text-blue-600'}">${isDone ? 'Tamamlandı' : 'Gelecek'}</span>
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span class="flex items-center gap-1"><i class="fa-regular fa-clock"></i> ${r.baslangic} - ${r.bitis}</span>
+                    <span class="${isDone ? 'text-green-600 font-bold' : 'text-blue-600'} group-hover:underline">${isDone ? 'Tamamlandı' : 'Detay'}</span>
                 </div>
             </div>`;
         }).join('');
 
-        // Tıklama olaylarını güvenli şekilde bağla
         listContainer.querySelectorAll('.randevu-card').forEach(card => {
             card.addEventListener('click', () => {
-                const id = card.dataset.id; // ID'yi data attribute'dan al
+                const id = card.dataset.id;
                 if (id) openEditRandevuModal(id);
             });
         });
 
     }, (error) => {
         console.error("Gelecek liste hatası:", error);
-        listContainer.innerHTML = `<div class="col-span-full text-center text-red-500">Veri yüklenirken hata oluştu.</div>`;
+        listContainer.innerHTML = `<div class="col-span-full text-center text-red-500 text-sm">Veri yüklenirken hata oluştu.</div>`;
     });
 }
 
@@ -251,36 +271,47 @@ async function openDayModal(dateStr, appointments) {
     await populateStudentSelect(currentDb, currentUid, currentAppId, 'randevuStudentId');
     resetRandevuForm(dateStr);
     
+    // Günü gösteren başlık
     const listDiv = document.getElementById('dailyAppointmentsList');
     if (appointments.length > 0) {
-        let html = `<h4 class="font-bold text-sm mb-2 text-gray-700">${formatDateTR(dateStr)} Programı</h4><div class="space-y-2 max-h-40 overflow-y-auto pr-1">`;
+        let html = `<h4 class="font-bold text-xs mb-2 text-gray-500 uppercase tracking-wider">${formatDateTR(dateStr)} Programı</h4><div class="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">`;
         appointments.sort((a,b) => a.baslangic.localeCompare(b.baslangic)).forEach(r => {
             html += `
-                <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm border border-gray-100">
+                <div class="flex justify-between items-center p-2 bg-indigo-50 rounded-lg text-sm border border-indigo-100">
                     <div><span class="font-bold text-indigo-700">${r.baslangic}</span> - ${r.ogrenciAd}</div>
-                    <button class="text-xs text-blue-600 hover:underline btn-edit-randevu" data-id="${r.id}">Düzenle</button>
+                    <button class="text-xs text-white bg-indigo-600 px-2 py-1 rounded hover:bg-indigo-700 btn-edit-randevu" data-id="${r.id}">Düzenle</button>
                 </div>`;
         });
-        html += `</div>`;
+        html += `</div><hr class="my-3 border-gray-100">`;
         listDiv.innerHTML = html;
         
         listDiv.querySelectorAll('.btn-edit-randevu').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                document.getElementById('addRandevuModal').style.display = 'none';
-                openEditRandevuModal(e.target.dataset.id);
+                // Mevcut modalı kapatmadan (veya kapatıp) düzenleme modalına geçiş
+                // Burada "Geri" tuşu mantığı karışmasın diye önce history.back() yapıp sonra yeni modal açabiliriz.
+                window.history.back(); 
+                setTimeout(() => openEditRandevuModal(e.target.dataset.id), 100);
             });
         });
     } else {
-        listDiv.innerHTML = `<p class="text-sm text-gray-400 text-center py-2">Bu tarihte randevu yok.</p>`;
+        listDiv.innerHTML = ``;
     }
 
-    document.getElementById('addRandevuModal').style.display = 'block';
+    openModalWithBackHistory('addRandevuModal');
+    
+    const closeBtn = document.getElementById('closeRandevuModalButton');
+    const cancelBtn = document.getElementById('cancelRandevuModalButton');
+    const handleClose = () => window.history.back();
+    
+    if(closeBtn) closeBtn.onclick = handleClose;
+    if(cancelBtn) cancelBtn.onclick = handleClose;
 }
 
 // --- KAYDETME (HAFTALIK TEKRAR İLE) ---
 export async function saveNewRandevu(db, currentUserId, appId) {
     const studentId = document.getElementById('randevuStudentId').value;
-    const studentName = document.getElementById('randevuStudentId').options[document.getElementById('randevuStudentId').selectedIndex].text;
+    const select = document.getElementById('randevuStudentId');
+    const studentName = select.options[select.selectedIndex]?.text || "Öğrenci";
     const baslik = document.getElementById('randevuBaslik').value || "Görüşme";
     const tarihStr = document.getElementById('randevuTarih').value;
     const baslangic = document.getElementById('randevuBaslangic').value;
@@ -288,9 +319,13 @@ export async function saveNewRandevu(db, currentUserId, appId) {
     const not = document.getElementById('randevuNot').value;
     const tekrar = parseInt(document.getElementById('randevuTekrar').value) || 0;
 
+    const errEl = document.getElementById('randevuModalErrorMessage');
+
     if (!studentId || !tarihStr || !baslangic) {
-        document.getElementById('randevuModalErrorMessage').textContent = "Lütfen öğrenci, tarih ve saati seçin.";
-        document.getElementById('randevuModalErrorMessage').classList.remove('hidden');
+        if(errEl) {
+            errEl.textContent = "Lütfen öğrenci, tarih ve saati seçin.";
+            errEl.classList.remove('hidden');
+        }
         return;
     }
 
@@ -321,20 +356,20 @@ export async function saveNewRandevu(db, currentUserId, appId) {
         }
 
         await batch.commit();
-        document.getElementById('addRandevuModal').style.display = 'none';
+        window.history.back(); // Modalı kapat
 
     } catch (e) {
         console.error(e);
-        alert("Hata oluştu");
+        alert("Randevu kaydedilirken hata oluştu.");
     } finally {
         btn.disabled = false;
-        btn.textContent = "Randevuyu Kaydet";
+        btn.textContent = "Kaydet";
     }
 }
 
 // --- DÜZENLEME / SİLME / TAMAMLAMA ---
 async function openEditRandevuModal(id) {
-    if (!id) { console.error("Randevu ID bulunamadı"); return; }
+    if (!id) return;
 
     const ref = doc(currentDb, "artifacts", currentAppId, "users", currentUid, "ajandam", id);
     const snap = await getDoc(ref);
@@ -342,18 +377,28 @@ async function openEditRandevuModal(id) {
     if (snap.exists()) {
         const d = snap.data();
         document.getElementById('editRandevuId').value = id;
+        document.getElementById('editRandevuStudentId').value = d.studentId; // Hidden
         document.getElementById('editRandevuBaslik').value = d.baslik;
         document.getElementById('editRandevuTarih').value = d.tarih;
         document.getElementById('editRandevuBaslangic').value = d.baslangic;
         document.getElementById('editRandevuBitis').value = d.bitis;
         document.getElementById('editRandevuNot').value = d.not || '';
-        document.getElementById('editRandevuModal').style.display = 'block';
+        
+        // Başlığı güncelle (Öğrenci adı görünsün)
+        const titleEl = document.getElementById('editRandevuTitle');
+        if(titleEl) titleEl.textContent = `${d.ogrenciAd} - Detay`;
+
+        openModalWithBackHistory('editRandevuModal');
     }
 }
 
 function setupEditModalListeners() {
-    document.getElementById('closeEditRandevuModalButton').onclick = () => document.getElementById('editRandevuModal').style.display = 'none';
-    document.getElementById('cancelEditRandevuModalButton').onclick = () => document.getElementById('editRandevuModal').style.display = 'none';
+    const closeBtn = document.getElementById('closeEditRandevuModalButton');
+    const cancelBtn = document.getElementById('cancelEditRandevuModalButton');
+    const handleClose = () => window.history.back();
+
+    if(closeBtn) closeBtn.onclick = handleClose;
+    if(cancelBtn) cancelBtn.onclick = handleClose;
     
     document.getElementById('saveRandevuChangesButton').onclick = async () => {
         const id = document.getElementById('editRandevuId').value;
@@ -365,20 +410,20 @@ function setupEditModalListeners() {
             not: document.getElementById('editRandevuNot').value
         };
         await updateDoc(doc(currentDb, "artifacts", currentAppId, "users", currentUid, "ajandam", id), data);
-        document.getElementById('editRandevuModal').style.display = 'none';
+        window.history.back();
     };
 
     document.getElementById('btnDeleteRandevu').onclick = async () => {
-        if(confirm('Silinsin mi?')) {
+        if(confirm('Bu randevuyu silmek istediğinize emin misiniz?')) {
             const id = document.getElementById('editRandevuId').value;
             await deleteDoc(doc(currentDb, "artifacts", currentAppId, "users", currentUid, "ajandam", id));
-            document.getElementById('editRandevuModal').style.display = 'none';
+            window.history.back();
         }
     };
 
     document.getElementById('btnToggleRandevuDurum').onclick = async () => {
         const id = document.getElementById('editRandevuId').value;
         await updateDoc(doc(currentDb, "artifacts", currentAppId, "users", currentUid, "ajandam", id), { durum: 'tamamlandi' });
-        document.getElementById('editRandevuModal').style.display = 'none';
+        window.history.back();
     };
 }

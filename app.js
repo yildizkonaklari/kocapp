@@ -307,6 +307,7 @@ async function showProfileModal(user) {
     
     document.getElementById('profileDisplayName').value = user.displayName || '';
     
+    
     // Paket Bilgilerini Çek
     try {
         const docRef = doc(db, "artifacts", appId, "users", user.uid, "settings", "profile");
@@ -356,6 +357,7 @@ document.getElementById('btnDeleteAccount')?.addEventListener('click', async () 
         window.location.href = "login.html";
     } catch (e) { alert("Hata: " + e.message); }
 });
+
 
 // Profil Sekme Geçişleri
 document.querySelectorAll('.profile-tab-button').forEach(btn => {
@@ -500,5 +502,4 @@ function initCoachNotifications(uid) {
 }
 
 // BAŞLAT
-
 main();

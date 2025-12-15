@@ -3,11 +3,11 @@ import {
     collection, query, orderBy, onSnapshot, serverTimestamp, where, collectionGroup, limit 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// İkincil App (Secondary App) Başlatma Fonksiyonları (Auth için)
+// İkincil App (Auth için)
 import { initializeApp as initializeApp2 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth as getAuth2, createUserWithEmailAndPassword as createUser2, signOut as signOut2 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-import { activeListeners, formatDateTR, formatCurrency, renderDersSecimi } from './helpers.js';
+import { activeListeners, formatDateTR, formatCurrency, renderDersSecimi, openModalWithBackHistory } from './helpers.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
@@ -19,51 +19,222 @@ const firebaseConfig = {
 };
 
 // =================================================================
-// YARDIMCI: KİMLİK BİLGİLERİ MODALI (KOPYALANABİLİR)
+// 1. ÖĞRENCİ LİSTESİ SAYFASI (MOBİL UYUMLU KART YAPISI)
 // =================================================================
-function showCredentialsModal(username, password, title = "İşlem Başarılı") {
-    const oldModal = document.getElementById('credentialModal');
-    if(oldModal) oldModal.remove();
-
-    const modalHtml = `
-    <div id="credentialModal" class="fixed inset-0 bg-gray-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
-        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl transform transition-all scale-100">
-            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm">
-                <i class="fa-solid fa-check"></i>
+export function renderOgrenciSayfasi(db, currentUserId, appId) {
+    document.getElementById("mainContentTitle").textContent = "Öğrencilerim";
+    document.getElementById("mainContentArea").innerHTML = `
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div class="relative w-full md:w-1/3">
+                <input type="text" id="searchStudentInput" placeholder="Öğrenci ara..." class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition-shadow">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-magnifying-glass text-gray-400"></i></div>
             </div>
-            <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">${title}</h3>
-            <p class="text-sm text-gray-500 mb-6 text-center">Aşağıdaki bilgileri kopyalayıp öğrenciye iletin.</p>
-            
-            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 space-y-3">
-                <div>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Kullanıcı Adı</p>
-                    <div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2">
-                        <span class="font-mono text-indigo-600 font-bold select-all text-sm" id="resUser">${username}</span>
-                        <button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" onclick="navigator.clipboard.writeText('${username}')" title="Kopyala">
-                            <i class="fa-regular fa-copy"></i>
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Şifre</p>
-                    <div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2">
-                        <span class="font-mono text-indigo-600 font-bold select-all text-sm" id="resPass">${password}</span>
-                        <button class="text-gray-400 hover:text-indigo-600 transition-colors p-1" onclick="navigator.clipboard.writeText('${password}')" title="Kopyala">
-                            <i class="fa-regular fa-copy"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <button id="btnCopyAllCreds" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mb-3 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-share-nodes"></i> Tümünü Kopyala
-            </button>
-            <button onclick="document.getElementById('credentialModal').remove()" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2">
-                Kapat
+            <button id="showAddStudentModalButton" class="w-full md:w-auto bg-purple-600 text-white px-5 py-3 rounded-xl font-bold hover:bg-purple-700 transition-all flex items-center justify-center shadow-lg shadow-purple-200 active:scale-95">
+                <i class="fa-solid fa-user-plus mr-2"></i>Yeni Öğrenci
             </button>
         </div>
-    </div>
+
+        <div id="studentListContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pb-24">
+            <p class="text-gray-500 text-center col-span-full py-8">Yükleniyor...</p>
+        </div>
     `;
+    
+    // --- MODAL AÇMA VE DERS LİSTESİ BAĞLANTISI ---
+    document.getElementById('showAddStudentModalButton').addEventListener('click', () => {
+        // Formu Temizle
+        document.getElementById('studentName').value = '';
+        document.getElementById('studentSurname').value = '';
+        document.getElementById('studentClass').value = '';
+        document.getElementById('studentOptionsContainer').innerHTML = '';
+        document.getElementById('studentDersSecimiContainer').innerHTML = '';
+        
+        // Modal Aç (History Destekli)
+        openModalWithBackHistory('addStudentModal');
+    });
+
+    // --- DERS SEÇİMİ TETİKLEYİCİSİ (ÖNEMLİ DÜZELTME) ---
+    // Sınıf seçildiğinde dersleri getiren listener
+    const classSelect = document.getElementById('studentClass');
+    if(classSelect) {
+        // Önce eski listenerları temizlemek için klonla (Çakışmayı önler)
+        const newSelect = classSelect.cloneNode(true);
+        classSelect.parentNode.replaceChild(newSelect, classSelect);
+        
+        newSelect.addEventListener('change', (e) => {
+            renderDersSecimi(e.target.value, 'studentOptionsContainer', 'studentDersSecimiContainer');
+        });
+    }
+
+    // --- MODAL KAPATMA BUTONLARI (MANUEL BAĞLAMA) ---
+    const closeBtns = [
+        'closeModalButton', 'cancelModalButton', // Ekle Modalı
+        'closeEditModalButton', 'cancelEditModalButton' // Düzenle Modalı
+    ];
+    closeBtns.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if(btn) {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                window.history.back(); // History API ile kapat
+            };
+        }
+    });
+
+    // --- ARAMA ---
+    document.getElementById('searchStudentInput').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('.student-card').forEach(card => {
+            const name = card.dataset.name.toLowerCase();
+            card.style.display = name.includes(term) ? 'flex' : 'none';
+        });
+    });
+
+    // --- LİSTELEME ---
+    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
+    activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
+        const container = document.getElementById('studentListContainer');
+        if(snapshot.empty) { 
+            container.innerHTML = '<div class="col-span-full text-center py-12"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl text-gray-400"><i class="fa-solid fa-users-slash"></i></div><p class="text-gray-500 font-medium">Henüz öğrenci eklenmemiş.</p></div>'; 
+            return; 
+        }
+        
+        container.innerHTML = '';
+        snapshot.forEach(doc => {
+            const s = doc.data();
+            const bakiye = (s.toplamBorc || 0) - (s.toplamOdenen || 0);
+            const initials = (s.ad[0] || '') + (s.soyad[0] || '');
+            
+            // Mobil Uyumlu Kart HTML
+            const card = document.createElement('div');
+            card.className = "student-card bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between group active:scale-[0.98]";
+            card.dataset.name = `${s.ad} ${s.soyad}`;
+            card.onclick = () => window.renderOgrenciDetaySayfasi(doc.id, `${s.ad} ${s.soyad}`);
+            
+            card.innerHTML = `
+                <div class="flex items-center gap-4 overflow-hidden">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center font-bold text-lg border border-white shadow-sm shrink-0">
+                        ${s.avatarIcon || initials}
+                    </div>
+                    <div class="min-w-0">
+                        <h4 class="font-bold text-gray-800 text-base truncate">${s.ad} ${s.soyad}</h4>
+                        <span class="inline-block bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide border border-gray-200 mt-0.5">
+                            ${s.sinif}
+                        </span>
+                    </div>
+                </div>
+                <div class="text-right shrink-0">
+                    <p class="text-xs text-gray-400 font-medium mb-0.5">Bakiye</p>
+                    <p class="font-bold text-sm ${bakiye > 0 ? 'text-red-500' : 'text-green-600'}">
+                        ${formatCurrency(bakiye)}
+                    </p>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    });
+}
+
+// =================================================================
+// 2. DÜZENLEME MODALI
+// =================================================================
+function showEditStudentModal(db, currentUserId, appId, studentId) {
+    const modal = document.getElementById('editStudentModal');
+    if(!modal) return;
+
+    getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId)).then(snap => {
+        if(snap.exists()) {
+            const s = snap.data();
+            document.getElementById('editStudentId').value = studentId;
+            document.getElementById('editStudentName').value = s.ad;
+            document.getElementById('editStudentSurname').value = s.soyad;
+            
+            // Sınıfı Seç ve Dersleri Tetikle
+            const classSelect = document.getElementById('editStudentClass');
+            classSelect.value = s.sinif;
+            
+            // Listener'ı burada da bağla (Düzeltme)
+            const newSelect = classSelect.cloneNode(true);
+            classSelect.parentNode.replaceChild(newSelect, classSelect);
+            newSelect.addEventListener('change', (e) => {
+                renderDersSecimi(e.target.value, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer');
+            });
+            newSelect.value = s.sinif; // Tekrar set et
+
+            // Dersleri Render Et
+            renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
+            
+            if (s.alan) { 
+                setTimeout(() => {
+                    const alanSelect = document.querySelector('#editStudentOptionsContainer select'); 
+                    if (alanSelect) alanSelect.value = s.alan;
+                }, 100);
+            }
+            
+            openModalWithBackHistory('editStudentModal');
+        }
+    });
+}
+
+
+export async function saveStudentChanges(db, currentUserId, appId) {
+    const id = document.getElementById('editStudentId').value;
+    const ad = document.getElementById('editStudentName').value.trim();
+    const soyad = document.getElementById('editStudentSurname').value.trim();
+    const sinif = document.getElementById('editStudentClass').value;
+    const dersler = Array.from(document.querySelectorAll('#editStudentDersSecimiContainer input:checked')).map(cb => cb.value);
+    const alanSelect = document.querySelector('#editStudentOptionsContainer select');
+    const alan = alanSelect ? alanSelect.value : null;
+    
+    await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), {
+        ad, soyad, sinif, alan: alan, takipDersleri: dersler
+    });
+    window.history.back(); // Modalı kapat
+}
+
+export async function deleteStudentFull(db, currentUserId, appId) {
+    const studentId = document.getElementById('editStudentId').value;
+    if (!studentId) return;
+    if (!confirm("Öğrenci ve tüm verileri silinecek. Emin misiniz?")) return;
+    
+    const btn = document.getElementById('btnDeleteStudent');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    
+    try {
+        const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
+        const subCollections = ['odevler', 'denemeler', 'hedefler', 'soruTakibi', 'koclukNotlari', 'mesajlar'];
+        
+        for (const subColName of subCollections) {
+            const q = query(collection(studentRef, subColName), limit(100));
+            const snapshot = await getDocs(q); // Basit silme (daha fazlası için cloud function gerekir)
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+        await deleteDoc(studentRef);
+        window.history.back(); // Modalı kapat
+        alert("Silindi.");
+    } catch (error) { console.error(error); alert("Hata."); } 
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-trash mr-2"></i> Sil'; }
+}
+
+// --- YARDIMCI FONKSİYONLAR ---
+
+
+
+function showCredentialsModal(username, password, title) {
+    const modalHtml = `
+    <div id="credentialModal" class="fixed inset-0 bg-gray-900/80 z-[110] flex items-center justify-center p-4 backdrop-blur-sm animate-scale-in">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+            <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-check"></i></div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">${title}</h3>
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 text-left space-y-3">
+                <div><p class="text-[10px] text-gray-400 font-bold uppercase">Kullanıcı Adı</p><p class="font-mono text-indigo-600 font-bold bg-white p-2 rounded border border-gray-200 select-all">${username}</p></div>
+                <div><p class="text-[10px] text-gray-400 font-bold uppercase">Şifre</p><p class="font-mono text-indigo-600 font-bold bg-white p-2 rounded border border-gray-200 select-all">${password}</p></div>
+            </div>
+            <button onclick="document.getElementById('credentialModal').remove()" class="w-full bg-gray-800 text-white py-3 rounded-xl font-bold">Kapat</button>
+        </div>
+    </div>`;
+    
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
     document.getElementById('btnCopyAllCreds').onclick = () => {
@@ -474,91 +645,6 @@ function renderKoclukNotlariTab(db, currentUserId, appId, studentId) {
     });
 }
 
-// =================================================================
-// 2. ÖĞRENCİ LİSTESİ (SAYFA)
-// =================================================================
-export function renderOgrenciSayfasi(db, currentUserId, appId) {
-    document.getElementById("mainContentTitle").textContent = "Öğrencilerim";
-    document.getElementById("mainContentArea").innerHTML = `
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <div class="relative w-full md:w-1/3">
-                <input type="text" id="searchStudentInput" placeholder="Öğrenci ara..." class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition-shadow">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-magnifying-glass text-gray-400"></i></div>
-            </div>
-            <button id="showAddStudentModalButton" class="w-full md:w-auto bg-purple-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-700 transition-all flex items-center justify-center shadow-lg shadow-purple-200 active:scale-95">
-                <i class="fa-solid fa-user-plus mr-2"></i>Yeni Öğrenci Ekle
-            </button>
-        </div>
-        <div id="studentListContainer" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <p class="text-gray-500 text-center py-8">Yükleniyor...</p>
-        </div>
-        <div class="h-24"></div>
-    `;
-    
-    document.getElementById('showAddStudentModalButton').addEventListener('click', () => {
-        document.getElementById('studentName').value = '';
-        document.getElementById('studentSurname').value = '';
-        document.getElementById('studentClass').value = '';
-        document.getElementById('studentOptionsContainer').innerHTML = '';
-        document.getElementById('studentDersSecimiContainer').innerHTML = '';
-        document.getElementById('addStudentModal').style.display = 'block';
-    });
-
-    document.getElementById('searchStudentInput').addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('#studentListContainer tbody tr').forEach(row => {
-            row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
-        });
-    });
-
-    const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
-    activeListeners.studentUnsubscribe = onSnapshot(q, (snapshot) => {
-        const container = document.getElementById('studentListContainer');
-        if(snapshot.empty) { 
-            container.innerHTML = '<div class="text-center py-12"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl text-gray-400"><i class="fa-solid fa-users-slash"></i></div><p class="text-gray-500 font-medium">Henüz öğrenci eklenmemiş.</p></div>'; 
-            return; 
-        }
-        
-        let html = `<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-100"><thead class="bg-gray-50"><tr><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ad Soyad</th><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sınıf</th><th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bakiye</th><th class="relative px-6 py-4"><span class="sr-only">Eylemler</span></th></tr></thead><tbody class="bg-white divide-y divide-gray-100">`;
-        
-        snapshot.forEach(doc => {
-            const s = doc.data();
-            const bakiye = (s.toplamBorc || 0) - (s.toplamOdenen || 0);
-            html += `
-                <tr class="hover:bg-purple-50 cursor-pointer transition-colors group" onclick="window.renderOgrenciDetaySayfasi('${doc.id}', '${s.ad} ${s.soyad}')">
-                    <td class="px-6 py-4 whitespace-nowrap"><div class="flex items-center"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 text-indigo-600 flex items-center justify-center font-bold mr-3 border border-white shadow-sm group-hover:scale-110 transition-transform">${s.avatarIcon || (s.ad[0] + s.soyad[0])}</div><div class="text-sm font-bold text-gray-800">${s.ad} ${s.soyad}</div></div></td>
-                    <td class="px-6 py-4 whitespace-nowrap"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">${s.sinif}</span></td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${bakiye > 0 ? 'text-red-500' : 'text-green-600'}">${formatCurrency(bakiye)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-purple-600 transition-colors"></i></td>
-                </tr>`;
-        });
-        html += `</tbody></table></div>`;
-        container.innerHTML = html;
-    });
-}
-
-function showEditStudentModal(db, currentUserId, appId, studentId) {
-    const modal = document.getElementById('editStudentModal');
-    if(!modal) { alert("Modal bulunamadı!"); return; }
-
-    getDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId)).then(snap => {
-        if(snap.exists()) {
-            const s = snap.data();
-            document.getElementById('editStudentId').value = studentId;
-            document.getElementById('editStudentName').value = s.ad;
-            document.getElementById('editStudentSurname').value = s.soyad;
-            const classSelect = document.getElementById('editStudentClass');
-            classSelect.value = s.sinif;
-            classSelect.dispatchEvent(new Event('change'));
-            setTimeout(() => {
-                renderDersSecimi(s.sinif, 'editStudentOptionsContainer', 'editStudentDersSecimiContainer', s.takipDersleri);
-                if (s.alan) { const alanSelect = document.querySelector('#editStudentOptionsContainer select'); if (alanSelect) alanSelect.value = s.alan; }
-                modal.classList.remove('hidden');
-                modal.style.display = 'flex';
-            }, 100);
-        }
-    });
-}
 
 // --- KAYIT & ŞİFRE & SİLME FONKSİYONLARI ---
 
@@ -623,56 +709,6 @@ export async function saveNewStudent(db, currentUserId, appId) {
     }
 }
 
-export async function saveStudentChanges(db, currentUserId, appId) {
-    const id = document.getElementById('editStudentId').value;
-    const ad = document.getElementById('editStudentName').value.trim();
-    const soyad = document.getElementById('editStudentSurname').value.trim();
-    const sinif = document.getElementById('editStudentClass').value;
-    const dersler = Array.from(document.querySelectorAll('#editStudentDersSecimiContainer input:checked')).map(cb => cb.value);
-    const alanSelect = document.querySelector('#editStudentOptionsContainer select');
-    const alan = alanSelect ? alanSelect.value : null;
-    
-    await updateDoc(doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", id), {
-        ad, soyad, sinif, alan: alan, takipDersleri: dersler
-    });
-    document.getElementById('editStudentModal').classList.add('hidden');
-    document.getElementById('editStudentModal').style.display = 'none';
-}
-
-export async function deleteStudentFull(db, currentUserId, appId) {
-    const studentId = document.getElementById('editStudentId').value;
-    if (!studentId) return;
-    if (!confirm("DİKKAT! Bu öğrenci ve ona ait TÜM VERİLER kalıcı olarak silinecektir. \n\nBu işlem geri alınamaz. Onaylıyor musunuz?")) return;
-    const btn = document.getElementById('btnDeleteStudent');
-    const originalText = btn.innerHTML;
-    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Siliniyor...';
-    try {
-        const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
-        const subCollections = ['odevler', 'denemeler', 'hedefler', 'soruTakibi', 'koclukNotlari', 'mesajlar'];
-        
-        for (const subColName of subCollections) {
-            const subColRef = collection(studentRef, subColName);
-            
-            while (true) {
-                // 400'erlik paketler halinde sil (Limit: 500)
-                const q = query(subColRef, limit(400));
-                const snapshot = await getDocs(q);
-                
-                if (snapshot.empty) break;
-                
-                const batch = writeBatch(db);
-                snapshot.docs.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-            }
-        }
-        await deleteDoc(studentRef);
-        document.getElementById('editStudentModal').classList.add('hidden');
-        document.getElementById('editStudentModal').style.display = 'none';
-        alert("Öğrenci silindi.");
-        document.getElementById('nav-ogrencilerim').click(); 
-    } catch (error) { console.error("Silme hatası:", error); alert("Hata oluştu."); } 
-    finally { btn.disabled = false; btn.innerHTML = originalText; }
-}
 
 async function resetStudentAccess(db, coachId, appId, studentDocId, studentName) {
     if(!confirm(`${studentName} için yeni bir giriş şifresi oluşturulacak. Eski şifre geçersiz olacak. Devam edilsin mi?`)) return;

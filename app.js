@@ -306,7 +306,6 @@ async function showProfileModal(user) {
     if (!profileModal) return;
     
     document.getElementById('profileDisplayName').value = user.displayName || '';
-    document.getElementById('kocDavetKodu').value = user.uid;
     
     // Paket Bilgilerini Çek
     try {
@@ -356,13 +355,6 @@ document.getElementById('btnDeleteAccount')?.addEventListener('click', async () 
         await deleteUser(auth.currentUser);
         window.location.href = "login.html";
     } catch (e) { alert("Hata: " + e.message); }
-});
-
-// ID Kopyala
-document.getElementById('btnKopyala')?.addEventListener('click', () => {
-    const input = document.getElementById('kocDavetKodu');
-    input.select();
-    navigator.clipboard.writeText(input.value).then(() => alert("Kopyalandı!"));
 });
 
 // Profil Sekme Geçişleri
@@ -508,4 +500,5 @@ function initCoachNotifications(uid) {
 }
 
 // BAŞLAT
+
 main();

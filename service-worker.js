@@ -1,9 +1,8 @@
 // --- FIREBASE CLOUD MESSAGING (FCM) KURULUMU ---
-// Bildirimlerin arka planda çalışması için gerekli kütüphaneler
 importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging-compat.js');
 
-// Sizin Firebase Proje Ayarlarınız
+// Firebase Proje Ayarlarınız
 firebase.initializeApp({
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -13,61 +12,61 @@ firebase.initializeApp({
   appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
 });
 
-// Arka plan mesajlarını dinle
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[NetKoç SW] Arka plan bildirimi alındı:', payload);
+  console.log('[NetKoç SW] Arka plan bildirimi:', payload);
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/public/icon-192.png', // Bildirim ikonu
-    badge: '/public/icon-192.png' // Android durum çubuğu ikonu
+    icon: '/public/icon-192.png',
+    badge: '/public/icon-192.png'
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// --- PWA ÖNBELLEKLEME (CACHING) ---
-const CACHE_NAME = 'netkoc-v3'; // FCM eklendiği için versiyonu artırdık
+// --- PWA ÖNBELLEKLEME (GÜNCELLENMİŞ STRATEJİ) ---
+const CACHE_NAME = 'netkoc-v4-network-first'; // Versiyonu artırdık
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/login.html',
-  '/student-login.html',      // Eklendi
-  '/coach-dashboard.html',    // Eklendi
-  '/student-dashboard.html',  // Eklendi
+  '/student-login.html',
+  '/coach-dashboard.html',
+  '/student-dashboard.html',
   '/manifest.json',
+  '/style.css',
   '/public/favicon.png',
   '/public/logo.png',
   '/public/icon-192.png',
   '/public/icon-512.png',
   '/public/mockup-phone.jpg',
   '/public/mockup-pc.jpg',
-  // Dış kaynaklar (Fontlar ve İkonlar)
+  // Dış kaynaklar
   'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
-// 1. KURULUM (INSTALL): Dosyaları önbelleğe al
+// 1. KURULUM (INSTALL)
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Yeni service worker'ı beklemeden aktif et
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[NetKoç SW] Dosyalar önbelleğe alınıyor...');
+      console.log('[SW] Ön belleğe alınıyor...');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
 });
 
-// 2. AKTİFLEŞTİRME (ACTIVATE): Eski önbellekleri temizle
+// 2. AKTİFLEŞTİRME (ACTIVATE) - Eski Cache'leri Temizle
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(
         keyList.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[NetKoç SW] Eski önbellek siliniyor:', key);
+            console.log('[SW] Eski önbellek siliniyor:', key);
             return caches.delete(key);
           }
         })
@@ -77,32 +76,38 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// 3. İSTEKLERİ YAKALAMA (FETCH): Strateji Belirleme
+// 3. İSTEKLERİ YAKALAMA (FETCH) - NETWORK FIRST STRATEJİSİ
 self.addEventListener('fetch', (event) => {
-  // Sadece http/https isteklerini işle
+  // Sadece http/https istekleri
   if (!event.request.url.startsWith('http')) return;
 
-  // ÖNEMLİ: Firebase ve API isteklerini asla önbelleğe alma (Network Only)
-  // Bu sayede veritabanı her zaman canlı kalır.
+  // Firebase ve API isteklerini pas geç (Network Only)
   if (event.request.url.includes('firestore.googleapis.com') || 
       event.request.url.includes('firebase') ||
-      event.request.url.includes('googleapis.com') || // FCM ve diğer Google API'leri için
-      event.request.method !== 'GET') {
+      event.request.url.includes('googleapis.com')) {
     return; 
   }
 
-  // Diğer her şey için: Önce Cache, Yoksa Network (Stale-While-Revalidate benzeri)
+  // HTML ve Ana Dosyalar için: Network First (Önce Ağ, Yoksa Cache)
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // Cache'de varsa hemen göster
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      // Yoksa internetten indir
-      return fetch(event.request).then((networkResponse) => {
-        // İndirdiğini bir sonraki sefer için cache'e at (Opsiyonel, dinamik cache)
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Ağdan başarılı yanıt gelirse cache'i güncelle ve yanıtı dön
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+        
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        
         return networkResponse;
-      });
-    })
+      })
+      .catch(() => {
+        // Ağ hatası varsa cache'e bak
+        console.log('[SW] Ağ yok, cache kullanılıyor:', event.request.url);
+        return caches.match(event.request);
+      })
   );
 });

@@ -2,46 +2,102 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Koç Kayıt Ekranı</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NetKoç - Hesap Oluştur</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="public/favicon.png">
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-100 flex justify-center items-center min-h-screen py-8">
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
-        <h2 class="text-3xl font-bold text-center text-gray-800 mb-2">Hesap Oluştur</h2>
-        <p class="text-center text-gray-500 mb-6">Yeni koç hesabı açın.</p>
+<body class="bg-gradient-to-tl from-purple-700 via-indigo-600 to-blue-500 min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+
+    <div class="absolute top-0 left-0 w-80 h-80 bg-white opacity-10 rounded-full -translate-x-1/3 -translate-y-1/3 blur-3xl"></div>
+    <div class="absolute bottom-0 right-0 w-96 h-96 bg-purple-400 opacity-20 rounded-full translate-x-1/4 translate-y-1/4 blur-3xl"></div>
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 animate-fade-in-up">
         
-        <div class="space-y-4">
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">E-posta</label>
-                <input type="email" id="email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+        <div class="pt-8 pb-4 px-8 text-center">
+            <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm transform rotate-6">
+                <i class="fa-solid fa-user-plus text-3xl text-indigo-600"></i>
             </div>
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Şifre</label>
-                <input type="password" id="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+            <h1 class="text-2xl font-bold text-gray-800">Aramıza Katılın</h1>
+            <p class="text-gray-500 text-sm mt-1">Koçluk kariyerinizi dijitalleştirin.</p>
+        </div>
+
+        <div class="px-8 pb-8">
+            <div id="errorMessage" class="hidden bg-red-50 border-l-4 border-red-500 text-red-700 p-3 mb-5 rounded-r text-sm flex items-start gap-2 animate-pulse">
+                <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+                <span>Hata mesajı.</span>
             </div>
-             <div>
-                <label for="passwordConfirm" class="block text-sm font-medium text-gray-700">Şifre Tekrar</label>
-                <input type="password" id="passwordConfirm" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+
+            <div class="space-y-4">
+                <div>
+                    <label for="email" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">E-Posta</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-regular fa-envelope"></i>
+                        </div>
+                        <input type="email" id="email" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-sm" placeholder="ornek@mail.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Şifre</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="password" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-sm" placeholder="En az 6 karakter">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="passwordConfirm" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Şifre Tekrar</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="passwordConfirm" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-sm" placeholder="Şifrenizi doğrulayın">
+                    </div>
+                </div>
+
+                <button id="signupButton" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4">
+                    <span>Hesap Oluştur</span>
+                    <i class="fa-solid fa-rocket"></i>
+                </button>
+            </div>
+
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-500">
+                    Zaten hesabınız var mı? 
+                    <a href="login.html" class="text-indigo-600 font-bold hover:underline">Giriş Yapın</a>
+                </p>
             </div>
         </div>
-        
-        <p id="errorMessage" class="text-sm text-red-600 mt-4 text-center hidden"></p>
-        
-        <button id="signupButton" class="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 mt-6 font-semibold">
-            Hesap Oluştur
-        </button>
-        
-        <p class="text-sm text-gray-600 text-center mt-4">
-            Zaten hesabınız var mı? 
-            <a href="login.html" class="font-medium text-purple-600 hover:text-purple-500">
-                Giriş yapın
-            </a>
-        </p>
     </div>
 
-    <!-- Bu sayfanın JS'i (auth.js) -->
+    <div class="mt-6 text-center text-indigo-100 text-xs relative z-10 opacity-80">
+        <p>&copy; 2025 NetKoç Takip Sistemi</p>
+    </div>
+
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+    </style>
+
     <script type="module" src="auth.js"></script>
 </body>
 </html>

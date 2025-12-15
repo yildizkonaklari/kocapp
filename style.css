@@ -1,7 +1,10 @@
 /* =================================================================
-   KOÇLUK TAKİP SİSTEMİ - ANA STİL DOSYASI
+   NETKOÇ - GLOBAL STİL DOSYASI
    ================================================================= */
-/* --- MOBİL UYGULAMA İYİLEŞTİRMELERİ --- */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
     /* iPhone Çentik (Notch) Desteği */
@@ -10,17 +13,15 @@
 }
 
 body {
-    /* Sayfayı aşağı çekince yenilenmesini engelle (Pull-to-refresh iptali) */
+    /* Uygulama Hissi (Pull-to-refresh engelleme) */
     overscroll-behavior-y: none;
-    
-    /* Mobilde tıklayınca çıkan mavi kutucuğu kaldır */
     -webkit-tap-highlight-color: transparent;
     
-    /* Metin seçimini engelle (Uygulama hissi için) */
+    /* Metin Seçimini Yönet */
     user-select: none;
     -webkit-user-select: none;
     
-    /* Çentik boşlukları */
+    /* Çentik Boşlukları */
     padding-top: var(--sat);
     padding-bottom: var(--sab);
 }
@@ -31,311 +32,91 @@ input, textarea, select {
     -webkit-user-select: text;
 }
 
-/* Kaydırma çubuğunu gizle ama kaydırmaya izin ver */
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
+/* --- YARDIMCI SINIFLAR --- */
 
-/* --- 1. GENEL YARDIMCI SINIFLAR --- */
+/* Scrollbar Gizleme */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Kaydırma Çubuğunu Gizle (Ama kaydırmaya izin ver) */
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-.no-scrollbar {
-    -ms-overflow-style: none;  /* IE ve Edge */
-    scrollbar-width: none;  /* Firefox */
-}
+/* Özel Scrollbar (Masaüstü için şık görünüm) */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
-/* Mobil tarayıcılarda güvenli alt boşluk (iPhone X ve üzeri için) */
-.pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-}
+/* Mobil Güvenli Alan */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
-/* Cam Efekti (Glassmorphism) */
-.glass-effect {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
+/* --- ANİMASYONLAR (Global) --- */
 
-/* Radyo Buton Seçili Durumu (Ödev Ekleme Modalı için) */
-.has-[:checked] {
-    border-color: #7c3aed; /* purple-600 */
-    background-color: #f5f3ff; /* purple-50 */
-}
-
-
-/* --- 2. ANİMASYONLAR --- */
-
-/* Aşağıdan Yukarı Kayma (Modallar için) */
+/* 1. Aşağıdan Yukarı Kayma (Modallar) */
 @keyframes slide-up {
     from { transform: translateY(100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
-.animate-slide-up {
-    animation: slide-up 0.3s ease-out forwards;
-}
+.animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-/* Pomodoro Nabız Efekti */
+/* 2. Fade In Up (Giriş Ekranları ve Kartlar) */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
+
+/* 3. Büyüyerek Gelme (Pop-up) */
+@keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.animate-scale-in { animation: scaleIn 0.2s ease-out forwards; }
+
+/* 4. Soluklaşarak Gelme (Listeler) */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+
+/* 5. Nabız Efekti (Canlı Durumlar) */
 @keyframes pulse-ring {
     0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); }
-    100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
-}
-.timer-active {
-    animation: pulse-ring 2s infinite;
-}
-
-/* Donut Grafik Animasyonu */
-#summaryDonutChart circle:nth-child(2) {
-    transition: stroke-dashoffset 1s ease-out;
-}
-
-
-/* --- 3. AJANDA TAKVİM STİLLERİ --- */
-
-#calendarGrid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    /* Hücreler arası boşluk yok, borderlar ile ayrılacak */
-}
-
-.calendar-header {
-    text-align: center;
-    font-size: 0.75rem; /* 12px */
-    font-weight: 600;
-    color: #6b7280; /* gray-500 */
-    padding-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.calendar-day {
-    position: relative;
-    height: 80px; /* Masaüstü ve mobil için ideal yükseklik */
-    padding: 0.25rem;
-    background-color: #ffffff;
-    border-right: 1px solid #f3f4f6;
-    border-bottom: 1px solid #f3f4f6;
-    transition: background-color 0.2s;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.calendar-day:hover {
-    background-color: #f9fafb; /* gray-50 */
-}
-
-.calendar-day.other-month {
-    background-color: #f9fafb;
-    color: #d1d5db; /* gray-300 */
-    cursor: default;
-}
-
-/* Gün Numarası */
-.calendar-day .day-number {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #374151; /* gray-700 */
-    margin-bottom: 4px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-}
-
-/* Bugünün Tarihi */
-.calendar-day.today .day-number {
-    background-color: #6d28d9; /* purple-700 */
-    color: white;
-    font-weight: 700;
-    box-shadow: 0 2px 4px rgba(109, 40, 217, 0.3);
-}
-
-/* Seçili Gün */
-.calendar-day.selected {
-    background-color: #eef2ff; /* indigo-50 */
-    box-shadow: inset 0 0 0 2px #6366f1; /* indigo-500 border */
-}
-
-/* Randevu Noktaları */
-.appointment-dots {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-    justify-content: center;
-    width: 100%;
-}
-
-.dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-}
-.dot-blue { background-color: #3b82f6; } /* Gelecek */
-.dot-red { background-color: #ef4444; } /* Geçmiş/Kaçırılan */
-.dot-green { background-color: #22c55e; } /* Tamamlandı */
-
-
-/* --- 4. MOBİL ALT MENÜ (BOTTOM NAVIGATION) --- */
-/* ... (Önceki temel stiller aynı) ... */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-
-@keyframes slide-up { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
-
-/* --- TAKİP BUTONU STİLİ (DİNAMİK) --- */
-/* Ortadaki Yuvarlak Buton */
-.bottom-nav-center-btn {
-    margin-top: 0.5rem; /* Yukarı taşma */
-    /* background-color ve color KALDIRILDI - Artık HTML/JS kontrol edecek */
-    box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5), 0 8px 10px -6px rgba(79, 70, 229, 0.1); /* İndigo gölge */
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 4px solid #ffffff; /* Beyaz çerçeve */
-}
-
-/* Aktif olduğunda (Mavi olduğunda) gölgeyi kaldır ve büyüt */
-.nav-btn.active .bottom-nav-center-btn {
-    transform: scale(1.1);
-    box-shadow: none !important; /* GÖLGE KALDIRILDI */
-    border-color: #e0e7ff; /* İsteğe bağlı: Dışına hafif bir çerçeve rengi */
-}
-
-/* Diğer İkonlar */
-.bottom-nav-btn.active { color: #4f46e5; }
-
-/* --- PROFİL KARTLARI --- */
-.profile-info-card {
-    background: white;
-    border-radius: 1rem;
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    border: 1px solid #f3f4f6;
-    margin-bottom: 0.75rem;
-}
-.profile-icon-box {
-    width: 40px; height: 40px;
-    border-radius: 0.75rem;
-    display: flex; align-items: center; justify-content: center;
-    margin-right: 1rem;
-    font-size: 1.1rem;
-}
-
-/* --- 5. SORU TAKİP TABLOSU (ÖZEL GRID) --- */
-/* Bu stiller, app.js içinde dinamik olarak oluşturulan tabloyu destekler */
-
-.tracking-container {
-    overflow-x: auto;
-    border-radius: 0.75rem; /* rounded-xl */
-    border: 1px solid #e5e7eb; /* gray-200 */
-    background-color: white;
-}
-
-/* Sticky Header ve Kolonlar için temel ayarlar */
-.tracking-header, .tracking-header-sub, .tracking-cell-date, .tracking-cell-total {
-    background-color: #ffffff;
-}
-
-/* Hücre Odaklanma (Input) */
-.tracking-input {
-    transition: all 0.2s;
-}
-.tracking-input:focus {
-    background-color: #ffffff;
-    box-shadow: inset 0 0 0 2px #6366f1; /* indigo-500 */
-}
-
-/* Onay Durumuna Göre Kenarlıklar */
-.tracking-input.border-yellow-400 {
-    background-color: #fefce8; /* yellow-50 */
-}
-.tracking-input.border-green-400 {
-    background-color: #f0fdf4; /* green-50 */
-    color: #15803d; /* green-700 */
-    font-weight: 600;
-}
-/* --- YENİ: SORU TAKİBİ KARTLARI --- */
-
-/* Günlük Akordiyon Başlığı */
-.accordion-header {
-    transition: all 0.2s ease-in-out;
-}
-/* Açık durumdaki günün stili (Mor çerçeve, açık mor arka plan) */
-.accordion-header[aria-expanded="true"] {
-    background-color: #f5f3ff; /* purple-50 */
-    border-color: #7c3aed; /* purple-600 */
-    color: #5b21b6; /* purple-800 */
-    box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.1), 0 2px 4px -1px rgba(124, 58, 237, 0.06);
-}
-/* Kapalı durumdaki günün stili */
-.accordion-header[aria-expanded="false"] {
-    background-color: white;
-    border-color: #e5e7eb; /* gray-200 */
-}
-
-
-/* Genel Yardımcılar */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-
-/* Animasyonlar */
-@keyframes slide-up {
-    from { transform: translateY(100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-.animate-slide-up { animation: slide-up 0.3s ease-out forwards; }
-
-@keyframes pulse-ring {
-    0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
     100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
 }
 .timer-active { animation: pulse-ring 2s infinite; }
 
-/* Akordiyon (Soru Takibi) */
-.accordion-header { transition: all 0.2s ease-in-out; }
+/* --- ÖZEL BİLEŞENLER --- */
+
+/* Takvim Hücresi */
+.calendar-day {
+    position: relative;
+    min-height: 80px;
+    background-color: #ffffff;
+    transition: background-color 0.2s;
+}
+@media (min-width: 768px) {
+    .calendar-day { min-height: 100px; }
+}
+
+/* Soru Takibi Akordiyon Başlığı */
 .accordion-header[aria-expanded="true"] {
-    background-color: #f5f3ff; border-color: #7c3aed; color: #5b21b6;
+    background-color: #f5f3ff; /* purple-50 */
+    border-color: #7c3aed; /* purple-600 */
+    color: #5b21b6; /* purple-800 */
     box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.1);
 }
-.accordion-header[aria-expanded="false"] { background-color: white; border-color: #e5e7eb; }
 
-/* Kartlar */
-.subject-card {
-    background-color: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem;
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); transition: all 0.2s;
+/* Profil Kartı */
+.profile-info-card {
+    transition: transform 0.2s, box-shadow 0.2s;
 }
-.subject-card:focus-within { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1); }
-
-/* Rutin Butonu */
-.routine-btn {
-    background-color: #10b981; color: white; font-weight: 700; border-radius: 0.5rem;
-    padding: 0.5rem 1rem; font-size: 0.875rem; text-transform: uppercase;
-    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); transition: transform 0.1s;
-}
-.routine-btn:active { transform: scale(0.95); }
-/* Alt Menü Taşma Ayarı */
-nav.fixed.bottom-0 {
-    overflow: visible !important; /* Butonun yukarı taşmasına izin ver */
+.profile-info-card:active {
+    transform: scale(0.98);
 }
 
-/* Profil Avatar */
-#profileAvatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Mobil Alt Menü Ortadaki Buton */
+.bottom-nav-center-btn {
+    box-shadow: 0 8px 16px -4px rgba(79, 70, 229, 0.4);
+    border: 4px solid #ffffff;
+    margin-bottom: 5px; /* Yukarı taşma efekti */
 }

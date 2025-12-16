@@ -187,13 +187,18 @@ function loadMessageStudentList(db, currentUserId, appId) {
 // === SOHBET YÜKLEME ===
 function loadChat(db, currentUserId, appId, studentId, studentName, studentAvatar) {
     currentChatStudentId = studentId;
-
+    
     // Mobil Görünüm Geçişi
-    openMobileChat();
+    if(typeof openMobileChat === 'function') openMobileChat();
 
-    document.getElementById('chatEmptyState').classList.add('hidden');
-    document.getElementById('chatContent').classList.remove('hidden');
-    document.getElementById('chatContent').classList.add('flex');
+    const emptyState = document.getElementById('chatEmptyState');
+    const chatContent = document.getElementById('chatContent');
+    
+    if(emptyState) emptyState.classList.add('hidden');
+    if(chatContent) {
+        chatContent.classList.remove('hidden');
+        chatContent.classList.add('flex');
+    }
 
     // Header Güncelle
     document.getElementById('chatHeaderName').textContent = studentName;
@@ -208,19 +213,27 @@ function loadChat(db, currentUserId, appId, studentId, studentName, studentAvata
     }
     
     document.getElementById('chatTargetStudentId').value = studentId;
+
+    // --- SOHBETİ TEMİZLEME BUTONU BAĞLANTISI (YENİ) ---
+    // Butonu bulmak için önce ID eklemeliyiz veya mevcut yapıyı kullanmalıyız.
+    // HTML'de ID olmadığı için querySelector ile title üzerinden veya class ile bulup ID atıyoruz.
+    const deleteBtn = document.querySelector('#chatContent button[title*="Temizle"]');
+    if(deleteBtn) {
+        deleteBtn.onclick = () => deleteChatHistory(db, currentUserId, appId, studentId);
+    }
     
     const messagesContainer = document.getElementById('chatMessages');
     messagesContainer.innerHTML = '<div class="flex justify-center p-4"><i class="fa-solid fa-spinner fa-spin text-purple-500"></i></div>';
 
     // Mesajları Dinle
     if (activeListeners.chatUnsubscribe) activeListeners.chatUnsubscribe();
-
+    
     const q = query(
         collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar"), 
         orderBy("tarih", "asc"),
-        limit(100) // Son 100 mesaj
+        limit(100)
     );
-
+    
     activeListeners.chatUnsubscribe = onSnapshot(q, (snapshot) => {
         if (snapshot.empty) {
             messagesContainer.innerHTML = `
@@ -239,9 +252,9 @@ function loadChat(db, currentUserId, appId, studentId, studentName, studentAvata
             const m = doc.data();
             const isMe = m.gonderen === 'koc';
             
-            // Tarih Ayracı (Gün bazlı)
             const msgDate = m.tarih ? m.tarih.toDate() : new Date();
-            const dateStr = formatDateTR(msgDate.toISOString().split('T')[0]);
+            // formatDateTR fonksiyonunun helpers.js'den import edildiğinden emin olun
+            const dateStr = (typeof formatDateTR === 'function') ? formatDateTR(msgDate.toISOString().split('T')[0]) : msgDate.toLocaleDateString();
             
             if (dateStr !== lastDate) {
                 html += `<div class="flex justify-center my-4"><span class="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium shadow-sm">${dateStr}</span></div>`;
@@ -249,7 +262,6 @@ function loadChat(db, currentUserId, appId, studentId, studentName, studentAvata
             }
 
             const time = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
             if (!isMe && !m.okundu) {
                 unreadBatch.push(doc.ref);
             }
@@ -270,12 +282,10 @@ function loadChat(db, currentUserId, appId, studentId, studentName, studentAvata
 
         messagesContainer.innerHTML = html;
         
-        // Otomatik en alta kaydır
         requestAnimationFrame(() => {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         });
 
-        // Okundu işaretle
         if (unreadBatch.length > 0) {
             const batch = writeBatch(db);
             unreadBatch.forEach(ref => batch.update(ref, { okundu: true }));
@@ -341,6 +351,58 @@ function closeMobileChat() {
         if(activeListeners.chatUnsubscribe) {
             activeListeners.chatUnsubscribe();
             activeListeners.chatUnsubscribe = null;
+        }
+    }
+}
+// === SOHBET GEÇMİŞİNİ SİLME ===
+async function deleteChatHistory(db, currentUserId, appId, studentId) {
+    if (!confirm("Bu öğrenciyle olan TÜM mesajlaşma geçmişiniz silinecektir. Bu işlem geri alınamaz. Onaylıyor musunuz?")) return;
+
+    const messagesRef = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar");
+    
+    try {
+        // Silme işlemi sırasında kullanıcıya bilgi verilebilir
+        const deleteBtn = document.querySelector('#chatContent button[title*="Temizle"]');
+        const originalIcon = deleteBtn ? deleteBtn.innerHTML : '';
+        if(deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        }
+
+        // Batch ile toplu silme (Firebase limiti 500 işlem)
+        const q = query(messagesRef, limit(500));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            alert("Silinecek mesaj bulunamadı.");
+            if(deleteBtn) { deleteBtn.disabled = false; deleteBtn.innerHTML = originalIcon; }
+            return;
+        }
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        
+        // Eğer 500'den fazla mesaj varsa döngü gerekebilir ama şimdilik tek seferlik yeterli
+        if(deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalIcon;
+        }
+        
+        // Başarılı mesajı (Opsiyonel, zaten liste boşalınca arayüz güncellenir)
+        // alert("Sohbet geçmişi temizlendi.");
+
+    } catch (error) {
+        console.error("Sohbet silme hatası:", error);
+        alert("Mesajlar silinirken bir hata oluştu.");
+        
+        const deleteBtn = document.querySelector('#chatContent button[title*="Temizle"]');
+        if(deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
         }
     }
 }

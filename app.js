@@ -379,7 +379,7 @@ document.getElementById('closeProfileModalButton')?.addEventListener('click', ()
 });
 
 // =================================================================
-// 7. BİLDİRİMLER (GÜNCELLENMİŞ AKILLI SİSTEM)
+// 7. BİLDİRİMLER (SADECE SEANS)
 // =================================================================
 function initCoachNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
@@ -390,103 +390,38 @@ function initCoachNotifications(uid) {
     
     if(!btn || !dropdown) return;
 
-    // Dropdown Açma/Kapama
-    btn.onclick = (e) => { 
-        e.stopPropagation(); 
-        dropdown.classList.toggle('hidden'); 
-        if(dot) dot.classList.add('hidden'); 
-    };
+    // Dropdown İşlemleri
+    btn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); if(dot) dot.classList.add('hidden'); };
+    if(closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.add('hidden'); };
+    document.addEventListener('click', (e) => { if(!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.add('hidden'); });
 
-    if(closeBtn) closeBtn.onclick = (e) => {
-        e.stopPropagation();
-        dropdown.classList.add('hidden');
-    };
-
-    // Dışarı tıklayınca kapat
-    document.addEventListener('click', (e) => { 
-        if(!dropdown.contains(e.target) && !btn.contains(e.target)) {
-            dropdown.classList.add('hidden');
-        }
-    });
-
-    let notifications = [];
-
-    const render = () => {
-        // Tarihe göre sırala (Yeniden eskiye) - Burada basitlik için sıralamayı query hallediyor
-        if (notifications.length > 0) {
+    // SADECE SEANS SORGUSU
+    const today = new Date().toISOString().split('T')[0];
+    onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(5)), (snap) => {
+        let html = '';
+        if (snap.empty) {
+            html = '<p class="text-center text-gray-400 text-xs py-8">Yaklaşan seans yok.</p>';
+            if(dot) dot.classList.add('hidden');
+        } else {
             if(dot) dot.classList.remove('hidden');
-            list.innerHTML = notifications.map(n => `
-                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors group" onclick="${n.action}">
+            snap.forEach(d => {
+                const data = d.data();
+                html += `
+                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors group" onclick="window.navigateToPage('ajandam')">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-xs font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">${n.title}</p>
-                            <p class="text-xs text-gray-500 line-clamp-1">${n.desc}</p>
+                            <p class="text-xs font-bold text-gray-800 group-hover:text-indigo-600">${data.title || 'Seans'}</p>
+                            <p class="text-xs text-gray-500">${data.ogrenciAd} - ${formatDateTR(data.tarih)} ${data.baslangic}</p>
                         </div>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${n.badgeClass}">${n.badgeText}</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700">Seans</span>
                     </div>
-                </div>`).join('');
-        } else {
-            if(dot) dot.classList.add('hidden');
-            list.innerHTML = '<p class="text-center text-gray-400 text-xs py-8">Bildirim yok.</p>';
+                </div>`;
+            });
         }
-    };
-
-    // 1. Yaklaşan Seanslar
-    const today = new Date().toISOString().split('T')[0];
-    onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(3)), (snap) => {
-        notifications = notifications.filter(n => n.type !== 'seans'); 
-        snap.forEach(d => {
-            const data = d.data();
-            notifications.push({
-                type: 'seans',
-                title: 'Yaklaşan Seans',
-                desc: `${data.ogrenciAd} - ${formatDateTR(data.tarih)} ${data.baslangic}`,
-                badgeText: 'Seans',
-                badgeClass: 'bg-blue-100 text-blue-700',
-                action: "document.getElementById('nav-ajandam').click()"
-            });
-        });
-        render();
+        list.innerHTML = html;
     });
 
-    // 2. Onay Bekleyen Ödevler
-    onSnapshot(query(collectionGroup(db, 'odevler'), where('kocId', '==', uid), where('durum', '==', 'tamamlandi'), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
-        notifications = notifications.filter(n => n.type !== 'odev');
-        snap.forEach(d => {
-            const data = d.data();
-            const studentId = d.ref.parent.parent.id;
-            notifications.push({
-                type: 'odev',
-                title: 'Ödev Onayı Bekliyor',
-                desc: data.title,
-                badgeText: 'Ödev',
-                badgeClass: 'bg-orange-100 text-orange-700',
-                // Tıklayınca Öğrenci Detay Sayfasını Açar
-                action: `renderOgrenciDetaySayfasi('${studentId}', 'Öğrenci'); window.navigateToPage('ogrencilerim')`
-            });
-        });
-        render();
-    });
-
-    // 3. Onay Bekleyen Sorular (YENİ EKLENDİ)
-    onSnapshot(query(collectionGroup(db, 'soruTakibi'), where('kocId', '==', uid), where('onayDurumu', '==', 'bekliyor'), limit(5)), (snap) => {
-        notifications = notifications.filter(n => n.type !== 'soru');
-        snap.forEach(d => {
-            const data = d.data();
-            // Bu sefer direkt Soru Takibi sayfasına gönderiyoruz
-            notifications.push({
-                type: 'soru',
-                title: 'Soru Onayı Bekliyor',
-                desc: `${data.ders} - ${data.adet} Soru`,
-                badgeText: 'Soru',
-                badgeClass: 'bg-yellow-100 text-yellow-700',
-                action: `window.navigateToPage('sorutakibi')`
-            });
-        });
-        render();
-    });
-
-    // 4. Mesajlar (Badge)
+    // 4. MESAJLAR (Sadece Badge Sayısı)
     onSnapshot(query(collectionGroup(db, 'mesajlar'), where('kocId', '==', uid), where('gonderen', '==', 'ogrenci'), where('okundu', '==', false)), (snap) => {
         const count = snap.size;
         const msgBadge = document.getElementById('headerUnreadMsgCount');
@@ -500,6 +435,75 @@ function initCoachNotifications(uid) {
         }
     });
 }
+// =================================================================
+// GLOBAL YÖNLENDİRME FONKSİYONU (ROUTER)
+// =================================================================
+window.navigateToPage = async (target) => {
+    console.log("Yönlendirme isteği geldi:", target);
+
+    // 1. Bildirim menülerini kapat (Temizlik)
+    const drop = document.getElementById('coachNotificationDropdown');
+    const dot = document.getElementById('headerNotificationDot');
+    if (drop) drop.classList.add('hidden');
+    if (dot) dot.classList.add('hidden');
+
+    // 2. Global değişken kontrolleri
+    const currentUser = auth.currentUser; // Firebase Auth'dan güncel kullanıcıyı al
+    if (!currentUser || !db) {
+        console.error("Sistem hazır değil: Kullanıcı oturumu yok.");
+        return;
+    }
+
+    // 3. KONTROL: Gelen 'target' bir menü elemanı mı? (Örn: 'ajandam', 'sorutakibi')
+    // Eğer HTML'de id="nav-ajandam" diye bir buton varsa, ona tıkla.
+    const navButton = document.getElementById(`nav-${target}`);
+    if (navButton) {
+        console.log(`Main menüye gidiliyor: nav-${target}`);
+        navButton.click();
+        return; // İşlem tamam, fonksiyondan çık.
+    }
+
+    // 4. KONTROL: Eğer bir menü değilse, bu bir ÖĞRENCİ ID'sidir.
+    // Öğrenci detay sayfasını açacağız.
+    const studentId = target;
+    console.log(`Öğrenci detayına gidiliyor: ID ${studentId}`);
+
+    try {
+        // A) Sol menüde 'Öğrencilerim' sekmesini aktif görünüm yap
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active', 'bg-indigo-50', 'text-indigo-600');
+            item.classList.add('text-gray-600');
+        });
+        const ogrencilerimNav = document.getElementById('nav-ogrencilerim');
+        if (ogrencilerimNav) {
+            ogrencilerimNav.classList.add('active', 'bg-indigo-50', 'text-indigo-600');
+        }
+
+        // B) Öğrenci ismini çek (Detay sayfası başlığı için)
+        // Eğer global 'coachId' yoksa currentUser.uid kullan
+        const activeCoachId = (typeof coachId !== 'undefined' ? coachId : null) || currentUser.uid;
+        
+        const docRef = doc(db, "artifacts", appId, "users", activeCoachId, "ogrencilerim", studentId);
+        const docSnap = await getDoc(docRef);
+
+        let studentName = "Öğrenci Detayı";
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            studentName = `${data.ad} ${data.soyad}`;
+        }
+
+        // C) Detay sayfasını render et
+        // NOT: renderOgrenciDetaySayfasi fonksiyonunuzun app.js veya ogrencilerim.js içinde tanımlı olması gerekir.
+        if (typeof renderOgrenciDetaySayfasi === 'function') {
+            renderOgrenciDetaySayfasi(db, activeCoachId, appId, studentId, studentName);
+        } else {
+            console.error("HATA: renderOgrenciDetaySayfasi fonksiyonu bulunamadı!");
+        }
+
+    } catch (error) {
+        console.error("Öğrenci detayına giderken hata:", error);
+    }
+};
 
 // BAŞLAT
 main();

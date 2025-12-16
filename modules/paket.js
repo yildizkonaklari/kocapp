@@ -26,13 +26,13 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
         if (profileSnap.exists()) {
             const data = profileSnap.data();
             currentPackageInfo.name = data.paketAdi || 'Standart';
-            currentPackageInfo.limit = data.maxOgrenci || 5;
+            currentPackageInfo.limit = data.maxOgrenci || 3;
             
             // Bitiş Tarihi Kontrolü
-            if (data.paketBitisTarihi) {
+            if (data.uyelikBitis) {
                 try {
                     // Timestamp veya Date string kontrolü
-                    const dateObj = data.paketBitisTarihi.toDate ? data.paketBitisTarihi.toDate() : new Date(data.paketBitisTarihi);
+                    const dateObj = data.uyelikBitis.toDate ? data.uyelikBitis.toDate() : new Date(data.uyelikBitis);
                     
                     // Geçerli bir tarih mi?
                     if (!isNaN(dateObj.getTime())) {
@@ -268,3 +268,4 @@ function createContactModal() {
     document.getElementById('btnCloseContactModal').onclick = closeModal;
     document.getElementById('btnCloseContactModalX').onclick = closeModal;
 }
+

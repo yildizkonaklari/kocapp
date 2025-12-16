@@ -840,3 +840,79 @@ async function resetStudentAccess(db, coachId, appId, studentDocId, studentName)
         alert("İşlem başarısız: " + error.message); 
     }
 }
+// =================================================================
+// YARDIMCI FONKSİYONLAR (Dosyanın en altına ekleyin)
+// =================================================================
+
+// 1. İkincil App ile Öğrenci Hesabı Oluşturma (Admin oturumu kapanmadan)
+async function createStudentAccount(username, password) {
+    const firebaseConfig = {
+        apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
+        authDomain: "kocluk-99ad2.firebaseapp.com",
+        projectId: "kocluk-99ad2",
+        storageBucket: "kocluk-99ad2.firebasestorage.app",
+        messagingSenderId: "784379379600",
+        appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
+    };
+
+    // İkincil bir Firebase uygulaması başlatıyoruz
+    const secondaryApp = initializeApp2(firebaseConfig, "StudentCreator");
+    const secondaryAuth = getAuth2(secondaryApp);
+    
+    try {
+        const email = `${username}@koc.com`;
+        // Yeni kullanıcıyı oluştur
+        const userCredential = await createUser2(secondaryAuth, email, password);
+        const uid = userCredential.user.uid;
+        
+        // İkincil oturumu hemen kapat ki ana yöneticinin oturumu karışmasın
+        await signOut2(secondaryAuth);
+        
+        return uid;
+    } catch (error) {
+        console.error("Hesap oluşturma hatası:", error);
+        throw error; // Hatayı yukarı fırlat ki saveNewStudent yakalasın
+    }
+}
+
+// 2. Kimlik Bilgileri Modalı (Başarılı kayıttan sonra çıkar)
+function showCredentialsModal(username, password, title = "İşlem Başarılı") {
+    // Varsa eskisini kaldır
+    const oldModal = document.getElementById('credentialModal');
+    if(oldModal) oldModal.remove();
+
+    const modalHtml = `
+    <div id="credentialModal" class="fixed inset-0 bg-gray-900/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
+            <button onclick="document.getElementById('credentialModal').remove()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm">
+                <i class="fa-solid fa-check"></i>
+            </div>
+        
+            <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">${title}</h3>
+            <p class="text-sm text-gray-500 mb-6 text-center">Bilgileri kopyalayıp öğrenciye iletin.</p>
+            
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 space-y-3">
+                <div>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Kullanıcı Adı</p>
+                    <div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2">
+                        <span class="font-mono text-indigo-600 font-bold select-all text-sm">${username}</span>
+                        <button class="text-gray-400 hover:text-indigo-600 p-1" onclick="navigator.clipboard.writeText('${username}')"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                </div>
+                <div>
+                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Şifre</p>
+                    <div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2">
+                        <span class="font-mono text-indigo-600 font-bold select-all text-sm">${password}</span>
+                         <button class="text-gray-400 hover:text-indigo-600 p-1" onclick="navigator.clipboard.writeText('${password}')"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}

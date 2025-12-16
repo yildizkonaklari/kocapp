@@ -15,7 +15,7 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
     // 1. Mevcut Profil Bilgilerini Çek
     let currentPackageInfo = {
         name: 'Standart',
-        expiry: 'Süresiz',
+        expiry: '-', // Varsayılanı "Süresiz" yerine "-" yaptık
         limit: 5
     };
 
@@ -25,16 +25,29 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
         
         if (profileSnap.exists()) {
             const data = profileSnap.data();
-            currentPackageInfo.name = data.paketAdi || 'Standart'; // Veritabanında paket adı yoksa varsayılan
+            currentPackageInfo.name = data.paketAdi || 'Standart';
             currentPackageInfo.limit = data.maxOgrenci || 5;
             
+            // Bitiş Tarihi Kontrolü
             if (data.paketBitisTarihi) {
-                // Tarih formatlama (Timestamp kontrolü)
-                const dateObj = data.paketBitisTarihi.toDate ? data.paketBitisTarihi.toDate() : new Date(data.paketBitisTarihi);
-                // Helper'daki formatDateTR fonksiyonunu kullanıyoruz veya manuel formatlıyoruz
-                currentPackageInfo.expiry = typeof formatDateTR === 'function' 
-                    ? formatDateTR(dateObj.toISOString().split('T')[0]) 
-                    : dateObj.toLocaleDateString('tr-TR');
+                try {
+                    // Timestamp veya Date string kontrolü
+                    const dateObj = data.paketBitisTarihi.toDate ? data.paketBitisTarihi.toDate() : new Date(data.paketBitisTarihi);
+                    
+                    // Geçerli bir tarih mi?
+                    if (!isNaN(dateObj.getTime())) {
+                        currentPackageInfo.expiry = typeof formatDateTR === 'function' 
+                            ? formatDateTR(dateObj.toISOString().split('T')[0]) 
+                            : dateObj.toLocaleDateString('tr-TR');
+                    }
+                } catch (e) {
+                    console.error("Tarih formatlama hatası", e);
+                }
+            } else {
+                // Eğer paket Standart değilse ve tarih yoksa uyarı verilebilir veya boş bırakılır
+                if (currentPackageInfo.name.toLowerCase() !== 'standart') {
+                    currentPackageInfo.expiry = 'Belirtilmedi';
+                }
             }
         }
     } catch (error) {
@@ -156,14 +169,12 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
         </div>
     `;
 
-    // --- HESAPLAMA MANTIĞI (GÜNCELLENMİŞ) ---
+    // --- HESAPLAMA MANTIĞI ---
     const input = document.getElementById('inputStudentCount');
-    const unitPrice = 33; // Öğrenci başı birim fiyat
+    const unitPrice = 33;
 
     const calculate = () => {
         let count = parseInt(input.value);
-        
-        // Güvenlik kontrolü (Min 5, 5'in katı değilse düzelt)
         if (isNaN(count) || count < 5) count = 5;
         if (count % 5 !== 0) count = Math.ceil(count / 5) * 5;
 
@@ -188,7 +199,6 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
         document.getElementById('priceYearTotal').textContent = `${formatCurrency(yearDiscounted)}`;
     };
 
-    // --- 5'er 5'er ARTIRMA/AZALTMA ---
     document.getElementById('btnDecStudent').onclick = () => { 
         let val = parseInt(input.value);
         if(val > 5) {
@@ -203,7 +213,6 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
         calculate();
     };
 
-    // İlk hesaplama
     calculate();
 
     // --- MODAL İŞLEMLERİ ---
@@ -214,7 +223,6 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
             const plan = e.target.dataset.plan;
             const count = input.value;
             
-            // Modal mesajını güncelle
             const modalTitle = document.getElementById('modalContactPlanTitle');
             if(modalTitle) modalTitle.textContent = `${plan} Plan - ${count} Öğrenci Limiti`;
             
@@ -229,37 +237,19 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
     });
 }
 
-// Modal Oluşturucu Fonksiyon
 function createContactModal() {
     if(document.getElementById('upgradeContactModal')) return;
 
     const modalHtml = `
     <div id="upgradeContactModal" class="fixed inset-0 bg-gray-900/80 z-[200] hidden items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
-            
-            <button id="btnCloseContactModalX" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-
-            <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm">
-                <i class="fa-solid fa-headset"></i>
-            </div>
-        
+            <button id="btnCloseContactModalX" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm"><i class="fa-solid fa-headset"></i></div>
             <h3 class="text-xl font-bold text-gray-800 mb-1 text-center">Paket Yükseltme</h3>
             <p id="modalContactPlanTitle" class="text-indigo-600 font-bold text-center text-sm mb-4">Plan Seçimi</p>
-            
-            <p class="text-sm text-gray-500 mb-6 text-center leading-relaxed">
-                Paket yükseltme işlemleri ve özel teklifler için müşteri temsilcimizle iletişime geçin.
-            </p>
-            
-            <a id="btnWhatsappLink" href="#" target="_blank" 
-               class="w-full bg-green-500 text-white py-3 rounded-xl font-bold mb-3 hover:bg-green-600 transition-colors shadow-lg shadow-green-200 flex items-center justify-center gap-2">
-                <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp ile Yaz
-            </a>
-            
-            <button id="btnCloseContactModal" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2 rounded-xl hover:bg-gray-50 transition-colors">
-                Kapat
-            </button>
+            <p class="text-sm text-gray-500 mb-6 text-center leading-relaxed">Paket yükseltme işlemleri ve özel teklifler için müşteri temsilcimizle iletişime geçin.</p>
+            <a id="btnWhatsappLink" href="#" target="_blank" class="w-full bg-green-500 text-white py-3 rounded-xl font-bold mb-3 hover:bg-green-600 transition-colors shadow-lg shadow-green-200 flex items-center justify-center gap-2"><i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp ile Yaz</a>
+            <button id="btnCloseContactModal" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2 rounded-xl hover:bg-gray-50 transition-colors">Kapat</button>
         </div>
     </div>`;
 

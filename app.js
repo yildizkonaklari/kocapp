@@ -164,7 +164,8 @@ function updateActiveLinkStyles(pageId) {
 // Geri Tuşu Yönetimi (Popstate)
 window.addEventListener('popstate', (event) => {
     // 1. AÇIK MODALLARI KAPAT
-    const openModals = document.querySelectorAll('.fixed.inset-0:not(.hidden)');
+    // DÜZELTME: mobileOverlay hariç tutuldu ki menü mantığına karışmasın.
+    const openModals = document.querySelectorAll('.fixed.inset-0:not(.hidden):not(#mobileOverlay)');
     if (openModals.length > 0) {
         openModals.forEach(modal => {
             modal.classList.add('hidden');
@@ -254,7 +255,7 @@ function updateUIForLoggedInUser(user) {
     });
 }
 
-// Mobil Menü (Drawer) Yönetimi (SAĞDAN GELİŞ)
+// Mobil Menü (Drawer) Yönetimi (SAĞDAN GELİŞ) - GÜNCELLENMİŞ
 const mobileDrawer = document.getElementById('mobileMenuDrawer');
 const overlay = document.getElementById('mobileOverlay');
 
@@ -262,6 +263,7 @@ function openMobileMenu() {
     if(mobileDrawer) {
         mobileDrawer.classList.remove('translate-x-full');
         if(overlay) overlay.classList.remove('hidden');
+        // Menü açıldığını geçmişe ekle
         window.history.pushState({ menuOpen: true }, '', window.location.href);
     }
 }
@@ -273,9 +275,26 @@ function closeMobileMenu() {
     }
 }
 
-document.getElementById('btnToggleMobileMenu')?.addEventListener('click', openMobileMenu);
-document.getElementById('btnCloseMobileMenu')?.addEventListener('click', () => window.history.back());
-overlay?.addEventListener('click', () => window.history.back());
+// Menüyü geçmiş kontrolü ile kapatan akıllı fonksiyon
+function handleCloseMenuAction() {
+    // Eğer geçmişte menü açık durumu varsa, geri git (bu popstate'i tetikler ve menüyü kapatır)
+    if (window.history.state && window.history.state.menuOpen) {
+        window.history.back();
+    } else {
+        // Geçmişte yoksa (direkt açılmışsa vs.) manuel kapat
+        closeMobileMenu();
+    }
+}
+
+// Olay Dinleyicileri
+document.getElementById('btnToggleMobileMenu')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openMobileMenu();
+});
+
+// X Butonu ve Boşluk (Overlay) Tıklaması için Akıllı Kapatma
+document.getElementById('btnCloseMobileMenu')?.addEventListener('click', handleCloseMenuAction);
+overlay?.addEventListener('click', handleCloseMenuAction);
 
 // =================================================================
 // 5. GLOBAL BUTON VE MODAL İŞLEMLERİ

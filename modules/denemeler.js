@@ -15,9 +15,15 @@ let currentStudentId = null;
 let currentStudentClass = null; 
 let denemeChartInstance = null;
 let currentDb = null;
+let globalUserId = null; 
+let globalAppId = null;
 
 export async function renderDenemelerSayfasi(db, currentUserId, appId) {
     currentDb = db;
+    // YENİ EKLENENLER:
+    globalUserId = currentUserId;
+    globalAppId = appId;
+
     document.getElementById("mainContentTitle").textContent = "Deneme Yönetimi";
     const area = document.getElementById("mainContentArea");
     
@@ -212,9 +218,29 @@ function renderDenemeList(list) {
                 </div>
             </div>
             ${detailsHtml}
-            <button onclick="event.stopPropagation(); deleteGlobalDoc('${d.id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full shadow-sm"><i class="fa-solid fa-trash"></i></button>
+<button class="btn-delete-deneme absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full shadow-sm" data-id="${d.id}">
+                <i class="fa-solid fa-trash"></i>
+            </button>
         </div>`;
     }).join('');
+
+    // SİLME BUTONLARINI AKTİF ET (YENİ KOD)
+    document.querySelectorAll('.btn-delete-deneme').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Kartın açılmasını engelle
+            const id = e.currentTarget.dataset.id;
+            
+            if(confirm("Bu denemeyi silmek istediğinize emin misiniz?")) {
+                try {
+                    await deleteDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id));
+                    // Liste snapshot ile otomatik güncellenir
+                } catch (error) {
+                    console.error("Silme hatası:", error);
+                    alert("Silinirken bir hata oluştu.");
+                }
+            }
+        });
+    });
 }
 
 // --- İSTATİSTİK VE GRAFİK ---
@@ -372,8 +398,14 @@ async function saveDeneme(db, uid, appId, levelKey) {
         eklenmeTarihi: serverTimestamp()
     };
 
-    if (tur === 'Diger') {
+if (tur === 'Diger') {
         const soru = parseInt(document.getElementById('inpDigerSoru').value) || 0;
+        
+        // YENİ KONTROL
+        if (soru <= 0) {
+            alert("Lütfen soru sayısını giriniz.");
+            return;
+        }
         const dogru = parseInt(document.getElementById('inpDigerDogru').value) || 0;
         const yanlis = parseInt(document.getElementById('inpDigerYanlis').value) || 0;
         
@@ -406,7 +438,11 @@ async function saveDeneme(db, uid, appId, levelKey) {
             }
         });
         
-        if (!hasEntry && !confirm("Hiçbir giriş yapmadınız. Boş deneme kaydedilsin mi?")) return;
+        // YENİ KONTROL: Boş kayda izin yok
+        if (!hasEntry) {
+            alert("Lütfen en az bir ders için Doğru/Yanlış girişi yapınız.");
+            return;
+        }
 
         dataPayload.toplamNet = totalNet.toFixed(2);
         dataPayload.netler = netler;
@@ -428,10 +464,3 @@ async function saveDeneme(db, uid, appId, levelKey) {
         btn.textContent = "Kaydet";
     }
 }
-
-window.deleteGlobalDoc = async (docId) => {
-    if (!currentDb) return;
-    if(confirm('Silmek istediğinize emin misiniz?')) {
-        await deleteDoc(doc(currentDb, "artifacts", "kocluk-sistemi", "users", window.currentUserIdGlobal || currentDb.app._options.authDomain.split('-')[0] /* Fallback ID */, "ogrencilerim", currentStudentId, "denemeler", docId));
-    }
-};

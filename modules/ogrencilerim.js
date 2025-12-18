@@ -156,7 +156,7 @@ export function renderOgrenciSayfasi(db, currentUserId, appId) {
 }
 
 // =================================================================
-// 2. KAYIT İŞLEMİ (MODAL KAPATMA FIX)
+// YENİ ÖĞRENCİ KAYDET (MODAL GÖSTERİMİ DÜZELTİLDİ)
 // =================================================================
 export async function saveNewStudent(db, currentUserId, appId) {
     const ad = document.getElementById('studentName').value.trim();
@@ -177,44 +177,56 @@ export async function saveNewStudent(db, currentUserId, appId) {
         const btnSave = document.getElementById('saveStudentButton');
         if(btnSave) { btnSave.disabled = true; btnSave.textContent = "Kaydediliyor..."; }
 
-        // Limit Kontrolü
+        // 1. Limit Kontrolü
         const profileSnap = await getDoc(doc(db, "artifacts", appId, "users", currentUserId, "settings", "profile"));
         let maxOgrenci = 10; 
         if (profileSnap.exists() && profileSnap.data().maxOgrenci !== undefined) maxOgrenci = profileSnap.data().maxOgrenci;
         
         const snapshot = await getCountFromServer(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"));
         if (snapshot.data().count >= maxOgrenci) {
-            // Modalı Kapat
-            document.getElementById('closeModalButton').click(); 
+            // Modalı Kapat (Limit Hatası Durumunda)
+            if(document.getElementById('closeModalButton')) document.getElementById('closeModalButton').click();
+            
             if(confirm(`Limit doldu (${maxOgrenci}). Paketinizi yükseltmek ister misiniz?`)) {
                 document.getElementById('nav-paketyukselt').click();
             }
             return;
         }
 
-        // Hesap Oluştur
+        // 2. Hesap Oluşturma Bilgileri Hazırla
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         const cleanName = ad.toLowerCase().replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c').replace(/\s/g,'');
         const cleanSurname = soyad.toLowerCase().replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c').replace(/\s/g,'');
         const username = `${cleanName}.${cleanSurname}.${randomSuffix}`;
         const password = Math.random().toString(36).slice(-8);
 
+        // 3. Öğrenci Hesabını Oluştur (Auth)
         const studentUid = await createStudentAccount(username, password);
 
-        // Firestore Kayıt
+        // 4. Firestore'a Veriyi Kaydet
         const studentRef = await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), {
             ad, soyad, sinif, alan: alan, takipDersleri: dersler, olusturmaTarihi: serverTimestamp(), toplamBorc: 0, toplamOdenen: 0, username: username, authUid: studentUid
         });
 
+        // 5. Öğrenci Profilini Oluştur
         await setDoc(doc(db, "artifacts", appId, "users", studentUid, "settings", "profile"), {
             email: `${username}@koc.com`, kocId: currentUserId, rol: "ogrenci", linkedDocId: studentRef.id, kayitTarihi: serverTimestamp()
         });
 
-        // Modalı Kapat (ID tetikleyerek)
-        document.getElementById('closeModalButton').click();
+        // 6. BAŞARILI: Ekleme Modalını Kapat
+        // (Bu işlem history.back() tetikler, bu yüzden yeni modalı hemen açarsak kapanabilir)
+        if(document.getElementById('closeModalButton')) {
+            document.getElementById('closeModalButton').click();
+        } else {
+            const modal = document.getElementById('addStudentModal');
+            if(modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
+        }
 
-        // Bilgi Modalını Göster
-        showCredentialsModal(username, password, "Öğrenci Kaydedildi");
+        // 7. BİLGİ PENCERESİNİ AÇ (Kopyalama Ekranı)
+        // DÜZELTME: setTimeout ile gecikmeli açıyoruz ki önceki modalın kapanma işlemi (history.back) tamamlansın.
+        setTimeout(() => {
+            showCredentialsModal(username, password, "Öğrenci Başarıyla Eklendi");
+        }, 500); // 500ms bekleme süresi
 
     } catch (error) {
         console.error("Kayıt hatası:", error);
@@ -875,44 +887,67 @@ async function createStudentAccount(username, password) {
     }
 }
 
-// 2. Kimlik Bilgileri Modalı (Başarılı kayıttan sonra çıkar)
-function showCredentialsModal(username, password, title = "İşlem Başarılı") {
-    // Varsa eskisini kaldır
+// =================================================================
+// KİMLİK BİLGİLERİ GÖSTERME VE KOPYALAMA MODALI
+// =================================================================
+function showCredentialsModal(username, password, title = "Kayıt Başarılı") {
+    // Varsa eski modalı temizle
     const oldModal = document.getElementById('credentialModal');
     if(oldModal) oldModal.remove();
+
+    // Hazır mesaj şablonu
+    const copyText = `Merhaba! 👋\nKoçluk sistemi giriş bilgilerin aşağıdadır:\n\n👤 *Kullanıcı Adı:* ${username}\n🔑 *Şifre:* ${password}\n\nUygulamaya giriş yapabilirsin. Başarılar! 🚀`;
 
     const modalHtml = `
     <div id="credentialModal" class="fixed inset-0 bg-gray-900/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
-            <button onclick="document.getElementById('credentialModal').remove()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-
+            
             <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm">
                 <i class="fa-solid fa-check"></i>
             </div>
         
             <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">${title}</h3>
-            <p class="text-sm text-gray-500 mb-6 text-center">Bilgileri kopyalayıp öğrenciye iletin.</p>
+            <p class="text-sm text-gray-500 mb-6 text-center">Bilgileri kopyalayıp öğrenciye iletebilirsiniz.</p>
             
             <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 space-y-3">
                 <div>
                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Kullanıcı Adı</p>
                     <div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2">
                         <span class="font-mono text-indigo-600 font-bold select-all text-sm">${username}</span>
-                        <button class="text-gray-400 hover:text-indigo-600 p-1" onclick="navigator.clipboard.writeText('${username}')"><i class="fa-regular fa-copy"></i></button>
                     </div>
                 </div>
                 <div>
                      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Şifre</p>
                     <div class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-2">
                         <span class="font-mono text-indigo-600 font-bold select-all text-sm">${password}</span>
-                         <button class="text-gray-400 hover:text-indigo-600 p-1" onclick="navigator.clipboard.writeText('${password}')"><i class="fa-regular fa-copy"></i></button>
                     </div>
                  </div>
             </div>
+
+            <button id="btnCopyAllCreds" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mb-3 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
+                <i class="fa-regular fa-copy"></i> Bilgileri Kopyala
+            </button>
+            
+            <button onclick="document.getElementById('credentialModal').remove()" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                Kapat
+            </button>
         </div>
     </div>`;
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Kopyalama İşlemi
+    document.getElementById('btnCopyAllCreds').onclick = () => {
+        navigator.clipboard.writeText(copyText).then(() => {
+            const btn = document.getElementById('btnCopyAllCreds');
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Kopyalandı!';
+            btn.classList.replace('bg-indigo-600', 'bg-green-600');
+            
+            // 2 saniye sonra eski haline dön
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-regular fa-copy"></i> Bilgileri Kopyala';
+                btn.classList.replace('bg-green-600', 'bg-indigo-600');
+            }, 2000);
+        });
+    };
 }

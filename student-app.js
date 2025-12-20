@@ -13,8 +13,7 @@ import {
     serverTimestamp, orderBy, limit, deleteDoc, writeBatch, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { formatDateTR, cleanUpListeners, activeListeners, EXAM_CONFIG, SUBJECT_DATA, CLASS_LEVEL_RULES } from './modules/helpers.js';
-
+import { formatDateTR, cleanUpListeners, activeListeners, EXAM_CONFIG, SUBJECT_DATA, CLASS_LEVEL_RULES, openModalWithBackHistory } from './modules/helpers.js';
 const firebaseConfig = {
   apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
   authDomain: "kocluk-99ad2.firebaseapp.com",
@@ -164,46 +163,134 @@ window.navigateToTab = function(tabId) {
 // =================================================================
 // 3. DASHBOARD
 // =================================================================
-async function loadDashboardData() {
-    if (!coachId || !studentDocId) return;
-    const snap = await getDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId));
-    if (snap.exists()) {
-        const d = snap.data();
-        document.getElementById('headerStudentName').textContent = d.ad;
-        if(document.getElementById('profileName')) {
-            document.getElementById('profileName').textContent = `${d.ad} ${d.soyad}`;
-            document.getElementById('profileClass').textContent = d.sinif;
-            document.getElementById('profileEmail').textContent = currentUser.email;
-            if(d.kocAdi) document.getElementById('profileCoachName').textContent = d.kocAdi;
-            else {
-                getDoc(doc(db, "artifacts", appId, "users", coachId, "settings", "profile")).then(s => {
-                    if(s.exists()) document.getElementById('profileCoachName').textContent = s.data().displayName || "Koç";
-                });
-            }
-        }
-        const avatarEl = document.getElementById('profileAvatar');
-        const headerLogo = document.getElementById('headerLogoContainer');
-        if(d.avatarIcon) {
-            if(avatarEl) { avatarEl.textContent = d.avatarIcon; avatarEl.style.backgroundColor = '#fff'; }
-            if(headerLogo) { headerLogo.innerHTML = `<span class="text-2xl">${d.avatarIcon}</span>`; headerLogo.style.background = 'transparent'; headerLogo.style.border='none'; }
-        }
-        const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(d.sinif);
-        studentDersler = d.takipDersleri || (isOrtaokul ? SUBJECT_DATA['ORTAOKUL_5_6_7'] : SUBJECT_DATA['LISE_9_10']);
-        renderProfileLessons(studentDersler);
-        const filterSelect = document.getElementById('dashboardTimeFilter');
-        if (filterSelect) {
-            const newFilterSelect = filterSelect.cloneNode(true);
-            filterSelect.parentNode.replaceChild(newFilterSelect, filterSelect);
-            newFilterSelect.addEventListener('change', () => loadStudentStats(db, coachId, appId, studentDocId, newFilterSelect.value));
-        }
-    }
-    updateHomeworkMetrics(); 
-    loadStudentStats(db, coachId, appId, studentDocId, '30'); 
-    loadUpcomingAppointments(db, coachId, appId, studentDocId);
-    loadActiveGoalsForDashboard();
-    loadOverdueHomeworks(db, coachId, appId, studentDocId);
-}
+function loadDashboardData() {
+    const container = document.getElementById('tab-home');
+    const user = firebase.auth().currentUser;
+    if (!user) return;
 
+    // --- MOTİVASYON SÖZLERİ ---
+    const quotes = [
+        "Başarı, her gün tekrarlanan küçük çabaların toplamıdır.",
+        "Gelecek, bugünden hazırlananlara aittir.",
+        "Asla vazgeçme. Mucizeler her gün olur.",
+        "Zirveye giden yol yokuştur ama manzarası güzeldir.",
+        "İnanmak başarmanın yarısıdır. Kendine güven!"
+    ];
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
+    // HTML İÇERİĞİ
+    container.innerHTML = `
+        <div class="space-y-6 pb-20">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Merhaba, ${user.displayName || 'Öğrenci'} 👋</h2>
+                    <p class="text-gray-500 text-sm">Bugün hedeflerine bir adım daha yaklaş!</p>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
+                <p class="text-lg font-medium italic relative z-10">"${randomQuote}"</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32" onclick="window.navigateToTab('tab-homework')">
+                    <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xl mb-2">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-bold text-gray-800" id="homePendingHomeworks">-</span>
+                        <p class="text-xs text-gray-500">Bekleyen Ödev</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32" onclick="window.navigateToTab('tab-tracking')">
+                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl mb-2">
+                        <i class="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                        <span class="text-2xl font-bold text-gray-800" id="homeTodayQuestions">-</span>
+                        <p class="text-xs text-gray-500">Bugün Çözülen</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-800">Hedeflerim</h3>
+                    <button onclick="window.navigateToTab('tab-goals')" class="text-indigo-600 text-xs font-bold hover:underline">Tümü</button>
+                </div>
+                <div id="homeGoalsList" class="space-y-3">
+                    <p class="text-center text-gray-400 text-xs py-4">Yükleniyor...</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform" onclick="window.navigateToTab('tab-denemeler')">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></div>
+                        <h4 class="font-bold text-gray-700 text-sm">Denemeler</h4>
+                    </div>
+                    <p class="text-xs text-gray-400">Netlerini takip et</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform" onclick="window.navigateToTab('tab-ajanda')">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-calendar-days"></i></div>
+                        <h4 class="font-bold text-gray-700 text-sm">Ajanda</h4>
+                    </div>
+                    <p class="text-xs text-gray-400">Programını gör</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Verileri çek ve doldur (Dashboard verileri)
+    // 1. Ödev Sayısı
+    getDocs(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam"))).then(snap => {
+        document.getElementById('homePendingHomeworks').textContent = snap.size;
+    });
+
+    // 2. Soru Sayısı (Bugün)
+    const today = new Date().toISOString().split('T')[0];
+    getDocs(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), where("tarih", "==", today))).then(snap => {
+        let total = 0;
+        snap.forEach(d => total += (parseInt(d.data().adet) || 0));
+        document.getElementById('homeTodayQuestions').textContent = total;
+    });
+
+    // 3. Hedefler (Kısa Liste - Yeniden Eskiye)
+    onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), where("durum", "==", "devam"), limit(3)), (snap) => {
+        const list = document.getElementById('homeGoalsList');
+        if(snap.empty) { list.innerHTML = '<p class="text-center text-gray-400 text-xs">Aktif hedef yok.</p>'; return; }
+        
+        let html = '';
+        const goals = [];
+        snap.forEach(d => goals.push(d.data()));
+        
+        // Sıralama (Yeniden Eskiye)
+        goals.sort((a, b) => {
+             const timeA = a.olusturmaTarihi?.seconds || new Date(a.bitisTarihi).getTime();
+             const timeB = b.olusturmaTarihi?.seconds || new Date(b.bitisTarihi).getTime();
+             return timeB - timeA; 
+        });
+
+        goals.forEach(g => {
+            const percent = Math.min(100, Math.round((g.ilerleme / g.hedefDegeri) * 100)) || 0;
+            html += `
+            <div class="flex items-center gap-3 pb-2 border-b border-gray-50 last:border-0">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 text-xs font-bold text-indigo-600 border-2 border-indigo-100">
+                    %${percent}
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-bold text-gray-800 truncate">${g.title}</h4>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                        <div class="bg-indigo-500 h-1.5 rounded-full" style="width: ${percent}%"></div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        list.innerHTML = html;
+    });
+}
 // ... Dashboard Yardımcıları
 function renderProfileLessons(dersler) {
     const profileTab = document.getElementById('tab-profile'); if(!profileTab) return;
@@ -706,14 +793,27 @@ function initStudentNotifications() {
     if(!list || !coachId || !studentDocId) return;
 
     let notifications = [];
-    const render = () => {
+const render = () => {
+        const list = document.getElementById('notificationList');
+        const badge = document.getElementById('notificationBadge');
+        
         if (notifications.length > 0) {
-            dot.classList.remove('hidden');
-            list.innerHTML = notifications.map(n => `<div class="p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors group" onclick="navigateToTab('${n.tab}')"><div class="flex justify-between items-start"><div><p class="text-xs font-bold text-gray-800 group-hover:text-indigo-600">${n.title}</p><p class="text-xs text-gray-500 line-clamp-1">${n.desc}</p></div><span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${n.bg}">${n.badge}</span></div></div>`).join('');
+            badge.classList.remove('hidden');
+            list.innerHTML = notifications.map(n => `
+                <div class="p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors" 
+                     onclick="document.getElementById('notificationDropdown').classList.add('hidden'); window.navigateToTab('${n.tab}')">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${n.bg}">${n.badge}</span>
+                        <span class="text-[9px] text-gray-400">${n.date ? formatDateTR(n.date) : ''}</span>
+                    </div>
+                    <h4 class="text-xs font-bold text-gray-800">${n.title}</h4>
+                    <p class="text-[10px] text-gray-500 line-clamp-2">${n.desc}</p>
+                </div>
+            `).join('');
         } else {
-            dot.classList.add('hidden');
-            list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Bildirim yok.</p></div>`;
-        }    
+            badge.classList.add('hidden');
+            list.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Bildirim yok.</p>';
+        }
     };
 // --- 4. MESAJ BİLDİRİMİ (KOÇTAN GELEN OKUNMAMIŞLAR) ---
     const msgBtn = document.getElementById('btnHeaderMessages'); // Header'daki mesaj butonu ID'si
@@ -876,6 +976,7 @@ document.getElementById('btnSaveModalSoru')?.addEventListener('click', async () 
 
 
 window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };
+
 
 
 

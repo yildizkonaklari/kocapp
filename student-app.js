@@ -45,9 +45,44 @@ function getLocalDateString(date) {
 }
 
 window.addEventListener('popstate', (event) => {
+    // 1. Modalları Kapat
     const openModals = document.querySelectorAll('.fixed.inset-0:not(.hidden)');
-    if (openModals.length > 0) openModals.forEach(m => m.classList.add('hidden'));
+    if (openModals.length > 0) {
+        openModals.forEach(m => m.classList.add('hidden'));
+        return; // Modal kapattıysak başka işlem yapma
+    }
+
+    // 2. Sekme (Tab) Geçmişi Varsa Geri Dön
+    // Eğer history state içinde tab bilgisi varsa ona dön
+    if (event.state && event.state.tab) {
+        // Döngüye girmemek için pushState yapmadan sadece UI değiştiriyoruz
+        switchTabUI(event.state.tab);
+    } else {
+        // Varsayılan olarak anasayfaya dön veya uygulamadan çık (tarayıcı yönetir)
+        // Eğer hiçbir tab açık değilse (örneğin ilk yükleme), ana sayfaya atabiliriz
+        if (!document.getElementById('tab-home').classList.contains('hidden')) {
+             // Zaten ana sayfadayız, işlem yok.
+        } else {
+             switchTabUI('tab-home');
+        }
+    }
 });
+
+// UI Değiştirme Yardımcısı (History Push Yapmaz)
+function switchTabUI(tabId) {
+    cleanUpListeners();
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById(tabId)?.classList.remove('hidden');
+    
+    document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.remove('text-indigo-600', 'active');
+        b.classList.add('text-gray-400');
+        if(b.dataset.target === tabId) {
+            b.classList.add('text-indigo-600', 'active');
+            b.classList.remove('text-gray-400');
+        }
+    });
+}
 
 function openModalWithBackHistory(modalId) {
     const modal = document.getElementById(modalId);
@@ -104,9 +139,12 @@ async function initializeStudentApp(uid) {
 }
 
 // =================================================================
-// 2. NAVİGASYON
+// 2. NAVİGASYON (Geri Tuşu Destekli)
 // =================================================================
-window.navigateToTab = function(tabId) {
+
+// 1. Yardımcı Fonksiyon: Sadece Ekranı ve Veriyi Günceller (History eklemez)
+// Bu fonksiyon hem tıklamalarda hem de geri tuşuna basıldığında kullanılır.
+function switchTabUI(tabId) {
     cleanUpListeners();
     document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
     document.getElementById(tabId)?.classList.remove('hidden');
@@ -126,6 +164,7 @@ window.navigateToTab = function(tabId) {
         else { centerBtn.classList.add('bg-indigo-600'); centerBtn.classList.remove('bg-indigo-700'); }
     }
 
+    // İlgili sayfanın verilerini yükle
     if (tabId === 'tab-homework') { odevWeekOffset=0; loadHomeworksTab(); }
     else if (tabId === 'tab-messages') { markMessagesAsRead(); loadStudentMessages(); }
     else if (tabId === 'tab-tracking') { currentWeekOffset=0; renderSoruTakibiGrid(); }
@@ -133,6 +172,15 @@ window.navigateToTab = function(tabId) {
     else if (tabId === 'tab-goals') loadGoalsTab();
     else if (tabId === 'tab-denemeler') loadDenemelerTab();
     else if (tabId === 'tab-home') loadDashboardData();
+}
+
+// 2. Ana Navigasyon: Tıklama ile çalışır ve Geçmişe Kaydeder
+window.navigateToTab = function(tabId) {
+    // Tarayıcı geçmişine (History) ekle - Bu satır geri tuşunun çalışmasını sağlar
+    window.history.pushState({ tab: tabId }, '', `#${tabId.replace('tab-', '')}`);
+    
+    // UI'ı güncelle
+    switchTabUI(tabId);
 };
 
 // =================================================================
@@ -345,8 +393,18 @@ function loadGoalsTab() {
     const list = document.getElementById('studentHedefList'); if(!list) return;
     activeListeners.hedeflerUnsubscribe = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), orderBy("bitisTarihi", "asc")), (snap) => {
         const goals = []; snap.forEach(doc => goals.push({ id: doc.id, ...doc.data() }));
-        goals.sort((a, b) => { if (a.isPinned && !b.isPinned) return -1; if (!a.isPinned && b.isPinned) return 1; return new Date(a.bitisTarihi) - new Date(b.bitisTarihi); });
-        if (goals.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-8 text-sm">Henüz hedef atanmamış.</p>'; return; }
+goals.sort((a, b) => {
+            // 1. Sabitleme Önceliği
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            
+            // 2. Yeniden Eskiye (Oluşturma Tarihine Göre, yoksa Bitiş Tarihine Göre)
+            // Timestamp kontrolü yapıyoruz
+            const timeA = a.olusturmaTarihi?.seconds || new Date(a.bitisTarihi).getTime() / 1000;
+            const timeB = b.olusturmaTarihi?.seconds || new Date(b.bitisTarihi).getTime() / 1000;
+            return timeB - timeA; // Büyük olan (yeni) üstte
+        });
+            if (goals.length === 0) { list.innerHTML = '<p class="text-center text-gray-400 py-8 text-sm">Henüz hedef atanmamış.</p>'; return; }
         list.innerHTML = goals.map(h => { 
             const isDone = h.durum === 'tamamlandi';
             const isPinned = h.isPinned === true;
@@ -517,7 +575,33 @@ function loadCalendarDataAndDraw(date) {
         if (listContainer) loadAllUpcomingAppointments(listContainer, getLocalDateString(new Date()));
     });
 }
-
+// Eksik Fonksiyon Tanımlaması
+function loadAllUpcomingAppointments(container, todayStr) {
+    if(!coachId || !studentDocId) return;
+    
+    getDocs(query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), where("studentId", "==", studentDocId), where("tarih", ">=", todayStr), orderBy("tarih", "asc"))).then(snap => {
+        if(snap.empty) {
+            container.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">Yaklaşan seans yok.</p>';
+        } else {
+            container.innerHTML = snap.docs.map(doc => {
+                const a = doc.data();
+                const isToday = a.tarih === todayStr;
+                return `
+                <div class="p-3 bg-white border border-gray-100 rounded-xl flex items-center justify-between shadow-sm mb-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full ${isToday ? 'bg-green-100 text-green-600' : 'bg-indigo-50 text-indigo-600'} flex items-center justify-center font-bold text-sm">
+                            ${a.tarih.split('-')[2]}
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-gray-800">${a.baslik || 'Görüşme'}</h4>
+                            <p class="text-xs text-gray-500">${formatDateTR(a.tarih)} • ${a.baslangic}-${a.bitis}</p>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    });
+}
 document.getElementById('prevMonth').onclick = () => { currentCalDate.setMonth(currentCalDate.getMonth() - 1); loadCalendarDataAndDraw(currentCalDate); };
 document.getElementById('nextMonth').onclick = () => { currentCalDate.setMonth(currentCalDate.getMonth() + 1); loadCalendarDataAndDraw(currentCalDate); };
 
@@ -531,7 +615,11 @@ function enableHeaderIcons() {
         if(close) close.onclick = () => drop.classList.add('hidden');
         document.addEventListener('click', (e) => { if (!drop.contains(e.target) && !btnNotif.contains(e.target)) drop.classList.add('hidden'); });
     }
-
+// Mesaj İkonu İşlevi
+    const btnMsg = document.getElementById('btnHeaderMessages');
+    if(btnMsg) {
+        btnMsg.onclick = () => window.navigateToTab('tab-messages');
+    }
     const btnChangeAvatar = document.getElementById('btnChangeAvatar');
     if (btnChangeAvatar) {
         btnChangeAvatar.onclick = () => {
@@ -560,9 +648,57 @@ function initStudentNotifications() {
         }
     };
 
-    activeListeners.notifHomework = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam"), limit(5)), (snap) => {
+   // --- Gelişmiş Bildirimler ---
+    const todayStr = getLocalDateString(new Date());
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = getLocalDateString(tomorrow);
+
+    // 1. ÖDEVLER (Yeni Eklenenler + Son Günü Gelenler)
+    activeListeners.notifHomework = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam")), (snap) => {
         notifications = notifications.filter(n => n.type !== 'odev');
-        snap.forEach(d => notifications.push({ type: 'odev', title: 'Ödev', desc: d.data().title, badge: 'Yap', bg: 'bg-orange-100 text-orange-700', tab: 'tab-homework' }));
+        snap.forEach(doc => {
+            const d = doc.data();
+            // Yeni Eklendi (Son 2 gün içinde eklenenler gibi düşünülebilir veya direkt gösterilebilir)
+            // Basitlik için tüm aktif ödevleri listeliyoruz ama metinleri tarihe göre ayarlıyoruz.
+            
+            if (d.bitisTarihi === todayStr) {
+                notifications.push({ type: 'odev', title: 'Hatırlatma', desc: `Son teslim tarihi bugün olan ödeviniz var: ${d.title}`, badge: 'Acil', bg: 'bg-red-100 text-red-700', tab: 'tab-homework', date: d.bitisTarihi });
+            } else if (d.bitisTarihi === tomorrowStr) {
+                notifications.push({ type: 'odev', title: 'Hatırlatma', desc: `Yarın teslim edilecek ödev: ${d.title}`, badge: 'Yarın', bg: 'bg-orange-100 text-orange-700', tab: 'tab-homework', date: d.bitisTarihi });
+            } else {
+                notifications.push({ type: 'odev', title: 'Ödev Eklendi', desc: `Son Teslim Tarihi ${formatDateTR(d.bitisTarihi)} - ${d.title}`, badge: 'Ödev', bg: 'bg-blue-100 text-blue-700', tab: 'tab-homework', date: d.bitisTarihi });
+            }
+        });
+        render();
+    });
+
+    // 2. HEDEFLER
+    activeListeners.notifGoals = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), where("durum", "==", "devam")), (snap) => {
+        notifications = notifications.filter(n => n.type !== 'hedef');
+        snap.forEach(doc => {
+            const d = doc.data();
+            if (d.bitisTarihi === todayStr) {
+                notifications.push({ type: 'hedef', title: 'Hatırlatma', desc: `Son teslim tarihi bugün olan hedefiniz var: ${d.title}`, badge: 'Acil', bg: 'bg-red-100 text-red-700', tab: 'tab-goals', date: d.bitisTarihi });
+            } else {
+                notifications.push({ type: 'hedef', title: 'Hedef Eklendi', desc: `${d.title} - Son Tarih: ${formatDateTR(d.bitisTarihi)}`, badge: 'Hedef', bg: 'bg-purple-100 text-purple-700', tab: 'tab-goals', date: d.bitisTarihi });
+            }
+        });
+        render();
+    });
+
+    // 3. SEANSLAR (Ajanda)
+    activeListeners.notifSession = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ajandam"), where("studentId", "==", studentDocId), where("tarih", ">=", todayStr)), (snap) => {
+        notifications = notifications.filter(n => n.type !== 'seans');
+        snap.forEach(doc => {
+            const d = doc.data();
+            if (d.tarih === todayStr) {
+                notifications.push({ type: 'seans', title: 'Bugünkü Seans', desc: `${d.baslik || 'Görüşme'} - Saat: ${d.baslangic}`, badge: 'Bugün', bg: 'bg-green-100 text-green-700', tab: 'tab-ajanda', date: d.tarih });
+            } else {
+                notifications.push({ type: 'seans', title: 'Seans Eklendi', desc: `${formatDateTR(d.tarih)} tarihli seans eklendi.`, badge: 'Randevu', bg: 'bg-indigo-100 text-indigo-700', tab: 'tab-ajanda', date: d.tarih });
+            }
+        });
+        // Tarihe göre sırala (Yakın tarih üstte)
+        notifications.sort((a, b) => new Date(a.date) - new Date(b.date));
         render();
     });
 }
@@ -645,5 +781,6 @@ document.getElementById('btnSaveModalSoru')?.addEventListener('click', async () 
     window.history.back();
     if (!document.getElementById('tab-tracking').classList.contains('hidden')) renderSoruTakibiGrid();
 });
+
 
 window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };

@@ -505,14 +505,109 @@ async function updateHomeworkMetrics() {
 // =================================================================
 // 8. MESAJLAR, AJANDA VE MODALLAR
 // =================================================================
+// =================================================================
+// YENİ WHATSAPP TARZI MESAJLAŞMA & BİLDİRİM
+// =================================================================
+
 function loadStudentMessages() {
-    const container = document.getElementById('studentMessagesContainer'); if(!container) return;
-    activeListeners.chatUnsubscribe = onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), orderBy("tarih")), (snap) => {
-        container.innerHTML = snap.docs.map(d => {
-            const m = d.data(); const me = m.gonderen === 'ogrenci';
-            return `<div class="flex w-full ${me ? 'justify-end' : 'justify-start'}"><div class="max-w-[85%] px-4 py-2 rounded-2xl text-sm ${me ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-gray-100 rounded-bl-none shadow-sm text-gray-800'}"><p>${m.text}</p><span class="text-[9px] opacity-70 block text-right mt-1">${m.tarih ? new Date(m.tarih.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}</span></div></div>`;
-        }).join('');
-        container.scrollTop = container.scrollHeight;
+    const tabContainer = document.getElementById('tab-messages');
+    if (!tabContainer) return;
+
+    // 1. WhatsApp Tarzı HTML Yapısını Oluştur (Mevcut içeriği eziyoruz)
+    tabContainer.innerHTML = `
+        <div class="flex flex-col h-[calc(100vh-140px)] bg-[#efeae2] relative rounded-xl overflow-hidden shadow-sm border border-gray-200">
+            <div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+            
+            <div id="studentMessagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 z-10 custom-scrollbar scroll-smooth">
+                <div class="flex justify-center"><i class="fa-solid fa-spinner fa-spin text-gray-400"></i></div>
+            </div>
+
+            <div class="bg-white p-2 px-3 border-t border-gray-200 z-20 shrink-0">
+                <form id="studentChatForm" class="flex items-end gap-2">
+                    <input type="text" id="studentMessageInput" 
+                        class="flex-1 bg-gray-100 text-gray-800 text-sm rounded-2xl px-4 py-3 border-0 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all max-h-32 overflow-y-auto" 
+                        placeholder="Mesaj yaz..." autocomplete="off">
+                    <button type="submit" class="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-indigo-700 shadow-md active:scale-95 transition-all shrink-0 mb-0.5">
+                        <i class="fa-solid fa-paper-plane text-sm ml-0.5"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    `;
+
+    const container = document.getElementById('studentMessagesContainer');
+    const form = document.getElementById('studentChatForm');
+    const input = document.getElementById('studentMessageInput');
+
+    // 2. Mesaj Gönderme Listener'ı (HTML'i yeni oluşturduğumuz için buraya ekliyoruz)
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+
+        try {
+            input.value = '';
+            input.focus();
+            await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), {
+                text: text,
+                gonderen: 'ogrenci',
+                tarih: serverTimestamp(),
+                okundu: false,
+                kocId: coachId
+            });
+        } catch (error) {
+            console.error("Mesaj hatası:", error);
+        }
+    });
+
+    // 3. Mesajları Dinle ve Render Et
+    if (activeListeners.chatUnsubscribe) activeListeners.chatUnsubscribe();
+
+    activeListeners.chatUnsubscribe = onSnapshot(query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), 
+        orderBy("tarih", "asc")
+    ), (snap) => {
+        if (snap.empty) {
+            container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 opacity-60"><i class="fa-solid fa-comments text-4xl mb-2"></i><p class="text-xs">Henüz mesaj yok.</p></div>';
+            return;
+        }
+
+        let html = '';
+        let lastDate = null;
+
+        snap.docs.forEach(d => {
+            const m = d.data();
+            const me = m.gonderen === 'ogrenci';
+            const dateObj = m.tarih ? m.tarih.toDate() : new Date();
+            const dateStr = formatDateTR(dateObj.toISOString().split('T')[0]);
+            const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Tarih Ayracı
+            if (dateStr !== lastDate) {
+                html += `<div class="flex justify-center my-4"><span class="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded shadow-sm opacity-80">${dateStr}</span></div>`;
+                lastDate = dateStr;
+            }
+
+            // Mesaj Balonu
+            html += `
+            <div class="flex w-full ${me ? 'justify-end' : 'justify-start'} animate-fade-in group">
+                <div class="max-w-[80%] px-3 py-1.5 rounded-lg text-sm shadow-sm relative break-words 
+                    ${me ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none'}">
+                    <p class="leading-relaxed text-[13px]">${m.text}</p>
+                    <div class="flex items-center justify-end gap-1 mt-0.5 opacity-70">
+                        <span class="text-[9px]">${timeStr}</span>
+                        ${me ? (m.okundu ? '<i class="fa-solid fa-check-double text-[9px]"></i>' : '<i class="fa-solid fa-check text-[9px]"></i>') : ''}
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        container.innerHTML = html;
+        
+        // En alta kaydır
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 100);
     });
 }
 
@@ -520,11 +615,6 @@ async function markMessagesAsRead() {
     const snap = await getDocs(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), where("gonderen", "==", "koc"), where("okundu", "==", false)));
     const b = writeBatch(db); snap.forEach(d => b.update(d.ref, { okundu: true })); await b.commit();
 }
-
-document.getElementById('studentChatForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault(); const inp = document.getElementById('studentMessageInput');
-    if (inp.value.trim()) { await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"), { text: inp.value, gonderen: 'ogrenci', tarih: serverTimestamp(), okundu: false, kocId: coachId }); inp.value = ''; }
-});
 
 function loadCalendarDataAndDraw(date) {
     const m = date.getMonth(), y = date.getFullYear();
@@ -623,9 +713,33 @@ function initStudentNotifications() {
         } else {
             dot.classList.add('hidden');
             list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-gray-400"><i class="fa-regular fa-bell-slash text-2xl mb-2 opacity-20"></i><p class="text-xs">Bildirim yok.</p></div>`;
-        }
+        }    
     };
+// --- 4. MESAJ BİLDİRİMİ (KOÇTAN GELEN OKUNMAMIŞLAR) ---
+    const msgBtn = document.getElementById('btnHeaderMessages'); // Header'daki mesaj butonu ID'si
+    // Butonun içinde kırmızı nokta için bir span var mı kontrol et, yoksa ekle
+    let msgBadge = msgBtn.querySelector('.badge-dot');
+    if (!msgBadge) {
+        msgBadge = document.createElement('span');
+        msgBadge.className = "badge-dot hidden absolute top-2 right-2 w-2.5 h-2.5 bg-red-600 rounded-full border-2 border-white";
+        msgBtn.style.position = "relative";
+        msgBtn.appendChild(msgBadge);
+    }
 
+    activeListeners.unreadMessagesUnsubscribe = onSnapshot(query(
+        collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "mesajlar"),
+        where("gonderen", "==", "koc"),
+        where("okundu", "==", false)
+    ), (snap) => {
+        if (!snap.empty) {
+            msgBadge.classList.remove('hidden');
+            // İstersen bildirim listesine de ekleyebilirsin:
+            // notifications.push({ type: 'mesaj', title: 'Yeni Mesaj', desc: 'Koçunuzdan yeni mesaj var.', badge: 'Mesaj', bg: 'bg-indigo-100 text-indigo-700', tab: 'tab-messages', date: getLocalDateString(new Date()) });
+            // render();
+        } else {
+            msgBadge.classList.add('hidden');
+        }
+    });
    // --- Gelişmiş Bildirimler ---
     const todayStr = getLocalDateString(new Date());
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -762,5 +876,6 @@ document.getElementById('btnSaveModalSoru')?.addEventListener('click', async () 
 
 
 window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };
+
 
 

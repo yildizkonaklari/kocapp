@@ -116,16 +116,18 @@ async function initializeStudentApp(uid) {
 }
 
 // =================================================================
-// 2. NAVİGASYON (Geri Tuşu Destekli)
+// 2. NAVİGASYON VE SEKME YÖNETİMİ
 // =================================================================
 
-// 1. Yardımcı Fonksiyon: Sadece Ekranı ve Veriyi Günceller (History eklemez)
-// Bu fonksiyon hem tıklamalarda hem de geri tuşuna basıldığında kullanılır.
+// YARDIMCI FONKSİYON: Sadece Ekranı ve Veriyi Günceller
 function switchTabUI(tabId) {
-    cleanUpListeners();
+    cleanUpListeners(); // Eski dinleyicileri temizle
+    
+    // Tüm sekmeleri gizle, isteneni aç
     document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
     document.getElementById(tabId)?.classList.remove('hidden');
     
+    // Alt menü butonlarını güncelle
     document.querySelectorAll('.nav-btn').forEach(b => {
         b.classList.remove('text-indigo-600', 'active');
         b.classList.add('text-gray-400');
@@ -135,6 +137,7 @@ function switchTabUI(tabId) {
         }
     });
 
+    // Orta buton (Kalem) rengini ayarla
     const centerBtn = document.querySelector('.bottom-nav-center-btn');
     if(centerBtn) {
         if(tabId==='tab-tracking') { centerBtn.classList.add('bg-indigo-700'); centerBtn.classList.remove('bg-indigo-600'); }
@@ -151,12 +154,9 @@ function switchTabUI(tabId) {
     else if (tabId === 'tab-home') loadDashboardData();
 }
 
-// 2. Ana Navigasyon: Tıklama ile çalışır ve Geçmişe Kaydeder
+// ANA FONKSİYON: Tıklama ile çalışır ve Geçmişe Kaydeder
 window.navigateToTab = function(tabId) {
-    // Tarayıcı geçmişine (History) ekle - Bu satır geri tuşunun çalışmasını sağlar
     window.history.pushState({ tab: tabId }, '', `#${tabId.replace('tab-', '')}`);
-    
-    // UI'ı güncelle
     switchTabUI(tabId);
 };
 
@@ -165,6 +165,10 @@ window.navigateToTab = function(tabId) {
 // =================================================================
 // =================================================================
 // 3. SAYFA YÜKLEYİCİLER (GÜNCELLENMİŞ)
+// =================================================================
+
+// =================================================================
+// 3. SAYFA YÜKLEYİCİLER (ANASAYFA)
 // =================================================================
 
 function loadDashboardData() {
@@ -250,7 +254,7 @@ function loadDashboardData() {
         </div>
     `;
 
-    // --- 3. VERİLERİ ÇEK VE DOLDUR ---
+    // --- 3. VERİLERİ ÇEK ---
     
     // A) Bekleyen Ödev Sayısı
     getDocs(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam"))).then(snap => {
@@ -271,14 +275,13 @@ function loadDashboardData() {
     onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), where("durum", "==", "devam"), limit(3)), (snap) => {
         const list = document.getElementById('homeGoalsList');
         if(!list) return;
-        
         if(snap.empty) { list.innerHTML = '<p class="text-center text-gray-400 text-xs py-2">Aktif hedef yok.</p>'; return; }
         
         let html = '';
         const goals = [];
         snap.forEach(d => goals.push(d.data()));
         
-        // Yeniden eskiye sırala (Oluşturma tarihi yoksa bitiş tarihine göre)
+        // Yeniden eskiye sırala
         goals.sort((a, b) => {
              const timeA = a.olusturmaTarihi?.seconds || new Date(a.bitisTarihi).getTime();
              const timeB = b.olusturmaTarihi?.seconds || new Date(b.bitisTarihi).getTime();
@@ -812,7 +815,7 @@ const render = () => {
         
         if (notifications.length > 0) {
             badge.classList.remove('hidden');
-            // DÜZELTME: onclick olayına dropdown gizleme kodu eklendi
+            // DÜZELTME: onclick içine gizleme kodu eklendi
             list.innerHTML = notifications.map(n => `
                 <div class="p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors" 
                      onclick="document.getElementById('notificationDropdown').classList.add('hidden'); window.navigateToTab('${n.tab}')">
@@ -990,5 +993,6 @@ document.getElementById('btnSaveModalSoru')?.addEventListener('click', async () 
 
 
 window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };
+
 
 

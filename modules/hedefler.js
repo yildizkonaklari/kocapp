@@ -163,10 +163,18 @@ function renderGoals(goals) {
         return;
     }
 
-    goals.sort((a, b) => {
+goals.sort((a, b) => {
+        // 1. Sabitleme Önceliği (Sabitlenenler her zaman en üstte kalır)
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return new Date(a.bitisTarihi) - new Date(b.bitisTarihi);
+
+        // 2. Yeniden Eskiye Sıralama (Newest First)
+        // Oluşturma tarihi (Firestore Timestamp) varsa saniyesini al, yoksa bitiş tarihini kullan
+        const timeA = a.olusturmaTarihi?.seconds || new Date(a.bitisTarihi).getTime() / 1000;
+        const timeB = b.olusturmaTarihi?.seconds || new Date(b.bitisTarihi).getTime() / 1000;
+
+        // Büyük olan tarih (Daha yeni zaman) üstte olsun (B - A)
+        return timeB - timeA; 
     });
 
     container.innerHTML = goals.map(g => {
@@ -281,4 +289,5 @@ export async function saveGlobalHedef(db, uid, appId) {
         btn.disabled = false;
         btn.textContent = "Kaydet";
     }
+
 }

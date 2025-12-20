@@ -1,6 +1,6 @@
 import { 
-    collection, query, onSnapshot, updateDoc, deleteDoc, 
-    where, orderBy, getDocs, doc, addDoc, serverTimestamp, writeBatch 
+    collection, query, updateDoc, deleteDoc, 
+    where, orderBy, getDocs, doc, addDoc, serverTimestamp, writeBatch, limit, startAfter, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { activeListeners, formatDateTR, openModalWithBackHistory } from './helpers.js';
@@ -9,23 +9,23 @@ let currentDb = null;
 let currentUserIdGlobal = null;
 let currentAppIdGlobal = null;
 let currentStudentId = null;
-let allFetchedQuestions = [];
+let lastVisibleQuestion = null; // Sayfalama için son döküman
 
 export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
     currentDb = db;
     currentUserIdGlobal = currentUserId;
     currentAppIdGlobal = appId;
     
-    // Sayfaya geri dönüldüyse state temizliği (Eğer sayfa yeniden çiziliyorsa)
-    // Ancak app.js her seferinde render çağırdığı için burada DOM element kontrolü yapmaya gerek yok, 
-    // değişkenleri sıfırlamak yeterli.
+    // State temizliği
     if (!document.getElementById('soruTakibiListContainer')) {
          currentStudentId = null;
+         lastVisibleQuestion = null;
     }
 
     document.getElementById("mainContentTitle").textContent = "Bireysel Soru Takibi";
     const area = document.getElementById("mainContentArea");
     
+    // HTML İSKELETİ (Tablo Kaldırıldı, Kart Yapısı Geldi)
     area.innerHTML = `
         <div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-30">
             
@@ -62,24 +62,21 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
         <div id="soruStatsArea" class="hidden grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                 <div>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Bugün</p>
+                    <h3 id="kpiSoruToday" class="text-2xl font-bold text-indigo-600">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fa-solid fa-calendar-day"></i></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
                     <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Bu Hafta</p>
-                    <h3 id="kpiSoruThisWeek" class="text-2xl font-bold text-indigo-600">0</h3>
+                    <h3 id="kpiSoruWeek" class="text-2xl font-bold text-green-600">0</h3>
                 </div>
-                <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center"><i class="fa-solid fa-calendar-week"></i></div>
+                <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><i class="fa-solid fa-calendar-week"></i></div>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                 <div>
-                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Geçen Hafta</p>
-                    <div class="flex items-center gap-2">
-                        <h3 id="kpiSoruLastWeek" class="text-2xl font-bold text-gray-400">0</h3>
-                        <span id="kpiSoruTrend" class="text-xs font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
-                    </div>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center"><i class="fa-solid fa-clock-rotate-left"></i></div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Bekleyen Onay</p>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Bekleyen</p>
                     <h3 id="kpiSoruPending" class="text-2xl font-bold text-orange-500">0</h3>
                 </div>
                 <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center"><i class="fa-solid fa-hourglass-half"></i></div>
@@ -92,22 +89,13 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
                 <p>Soru takibi yapmak için lütfen öğrenci seçin.</p>
             </div>
             
-            <div id="soruListContent" class="hidden bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100">
-                        <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
-                            <tr>
-                                <th class="px-4 py-3 text-left">Tarih</th>
-                                <th class="px-4 py-3 text-left">Ders</th>
-                                <th class="px-4 py-3 text-left">Konu</th>
-                                <th class="px-4 py-3 text-center">Adet</th>
-                                <th class="px-4 py-3 text-center">Durum</th>
-                                <th class="px-4 py-3 text-right">İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody id="soruTableBody" class="divide-y divide-gray-100 text-sm"></tbody>
-                    </table>
+            <div id="soruListContent" class="hidden space-y-3">
                 </div>
+
+            <div id="loadMoreSoruContainer" class="hidden mt-4 text-center">
+                <button id="btnLoadMoreSoru" class="bg-white border border-gray-200 text-gray-600 px-6 py-2 rounded-full text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors">
+                    <i class="fa-solid fa-arrow-down mr-2"></i> Daha Fazla Göster
+                </button>
             </div>
         </div>
     `;
@@ -118,6 +106,11 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
     // Event Listeners
     document.getElementById('btnAddNewSoru').addEventListener('click', openAddSoruModal);
     document.getElementById('btnApproveAllSoru').addEventListener('click', approveAllPendingQuestions);
+    
+    // Load More Listener
+    document.getElementById('btnLoadMoreSoru').addEventListener('click', () => {
+        fetchQuestions(true);
+    });
 }
 
 // --- DROPDOWN SETUP ---
@@ -154,7 +147,13 @@ async function setupSoruSearchableDropdown(db, uid, appId) {
                 document.getElementById('soruActionButtons').classList.remove('hidden');
                 document.getElementById('soruListContent').classList.remove('hidden');
                 
-                startSoruListener(db, uid, appId, s.id);
+                // İstatistikleri Hesapla ve İlk Verileri Çek
+                calculateSoruStats(db, uid, appId, s.id);
+                
+                // Listeyi Sıfırla ve İlk 20'yi çek
+                lastVisibleQuestion = null;
+                document.getElementById('soruListContent').innerHTML = '';
+                fetchQuestions(false); 
             };
             listContainer.appendChild(item);
         });
@@ -167,153 +166,233 @@ async function setupSoruSearchableDropdown(db, uid, appId) {
     document.addEventListener('click', (e) => { if (!triggerBtn.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden'); });
 }
 
-// --- DATA LISTENER ---
-function startSoruListener(db, uid, appId, studentId) {
-    const q = query(
-        collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "soruTakibi"),
-        orderBy("tarih", "desc"),
-        orderBy("eklenmeTarihi", "desc")
-    );
+// --- VERİ ÇEKME (PAGINATION) ---
+async function fetchQuestions(isLoadMore = false) {
+    if (!currentStudentId) return;
 
-    if (activeListeners.soruTakibiUnsubscribe) activeListeners.soruTakibiUnsubscribe();
+    const listContainer = document.getElementById('soruListContent');
+    const loadMoreBtn = document.getElementById('btnLoadMoreSoru');
+    const loadMoreContainer = document.getElementById('loadMoreSoruContainer');
 
-    activeListeners.soruTakibiUnsubscribe = onSnapshot(q, (snap) => {
-        allFetchedQuestions = [];
-        snap.forEach(doc => {
-            allFetchedQuestions.push({ id: doc.id, ...doc.data(), path: doc.ref.path });
+    if (isLoadMore) loadMoreBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yükleniyor...';
+    else listContainer.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
+
+    try {
+        let q = query(
+            collection(currentDb, "artifacts", currentAppIdGlobal, "users", currentUserIdGlobal, "ogrencilerim", currentStudentId, "soruTakibi"),
+            orderBy("tarih", "desc"),
+            orderBy("eklenmeTarihi", "desc"),
+            limit(20)
+        );
+
+        if (isLoadMore && lastVisibleQuestion) {
+            q = query(
+                collection(currentDb, "artifacts", currentAppIdGlobal, "users", currentUserIdGlobal, "ogrencilerim", currentStudentId, "soruTakibi"),
+                orderBy("tarih", "desc"),
+                orderBy("eklenmeTarihi", "desc"),
+                startAfter(lastVisibleQuestion),
+                limit(20)
+            );
+        }
+
+        const snapshot = await getDocs(q);
+
+        if (!isLoadMore) listContainer.innerHTML = '';
+
+        if (snapshot.empty) {
+            if (!isLoadMore) listContainer.innerHTML = '<div class="text-center py-10 text-gray-400 border border-dashed rounded-xl"><p>Kayıt bulunamadı.</p></div>';
+            loadMoreContainer.classList.add('hidden');
+            return;
+        }
+
+        lastVisibleQuestion = snapshot.docs[snapshot.docs.length - 1];
+
+        // 20'den az geldiyse son sayfa demektir
+        if (snapshot.docs.length < 20) loadMoreContainer.classList.add('hidden');
+        else loadMoreContainer.classList.remove('hidden');
+
+        if (isLoadMore) loadMoreBtn.innerHTML = '<i class="fa-solid fa-arrow-down mr-2"></i> Daha Fazla Göster';
+
+        snapshot.forEach(doc => {
+            renderSingleQuestionCard(doc);
         });
-        
-        renderSoruList();
-        calculateSoruStats();
-    });
+
+    } catch (error) {
+        console.error("Soru yükleme hatası:", error);
+        listContainer.innerHTML += '<p class="text-center text-red-400 text-xs py-2">Hata oluştu.</p>';
+    }
 }
 
-function renderSoruList() {
-    const tbody = document.getElementById('soruTableBody');
-    if (allFetchedQuestions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400 text-sm">Kayıt bulunamadı.</td></tr>`;
-        return;
+// --- KART RENDER ---
+function renderSingleQuestionCard(docSnapshot) {
+    const container = document.getElementById('soruListContent');
+    const q = { id: docSnapshot.id, ...docSnapshot.data(), path: docSnapshot.ref.path };
+    
+    const isApproved = q.onayDurumu === 'onaylandi';
+    
+    // Durum Rozeti
+    const statusBadge = isApproved 
+        ? `<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded border border-green-200">Onaylı</span>`
+        : `<span class="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded border border-orange-200">Onay Bekliyor</span>`;
+
+    // Aksiyon Butonları (Mobilde Alt Satır)
+    let actionButtons = '';
+    if (!isApproved) {
+        actionButtons = `
+            <div class="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+                <button class="btn-soru-delete flex-1 bg-red-50 text-red-600 hover:bg-red-100 py-2 rounded-lg text-xs font-bold transition-colors" data-path="${q.path}">
+                    <i class="fa-solid fa-trash mr-1"></i> Sil
+                </button>
+                <button class="btn-soru-approve flex-1 bg-green-50 text-green-600 hover:bg-green-100 py-2 rounded-lg text-xs font-bold transition-colors" data-path="${q.path}">
+                    <i class="fa-solid fa-check mr-1"></i> Onayla
+                </button>
+            </div>
+        `;
+    } else {
+        actionButtons = `
+            <div class="flex justify-end mt-2">
+                <button class="btn-soru-toggle text-gray-400 hover:text-orange-500 text-xs font-medium underline" data-path="${q.path}">Geri Al</button>
+            </div>
+        `;
     }
 
-    tbody.innerHTML = allFetchedQuestions.map(q => {
-        const isApproved = q.onayDurumu === 'onaylandi';
-        const statusBadge = isApproved 
-            ? `<span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">Onaylı</span>`
-            : `<span class="px-2 py-1 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold">Bekliyor</span>`;
-        
-        const actionBtn = isApproved
-            ? `<button onclick="toggleSoruStatus('${q.path}', 'onaylandi')" class="text-gray-400 hover:text-orange-500 text-xs font-medium underline">Geri Al</button>`
-            : `<div class="flex justify-end gap-2">
-                 <button onclick="deleteSoru('${q.path}')" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
-                 <button onclick="approveSingleSoru('${q.path}')" class="text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 px-2 py-1 rounded text-xs font-bold">Onayla</button>
-               </div>`;
+    const cardHtml = `
+        <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group animate-fade-in">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">${q.ders}</h4>
+                    <p class="text-xs text-gray-500">${q.konu || 'Konu belirtilmedi'}</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-xl font-bold text-indigo-600 block leading-none">${q.adet}</span>
+                    <span class="text-[10px] text-gray-400">Soru</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between mt-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] bg-gray-50 text-gray-500 px-2 py-1 rounded font-medium">
+                        <i class="fa-regular fa-calendar mr-1"></i> ${formatDateTR(q.tarih)}
+                    </span>
+                    ${statusBadge}
+                </div>
+            </div>
+            
+            ${actionButtons}
+        </div>
+    `;
 
-        return `
-            <tr class="hover:bg-gray-50 transition-colors group">
-                <td class="px-4 py-3 whitespace-nowrap text-gray-600">${formatDateTR(q.tarih)}</td>
-                <td class="px-4 py-3 font-medium text-gray-800">${q.ders}</td>
-                <td class="px-4 py-3 text-gray-500 truncate max-w-[150px]">${q.konu || '-'}</td>
-                <td class="px-4 py-3 text-center font-bold text-indigo-600">${q.adet}</td>
-                <td class="px-4 py-3 text-center">${statusBadge}</td>
-                <td class="px-4 py-3 text-right">${actionBtn}</td>
-            </tr>
-        `;
-    }).join('');
+    // String'i DOM elementine çevirip ekle (Listener eklemek için)
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = cardHtml;
+    const cardElement = tempDiv.firstElementChild;
+    container.appendChild(cardElement);
+
+    // Listenerları Ekle
+    const btnApprove = cardElement.querySelector('.btn-soru-approve');
+    const btnDelete = cardElement.querySelector('.btn-soru-delete');
+    const btnToggle = cardElement.querySelector('.btn-soru-toggle');
+
+    if(btnApprove) btnApprove.onclick = () => updateSoruStatus(q.path, 'onaylandi', cardElement);
+    if(btnDelete) btnDelete.onclick = () => deleteSoruDoc(q.path, cardElement);
+    if(btnToggle) btnToggle.onclick = () => updateSoruStatus(q.path, 'bekliyor', cardElement);
 }
 
-function calculateSoruStats() {
-    // Tarih Hesaplamaları
+// --- İSTATİSTİK HESAPLAMA ---
+async function calculateSoruStats(db, uid, appId, sid) {
     const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    
     // Bu haftanın başı (Pazartesi)
     const day = now.getDay() || 7; 
     const thisWeekStart = new Date(now);
     thisWeekStart.setHours(0,0,0,0);
     thisWeekStart.setDate(now.getDate() - day + 1);
+    const weekStartStr = thisWeekStart.toISOString().split('T')[0];
+
+    // İstatistikler için ayrı bir sorgu (Limit olmadan tümünü çekmek gerekebilir veya sadece bu haftayı)
+    // Performans için sadece bu haftayı ve bekleyenleri çekelim
     
-    // Geçen haftanın başı ve sonu
-    const lastWeekStart = new Date(thisWeekStart);
-    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
-    const lastWeekEnd = new Date(thisWeekStart);
-    lastWeekEnd.setDate(thisWeekStart.getDate() - 1); // Pazar
+    // 1. Bekleyen Sayısı
+    const qPending = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("onayDurumu", "==", "bekliyor"));
+    const snapPending = await getCountFromServer(qPending); // Firebase getCountFromServer V11+ destekler
+    
+    // 2. Bu Hafta Toplamı
+    const qWeek = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", weekStartStr));
+    const snapWeek = await getDocs(qWeek);
+    
+    let weekTotal = 0;
+    let todayTotal = 0;
 
-    const strThisWeekStart = thisWeekStart.toISOString().split('T')[0];
-    const strLastWeekStart = lastWeekStart.toISOString().split('T')[0];
-    const strLastWeekEnd = lastWeekEnd.toISOString().split('T')[0];
-
-    let thisWeekTotal = 0;
-    let lastWeekTotal = 0;
-    let pendingCount = 0;
-
-    allFetchedQuestions.forEach(q => {
-        const qDate = q.tarih;
-        const qAdet = parseInt(q.adet) || 0;
-
-        // Bekleyenler
-        if (q.onayDurumu === 'bekliyor') pendingCount++;
-
-        // Bu Hafta (Onaylılar + Bekleyenler sayılabilir veya sadece onaylılar. Genelde toplam efor sayılır)
-        if (qDate >= strThisWeekStart) {
-            thisWeekTotal += qAdet;
-        }
-        // Geçen Hafta
-        else if (qDate >= strLastWeekStart && qDate <= strLastWeekEnd) {
-            lastWeekTotal += qAdet;
-        }
+    snapWeek.forEach(doc => {
+        const d = doc.data();
+        const adet = parseInt(d.adet) || 0;
+        weekTotal += adet;
+        if (d.tarih === todayStr) todayTotal += adet;
     });
 
-    document.getElementById('kpiSoruThisWeek').textContent = thisWeekTotal;
-    document.getElementById('kpiSoruLastWeek').textContent = lastWeekTotal;
-    document.getElementById('kpiSoruPending').textContent = pendingCount;
+    document.getElementById('kpiSoruToday').textContent = todayTotal;
+    document.getElementById('kpiSoruWeek').textContent = weekTotal;
+    document.getElementById('kpiSoruPending').textContent = snapPending.data().count;
+}
 
-    // Trend
-    const trendEl = document.getElementById('kpiSoruTrend');
-    if (lastWeekTotal === 0) {
-        trendEl.textContent = thisWeekTotal > 0 ? "%100+" : "-";
-        trendEl.className = "text-xs font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500";
-    } else {
-        const diff = thisWeekTotal - lastWeekTotal;
-        const percent = Math.round((diff / lastWeekTotal) * 100);
-        if (diff >= 0) {
-            trendEl.textContent = `+${percent}%`;
-            trendEl.className = "text-xs font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700";
-        } else {
-            trendEl.textContent = `${percent}%`;
-            trendEl.className = "text-xs font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700";
-        }
+// --- ACTIONS (YARDIMCI FONKSİYONLAR) ---
+
+async function updateSoruStatus(path, status, cardElement) {
+    try {
+        await updateDoc(doc(currentDb, path), { onayDurumu: status });
+        // Kartı yeniden render etmeden basitçe güncellemek veya gizlemek yerine
+        // En temizi listeyi yenilemek veya sadece o kartı görsel olarak değiştirmektir.
+        // Burada basitçe reload efekti için:
+        cardElement.style.opacity = '0.5';
+        setTimeout(() => {
+            // Eğer "onaylandi" ise ve biz "bekliyor" yaptıysak, o kart listeden gitmemeli ama görseli değişmeli.
+            // En sağlıklısı o kartı veritabanından güncel haliyle tekrar çekmek veya manuel UI update.
+            // Basitlik için: Listeden kaldırıyoruz (Çünkü sıralama değişebilir veya filtre varsa) 
+            // VEYA sayfayı yenilemeden UI'ı manuel düzeltiyoruz.
+            // Şimdilik listeyi temizlemeden manuel güncelleme (Zor olduğu için), 
+            // kartı gizleyip kullanıcıya işlem yapıldığını hissettirelim.
+            cardElement.innerHTML = `<div class="p-4 text-center text-green-600 font-bold bg-green-50 rounded-xl">İşlem Başarılı!</div>`;
+            setTimeout(() => cardElement.remove(), 500); 
+        }, 300);
+    } catch (e) {
+        console.error(e);
+        alert("İşlem başarısız.");
     }
 }
 
-// --- ACTIONS ---
+async function deleteSoruDoc(path, cardElement) {
+    if(!confirm("Silmek istediğinize emin misiniz?")) return;
+    try {
+        await deleteDoc(doc(currentDb, path));
+        cardElement.style.transform = 'scale(0.9)';
+        cardElement.style.opacity = '0';
+        setTimeout(() => cardElement.remove(), 300);
+    } catch (e) {
+        console.error(e);
+        alert("Silinemedi.");
+    }
+}
+
 function openAddSoruModal() {
     if (!currentStudentId) return;
-    
-    // Modal HTML içindeki inputları temizle
     const modal = document.getElementById('addSoruModal');
     if(!modal) return;
 
-    // Öğrenci seçimi gizle (Zaten seçili)
-    const selectCont = document.getElementById('soruStudentSelectContainer');
-    if(selectCont) selectCont.classList.add('hidden');
-    
-    // Hidden inputa ID ata
+    // Inputları temizle ve hazırla
+    document.getElementById('soruStudentSelectContainer')?.classList.add('hidden');
     document.getElementById('currentStudentIdForSoruTakibi').value = currentStudentId;
-    
-    // Tarih bugüne ayarla
     document.getElementById('soruTarih').value = new Date().toISOString().split('T')[0];
-    document.getElementById('soruDers').value = '';
-    document.getElementById('soruKonu').value = '';
-    document.getElementById('soruAdet').value = '';
+    ['soruDers', 'soruKonu', 'soruAdet'].forEach(id => document.getElementById(id).value = '');
 
     openModalWithBackHistory('addSoruModal');
 
-    // Kapatma butonlarını ayarla
-    const closeBtn = document.getElementById('closeSoruModalButton');
-    const cancelBtn = document.getElementById('cancelSoruModalButton');
-    const handleClose = () => window.history.back();
-    if(closeBtn) closeBtn.onclick = handleClose;
-    if(cancelBtn) cancelBtn.onclick = handleClose;
-    
-    // Kaydet butonunu bağla
+    // Kapatma Butonları (History uyumlu)
+    const closeModal = () => window.history.back();
+    document.getElementById('closeSoruModalButton').onclick = closeModal;
+    document.getElementById('cancelSoruModalButton').onclick = closeModal;
+
+    // Kaydet Butonu
     const saveBtn = document.getElementById('saveSoruButton');
     const newSaveBtn = saveBtn.cloneNode(true);
     saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
@@ -321,20 +400,22 @@ function openAddSoruModal() {
 }
 
 export async function saveGlobalSoru(db, currentUserId, appId) {
-    // Hidden inputtan veya değişkenden ID al
     const sid = document.getElementById('currentStudentIdForSoruTakibi').value || currentStudentId;
-    
     const tarih = document.getElementById('soruTarih').value;
     const ders = document.getElementById('soruDers').value;
     const konu = document.getElementById('soruKonu').value;
     const adet = parseInt(document.getElementById('soruAdet').value);
 
-    if (!sid || !tarih || !ders || !adet) { alert("Lütfen tüm alanları doldurun."); return; }
+    if (!sid || !tarih || !ders || !adet) { alert("Lütfen tarih, ders ve soru sayısını girin."); return; }
+
+    const btn = document.getElementById('saveSoruButton');
+    btn.disabled = true;
+    btn.textContent = "Kaydediliyor...";
 
     try {
         await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sid, "soruTakibi"), {
             tarih, ders, konu, adet, 
-            onayDurumu: 'onaylandi', // Koç girdiği için direkt onaylı
+            onayDurumu: 'onaylandi',
             eklenmeTarihi: serverTimestamp(),
             kocId: currentUserId
         });
@@ -342,15 +423,21 @@ export async function saveGlobalSoru(db, currentUserId, appId) {
     } catch (e) {
         console.error(e);
         alert("Hata oluştu.");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Kaydet";
     }
 }
 
 async function approveAllPendingQuestions() {
     if (!currentStudentId) return;
-    const pending = allFetchedQuestions.filter(q => q.onayDurumu === 'bekliyor');
     
-    if (pending.length === 0) { alert("Onay bekleyen soru yok."); return; }
-    if (!confirm(`${pending.length} adet kaydı onaylıyor musunuz?`)) return;
+    // Bekleyenleri bulmak için sorgu (Pagination yüzünden allFetchedQuestions listesi eksik olabilir, o yüzden DB'den sorguluyoruz)
+    const q = query(collection(currentDb, "artifacts", currentAppIdGlobal, "users", currentUserIdGlobal, "ogrencilerim", currentStudentId, "soruTakibi"), where("onayDurumu", "==", "bekliyor"));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) { alert("Onay bekleyen soru yok."); return; }
+    if (!confirm(`${snapshot.size} adet kaydı onaylıyor musunuz?`)) return;
 
     const btn = document.getElementById('btnApproveAllSoru');
     const originalText = btn.innerHTML;
@@ -359,33 +446,22 @@ async function approveAllPendingQuestions() {
 
     try {
         const batch = writeBatch(currentDb);
-        pending.forEach(q => {
-            const ref = doc(currentDb, q.path);
-            batch.update(ref, { onayDurumu: 'onaylandi' });
+        snapshot.docs.forEach(doc => {
+            batch.update(doc.ref, { onayDurumu: 'onaylandi' });
         });
         await batch.commit();
+        
+        // Listeyi yenile
+        document.getElementById('soruListContent').innerHTML = '';
+        lastVisibleQuestion = null;
+        fetchQuestions(false);
+        calculateSoruStats(currentDb, currentUserIdGlobal, currentAppIdGlobal, currentStudentId);
+
     } catch (e) {
         console.error(e);
-        alert("Onaylama sırasında hata oluştu.");
+        alert("Hata oluştu.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
     }
 }
-
-// Global'e fonksiyon atama (HTML onclick için)
-window.toggleSoruStatus = async (path, currentStatus) => {
-    if (!currentDb) return;
-    const newStatus = currentStatus === 'onaylandi' ? 'bekliyor' : 'onaylandi';
-    await updateDoc(doc(currentDb, path), { onayDurumu: newStatus });
-};
-
-window.approveSingleSoru = async (path) => {
-    if (!currentDb) return;
-    await updateDoc(doc(currentDb, path), { onayDurumu: 'onaylandi' });
-};
-
-window.deleteSoru = async (path) => {
-    if (!currentDb) return;
-    if(confirm('Bu kaydı silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path));
-};

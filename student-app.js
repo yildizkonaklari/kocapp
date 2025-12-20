@@ -163,12 +163,16 @@ window.navigateToTab = function(tabId) {
 // =================================================================
 // 3. DASHBOARD
 // =================================================================
+// =================================================================
+// 3. SAYFA YÜKLEYİCİLER (GÜNCELLENMİŞ)
+// =================================================================
+
 function loadDashboardData() {
     const container = document.getElementById('tab-home');
-    const user = firebase.auth().currentUser;
+    const user = auth.currentUser;
     if (!user) return;
 
-    // --- MOTİVASYON SÖZLERİ ---
+    // --- 1. MOTİVASYON SÖZLERİ ---
     const quotes = [
         "Başarı, her gün tekrarlanan küçük çabaların toplamıdır.",
         "Gelecek, bugünden hazırlananlara aittir.",
@@ -178,23 +182,26 @@ function loadDashboardData() {
     ];
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-    // HTML İÇERİĞİ
+    // --- 2. YENİ HTML YAPISI ---
     container.innerHTML = `
-        <div class="space-y-6 pb-20">
+        <div class="space-y-6 pb-24">
             <div class="flex justify-between items-center">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">Merhaba, ${user.displayName || 'Öğrenci'} 👋</h2>
-                    <p class="text-gray-500 text-sm">Bugün hedeflerine bir adım daha yaklaş!</p>
+                    <p class="text-gray-500 text-sm">Bugün hedeflerine odaklan!</p>
                 </div>
             </div>
 
-            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden animate-fade-in">
                 <div class="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
-                <p class="text-lg font-medium italic relative z-10">"${randomQuote}"</p>
+                <div class="relative z-10">
+                    <i class="fa-solid fa-quote-left text-white/30 text-2xl mb-2"></i>
+                    <p class="text-lg font-medium italic">"${randomQuote}"</p>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32" onclick="window.navigateToTab('tab-homework')">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32 active:scale-95 transition-transform cursor-pointer" onclick="window.navigateToTab('tab-homework')">
                     <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xl mb-2">
                         <i class="fa-solid fa-list-check"></i>
                     </div>
@@ -203,7 +210,7 @@ function loadDashboardData() {
                         <p class="text-xs text-gray-500">Bekleyen Ödev</p>
                     </div>
                 </div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32" onclick="window.navigateToTab('tab-tracking')">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-32 active:scale-95 transition-transform cursor-pointer" onclick="window.navigateToTab('tab-tracking')">
                     <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl mb-2">
                         <i class="fa-solid fa-pen"></i>
                     </div>
@@ -225,16 +232,16 @@ function loadDashboardData() {
             </div>
 
             <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform" onclick="window.navigateToTab('tab-denemeler')">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform cursor-pointer" onclick="window.navigateToTab('tab-denemeler')">
                     <div class="flex items-center gap-3 mb-2">
-                        <div class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></div>
+                        <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-chart-line text-lg"></i></div>
                         <h4 class="font-bold text-gray-700 text-sm">Denemeler</h4>
                     </div>
                     <p class="text-xs text-gray-400">Netlerini takip et</p>
                 </div>
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform" onclick="window.navigateToTab('tab-ajanda')">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 active:scale-95 transition-transform cursor-pointer" onclick="window.navigateToTab('tab-ajanda')">
                     <div class="flex items-center gap-3 mb-2">
-                        <div class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center"><i class="fa-solid fa-calendar-days"></i></div>
+                        <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-calendar-days text-lg"></i></div>
                         <h4 class="font-bold text-gray-700 text-sm">Ajanda</h4>
                     </div>
                     <p class="text-xs text-gray-400">Programını gör</p>
@@ -243,30 +250,35 @@ function loadDashboardData() {
         </div>
     `;
 
-    // Verileri çek ve doldur (Dashboard verileri)
-    // 1. Ödev Sayısı
+    // --- 3. VERİLERİ ÇEK VE DOLDUR ---
+    
+    // A) Bekleyen Ödev Sayısı
     getDocs(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "odevler"), where("durum", "==", "devam"))).then(snap => {
-        document.getElementById('homePendingHomeworks').textContent = snap.size;
+        const el = document.getElementById('homePendingHomeworks');
+        if(el) el.textContent = snap.size;
     });
 
-    // 2. Soru Sayısı (Bugün)
+    // B) Bugün Çözülen Soru Sayısı
     const today = new Date().toISOString().split('T')[0];
     getDocs(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), where("tarih", "==", today))).then(snap => {
         let total = 0;
         snap.forEach(d => total += (parseInt(d.data().adet) || 0));
-        document.getElementById('homeTodayQuestions').textContent = total;
+        const el = document.getElementById('homeTodayQuestions');
+        if(el) el.textContent = total;
     });
 
-    // 3. Hedefler (Kısa Liste - Yeniden Eskiye)
+    // C) Hedefler (Son Eklenen 3 Tane)
     onSnapshot(query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "hedefler"), where("durum", "==", "devam"), limit(3)), (snap) => {
         const list = document.getElementById('homeGoalsList');
-        if(snap.empty) { list.innerHTML = '<p class="text-center text-gray-400 text-xs">Aktif hedef yok.</p>'; return; }
+        if(!list) return;
+        
+        if(snap.empty) { list.innerHTML = '<p class="text-center text-gray-400 text-xs py-2">Aktif hedef yok.</p>'; return; }
         
         let html = '';
         const goals = [];
         snap.forEach(d => goals.push(d.data()));
         
-        // Sıralama (Yeniden Eskiye)
+        // Yeniden eskiye sırala (Oluşturma tarihi yoksa bitiş tarihine göre)
         goals.sort((a, b) => {
              const timeA = a.olusturmaTarihi?.seconds || new Date(a.bitisTarihi).getTime();
              const timeB = b.olusturmaTarihi?.seconds || new Date(b.bitisTarihi).getTime();
@@ -276,14 +288,14 @@ function loadDashboardData() {
         goals.forEach(g => {
             const percent = Math.min(100, Math.round((g.ilerleme / g.hedefDegeri) * 100)) || 0;
             html += `
-            <div class="flex items-center gap-3 pb-2 border-b border-gray-50 last:border-0">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 text-xs font-bold text-indigo-600 border-2 border-indigo-100">
+            <div class="flex items-center gap-3 pb-3 border-b border-gray-50 last:border-0 last:pb-0">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 text-xs font-bold text-indigo-600 border-2 border-indigo-100 shrink-0">
                     %${percent}
                 </div>
-                <div class="flex-1">
+                <div class="flex-1 min-w-0">
                     <h4 class="text-sm font-bold text-gray-800 truncate">${g.title}</h4>
-                    <div class="w-full bg-gray-100 rounded-full h-1.5 mt-1">
-                        <div class="bg-indigo-500 h-1.5 rounded-full" style="width: ${percent}%"></div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                        <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
                     </div>
                 </div>
             </div>`;
@@ -794,12 +806,13 @@ function initStudentNotifications() {
     if(!list || !coachId || !studentDocId) return;
 
     let notifications = [];
-    const render = () => {
+const render = () => {
         const list = document.getElementById('notificationList');
         const badge = document.getElementById('notificationBadge');
         
         if (notifications.length > 0) {
             badge.classList.remove('hidden');
+            // DÜZELTME: onclick olayına dropdown gizleme kodu eklendi
             list.innerHTML = notifications.map(n => `
                 <div class="p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors" 
                      onclick="document.getElementById('notificationDropdown').classList.add('hidden'); window.navigateToTab('${n.tab}')">
@@ -974,7 +987,8 @@ document.getElementById('btnSaveModalSoru')?.addEventListener('click', async () 
     window.history.back();
     if (!document.getElementById('tab-tracking').classList.contains('hidden')) renderSoruTakibiGrid();
 });
-window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };
 
+
+window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };
 
 

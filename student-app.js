@@ -68,29 +68,7 @@ window.addEventListener('popstate', (event) => {
     }
 });
 
-// UI Değiştirme Yardımcısı (History Push Yapmaz)
-function switchTabUI(tabId) {
-    cleanUpListeners();
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-    document.getElementById(tabId)?.classList.remove('hidden');
-    
-    document.querySelectorAll('.nav-btn').forEach(b => {
-        b.classList.remove('text-indigo-600', 'active');
-        b.classList.add('text-gray-400');
-        if(b.dataset.target === tabId) {
-            b.classList.add('text-indigo-600', 'active');
-            b.classList.remove('text-gray-400');
-        }
-    });
-}
 
-function openModalWithBackHistory(modalId) {
-    const modal = document.getElementById(modalId);
-    if(modal) {
-        modal.classList.remove('hidden');
-        window.history.pushState({ modalOpen: true }, '', window.location.href);
-    }
-}
 
 // =================================================================
 // 1. BAŞLATMA
@@ -141,6 +119,23 @@ async function initializeStudentApp(uid) {
 // =================================================================
 // 2. NAVİGASYON (Geri Tuşu Destekli)
 // =================================================================
+
+// 1. Yardımcı Fonksiyon: Sadece Ekranı ve Veriyi Günceller (History eklemez)
+// Bu fonksiyon hem tıklamalarda hem de geri tuşuna basıldığında kullanılır.
+function switchTabUI(tabId) {
+    cleanUpListeners();
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById(tabId)?.classList.remove('hidden');
+    
+    document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.remove('text-indigo-600', 'active');
+        b.classList.add('text-gray-400');
+        if(b.dataset.target === tabId) {
+            b.classList.add('text-indigo-600', 'active');
+            b.classList.remove('text-gray-400');
+        }
+    });
+
     const centerBtn = document.querySelector('.bottom-nav-center-btn');
     if(centerBtn) {
         if(tabId==='tab-tracking') { centerBtn.classList.add('bg-indigo-700'); centerBtn.classList.remove('bg-indigo-600'); }
@@ -767,4 +762,5 @@ document.getElementById('btnSaveModalSoru')?.addEventListener('click', async () 
 
 
 window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };
+
 

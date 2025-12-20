@@ -291,6 +291,13 @@ function loadDashboardData() {
         list.innerHTML = html;
     });
 }
+    updateHomeworkMetrics(); 
+    loadStudentStats(db, coachId, appId, studentDocId, '30'); 
+    loadUpcomingAppointments(db, coachId, appId, studentDocId);
+    loadActiveGoalsForDashboard();
+    loadOverdueHomeworks(db, coachId, appId, studentDocId);
+}
+
 // ... Dashboard Yardımcıları
 function renderProfileLessons(dersler) {
     const profileTab = document.getElementById('tab-profile'); if(!profileTab) return;
@@ -793,7 +800,7 @@ function initStudentNotifications() {
     if(!list || !coachId || !studentDocId) return;
 
     let notifications = [];
-const render = () => {
+    const render = () => {
         const list = document.getElementById('notificationList');
         const badge = document.getElementById('notificationBadge');
         
@@ -973,10 +980,6 @@ document.getElementById('btnSaveModalSoru')?.addEventListener('click', async () 
     window.history.back();
     if (!document.getElementById('tab-tracking').classList.contains('hidden')) renderSoruTakibiGrid();
 });
-
-
 window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };
-
-
 
 

@@ -176,71 +176,113 @@ function startDenemeListener(db, uid, appId, studentId) {
     });
 }
 
-function renderDenemeList(list) {
-    const container = document.getElementById('denemeListContainer');
-    if (list.length === 0) { 
-        container.innerHTML = '<div class="text-center py-8 bg-gray-50 rounded-xl border border-gray-100"><p class="text-gray-400">Henüz deneme kaydı yok.</p></div>'; 
-        return; 
+function renderDenemeList(data) {
+    const listContainer = document.getElementById("denemeListContainer");
+    
+    if (data.length === 0) {
+        listContainer.innerHTML = `
+            <div class="text-center py-10 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <i class="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
+                <p>Henüz deneme kaydı bulunmuyor.</p>
+            </div>`;
+        return;
     }
 
-    container.innerHTML = list.map(d => {
-        const isApproved = d.onayDurumu === 'onaylandi';
-        const isExcluded = d.analizHaric === true; 
-        
-        let detailsHtml = '';
-        if (d.netler) {
-            detailsHtml = '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 pt-2 border-t border-gray-100 hidden animate-fade-in details-panel">';
-            for (const [ders, stats] of Object.entries(d.netler)) {
-                if (parseFloat(stats.net) !== 0) {
-                    detailsHtml += `<div class="text-xs bg-gray-50 p-1.5 rounded flex justify-between"><span class="font-bold truncate">${ders}</span><span class="text-gray-600">${stats.net} Net</span></div>`;
-                }
-            }
-            detailsHtml += '</div>';
-        } else {
-            detailsHtml = `<div class="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500 hidden animate-fade-in details-panel flex gap-4">
-                <span class="font-bold text-gray-700">Soru: <span class="font-normal">${d.soruSayisi || '-'}</span></span>
-                <span class="font-bold text-green-600">Doğru: <span class="font-normal">${d.dogru || '-'}</span></span>
-                <span class="font-bold text-red-500">Yanlış: <span class="font-normal">${d.yanlis || '-'}</span></span>
-            </div>`;
-        }
+    // 1. BEKLEYEN VAR MI KONTROLÜ
+    const hasPending = data.some(d => d.onayDurumu === 'bekliyor');
+    let warningHtml = '';
 
-        return `
-        <div class="bg-white p-4 rounded-xl border ${isExcluded ? 'border-orange-200 bg-orange-50' : 'border-gray-200'} shadow-sm relative group cursor-pointer transition-all hover:shadow-md" onclick="this.querySelector('.details-panel').classList.toggle('hidden')">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h4 class="font-bold text-gray-800 text-sm">${d.ad} <span class="text-xs font-normal text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded ml-1">${d.tur}</span></h4>
-                    <p class="text-xs text-gray-500 mt-1 flex items-center"><i class="fa-regular fa-calendar mr-1.5 text-gray-400"></i> ${formatDateTR(d.tarih)}</p>
+    // 2. VARSA UYARI KUTUSU OLUŞTUR (Yeşil Tasarım)
+    if (hasPending) {
+        warningHtml = `
+        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-xl shadow-sm flex items-center justify-between animate-fade-in">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xl shrink-0">
+                    <i class="fa-solid fa-bell"></i>
                 </div>
-                <div class="text-right">
-                    <h3 class="text-xl font-bold ${isExcluded ? 'text-orange-600' : 'text-indigo-600'}">${d.toplamNet} <span class="text-xs font-normal text-gray-400">Net</span></h3>
-                    ${!isApproved ? '<span class="text-[9px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Onay Bekliyor</span>' : ''}
-                    ${isExcluded ? '<span class="text-[9px] bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full block mt-1">Analiz Dışı</span>' : ''}
+                <div>
+                    <h4 class="font-bold text-green-800 text-sm">Onayda Bekleyen Denemeler Var!</h4>
+                    <p class="text-xs text-green-600">Öğrencinin eklediği sonuçlar analize dahil edilmek için onayınızı bekliyor.</p>
                 </div>
             </div>
-            ${detailsHtml}
-<div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                ${d.onayDurumu === 'bekliyor' ? `
-                <button class="btn-approve-deneme text-gray-400 hover:text-green-600 p-1.5 bg-white rounded-full shadow-sm hover:shadow-md transition-all" title="Onayla" data-id="${d.id}">
-                    <i class="fa-solid fa-check"></i>
+            <i class="fa-solid fa-chevron-down text-green-400 animate-bounce"></i>
+        </div>`;
+    }
+
+    // 3. LİSTEYİ OLUŞTUR
+    const listHtml = data.map(d => {
+        const dateObj = d.tarih ? new Date(d.tarih) : null;
+        const dateStr = dateObj ? dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) : '-';
+        
+        // Onay Durumu Rozeti
+        const isApproved = d.onayDurumu === 'onaylandi';
+        const statusBadge = isApproved 
+            ? '<span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold border border-indigo-100"><i class="fa-solid fa-check-circle"></i> Onaylı</span>'
+            : '<span class="text-[10px] bg-orange-50 text-orange-600 px-2 py-1 rounded font-bold border border-orange-100 animate-pulse"><i class="fa-solid fa-clock"></i> Bekliyor</span>';
+
+        return `
+        <div class="group bg-white p-5 rounded-2xl border ${!isApproved ? 'border-orange-200 ring-2 ring-orange-50' : 'border-gray-100'} shadow-sm hover:shadow-md transition-all relative overflow-hidden mb-3">
+            
+            ${!isApproved ? '<div class="absolute top-0 left-0 w-1 h-full bg-orange-400"></div>' : ''}
+
+            <div class="flex justify-between items-start pl-2">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">${d.tur}</span>
+                        ${statusBadge}
+                    </div>
+                    <h4 class="font-bold text-gray-800 text-lg">${d.ad || 'Deneme Sınavı'}</h4>
+                    <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                        <span><i class="fa-regular fa-calendar mr-1"></i> ${dateStr}</span>
+                        ${!d.analizHaric ? '<span class="text-green-600 bg-green-50 px-2 py-0.5 rounded"><i class="fa-solid fa-chart-pie mr-1"></i>Analize Dahil</span>' : '<span class="text-gray-400"><i class="fa-solid fa-eye-slash mr-1"></i>Analiz Dışı</span>'}
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <div class="text-2xl font-black text-indigo-600 tracking-tight leading-none">${d.toplamNet}</div>
+                    <div class="text-[10px] font-bold text-gray-400 uppercase mt-1">TOPLAM NET</div>
+                </div>
+            </div>
+            
+            ${d.netler ? `
+            <div class="mt-4 pt-4 border-t border-gray-50 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                ${Object.entries(d.netler).map(([ders, val]) => `
+                    <div class="text-center bg-gray-50 rounded-lg p-1.5">
+                        <div class="text-[10px] text-gray-500 truncate font-medium">${ders}</div>
+                        <div class="text-xs font-bold text-gray-800">${val.net}</div>
+                    </div>
+                `).join('')}
+            </div>` : ''}
+
+            <div class="absolute top-3 right-3 flex gap-2 opacity-100 transition-opacity">
+                
+                ${!isApproved ? `
+                <button class="btn-approve-deneme bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2 px-3" title="Onayla ve Analize Ekle" data-id="${d.id}">
+                    <i class="fa-solid fa-check text-lg"></i>
+                    <span class="text-xs font-bold">Onayla</span>
                 </button>` : ''}
                 
-                <button class="btn-delete-deneme text-gray-400 hover:text-red-500 p-1.5 bg-white rounded-full shadow-sm hover:shadow-md transition-all" title="Sil" data-id="${d.id}">
+                <button class="btn-delete-deneme text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all" title="Sil" data-id="${d.id}">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
+
         </div>`;
     }).join('');
 
-    // SİLME BUTONLARINI AKTİF ET (YENİ KOD)
+    // 4. HTML'İ BİRLEŞTİR VE BAS
+    listContainer.innerHTML = warningHtml + listHtml;
+
+    // --- BUTTON LISTENERLARI (SİLME VE ONAYLAMA) ---
+    
+    // Silme İşlemi
     document.querySelectorAll('.btn-delete-deneme').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            e.stopPropagation(); // Kartın açılmasını engelle
+            e.stopPropagation();
             const id = e.currentTarget.dataset.id;
-            
             if(confirm("Bu denemeyi silmek istediğinize emin misiniz?")) {
                 try {
                     await deleteDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id));
-                    // Liste snapshot ile otomatik güncellenir
                 } catch (error) {
                     console.error("Silme hatası:", error);
                     alert("Silinirken bir hata oluştu.");
@@ -248,27 +290,29 @@ function renderDenemeList(list) {
             }
         });
     });
-    // --- ONAYLA BUTONLARI ---
+
+    // Onaylama İşlemi
     document.querySelectorAll('.btn-approve-deneme').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            e.stopPropagation(); // Kart detayını açmasını engelle
+            e.stopPropagation();
             const id = e.currentTarget.dataset.id;
             
             if(confirm("Bu denemeyi onaylamak ve analize dahil etmek istiyor musunuz?")) {
-                const btnIcon = e.currentTarget.querySelector('i');
-                btnIcon.className = "fa-solid fa-spinner fa-spin"; // Yükleniyor ikonu
+                const btnElem = e.currentTarget;
+                const originalContent = btnElem.innerHTML;
+                btnElem.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Yükleniyor
+                btnElem.disabled = true;
 
                 try {
-                    // Firestore güncelleme işlemi
                     await updateDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id), {
                         onayDurumu: 'onaylandi'
                     });
-                    
-                    // İşlem başarılı olunca liste otomatik güncellenecektir (onSnapshot sayesinde)
+                    // onSnapshot sayesinde liste kendiliğinden güncellenecektir.
                 } catch (error) {
                     console.error("Onaylama hatası:", error);
                     alert("Onaylanırken bir hata oluştu.");
-                    btnIcon.className = "fa-solid fa-check"; // İkonu geri al
+                    btnElem.innerHTML = originalContent;
+                    btnElem.disabled = false;
                 }
             }
         });
@@ -496,4 +540,5 @@ if (tur === 'Diger') {
         btn.textContent = "Kaydet";
     }
 }
+
 

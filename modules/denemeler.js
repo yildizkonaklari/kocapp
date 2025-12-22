@@ -218,9 +218,16 @@ function renderDenemeList(list) {
                 </div>
             </div>
             ${detailsHtml}
-<button class="btn-delete-deneme absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full shadow-sm" data-id="${d.id}">
-                <i class="fa-solid fa-trash"></i>
-            </button>
+<div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                ${d.onayDurumu === 'bekliyor' ? `
+                <button class="btn-approve-deneme text-gray-400 hover:text-green-600 p-1.5 bg-white rounded-full shadow-sm hover:shadow-md transition-all" title="Onayla" data-id="${d.id}">
+                    <i class="fa-solid fa-check"></i>
+                </button>` : ''}
+                
+                <button class="btn-delete-deneme text-gray-400 hover:text-red-500 p-1.5 bg-white rounded-full shadow-sm hover:shadow-md transition-all" title="Sil" data-id="${d.id}">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
         </div>`;
     }).join('');
 
@@ -237,6 +244,31 @@ function renderDenemeList(list) {
                 } catch (error) {
                     console.error("Silme hatası:", error);
                     alert("Silinirken bir hata oluştu.");
+                }
+            }
+        });
+    });
+    // --- ONAYLA BUTONLARI ---
+    document.querySelectorAll('.btn-approve-deneme').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Kart detayını açmasını engelle
+            const id = e.currentTarget.dataset.id;
+            
+            if(confirm("Bu denemeyi onaylamak ve analize dahil etmek istiyor musunuz?")) {
+                const btnIcon = e.currentTarget.querySelector('i');
+                btnIcon.className = "fa-solid fa-spinner fa-spin"; // Yükleniyor ikonu
+
+                try {
+                    // Firestore güncelleme işlemi
+                    await updateDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id), {
+                        onayDurumu: 'onaylandi'
+                    });
+                    
+                    // İşlem başarılı olunca liste otomatik güncellenecektir (onSnapshot sayesinde)
+                } catch (error) {
+                    console.error("Onaylama hatası:", error);
+                    alert("Onaylanırken bir hata oluştu.");
+                    btnIcon.className = "fa-solid fa-check"; // İkonu geri al
                 }
             }
         });
@@ -464,3 +496,4 @@ if (tur === 'Diger') {
         btn.textContent = "Kaydet";
     }
 }
+

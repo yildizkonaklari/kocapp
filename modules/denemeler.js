@@ -1,6 +1,6 @@
 import { 
     collection, query, onSnapshot, updateDoc, deleteDoc, getDoc,
-    where, orderBy, getDocs, doc, addDoc, serverTimestamp 
+    where, orderBy, getDocs, doc, addDoc, serverTimestamp, startAfter, limit 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { 
@@ -631,6 +631,7 @@ if (tur === 'Diger') {
         btn.textContent = "Kaydet";
     }
 }
+
 
 
 

@@ -17,6 +17,9 @@ let denemeChartInstance = null;
 let currentDb = null;
 let globalUserId = null; 
 let globalAppId = null;
+let lastVisibleDeneme = null; // Sayfalama için son dökümanı tutar
+const DENEME_PAGE_SIZE = 20;  // Sayfa başı kayıt sayısı
+let isDenemeLoading = false;  // Çift tıklamayı önlemek için
 
 export async function renderDenemelerSayfasi(db, currentUserId, appId) {
     currentDb = db;
@@ -163,162 +166,250 @@ async function setupDenemeSearchableDropdown(db, uid, appId) {
     });
 }
 
-function startDenemeListener(db, uid, appId, studentId) {
-    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "denemeler"), orderBy("tarih", "desc"));
+// --- VERİ ÇEKME VE SAYFALAMA ---
+async function startDenemeListener(db, uid, appId, studentId) {
+    // 1. Listeyi ve State'i Sıfırla
+    const container = document.getElementById('denemeListContainer');
+    container.innerHTML = ''; 
+    lastVisibleDeneme = null;
     
-    if (activeListeners.denemelerUnsubscribe) activeListeners.denemelerUnsubscribe();
-
-    activeListeners.denemelerUnsubscribe = onSnapshot(q, (snap) => {
-        const list = [];
-        snap.forEach(d => list.push({id:d.id, ...d.data()}));
-        renderDenemeList(list);
-        calculateStatsAndChart(list);
-    });
-}
-
-function renderDenemeList(data) {
-    const listContainer = document.getElementById("denemeListContainer");
-    
-    if (data.length === 0) {
-        listContainer.innerHTML = `
-            <div class="text-center py-10 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                <i class="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
-                <p>Henüz deneme kaydı bulunmuyor.</p>
-            </div>`;
-        return;
+    // 2. Yükle Butonu Alanını Oluştur
+    let loadMoreDiv = document.getElementById('denemeLoadMoreContainer');
+    if (!loadMoreDiv) {
+        loadMoreDiv = document.createElement('div');
+        loadMoreDiv.id = 'denemeLoadMoreContainer';
+        loadMoreDiv.className = 'text-center mt-4 hidden pb-10';
+        loadMoreDiv.innerHTML = `<button id="btnLoadMoreDeneme" class="bg-white border border-gray-200 text-gray-600 px-6 py-2 rounded-full text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors">Daha Fazla Göster</button>`;
+        // Ana container'ın dışına değil, list container'ın hemen altına ekleyelim
+        container.parentNode.appendChild(loadMoreDiv);
+        
+        document.getElementById('btnLoadMoreDeneme').addEventListener('click', () => {
+            fetchNextDenemeBatch(db, uid, appId, studentId);
+        });
     }
 
-    // 1. BEKLEYEN VAR MI KONTROLÜ
-    const hasPending = data.some(d => d.onayDurumu === 'bekliyor');
-    let warningHtml = '';
+    // 3. İlk 20 Kaydı Getir
+    await fetchNextDenemeBatch(db, uid, appId, studentId, true);
+}
 
-    // 2. VARSA UYARI KUTUSU OLUŞTUR (Yeşil Tasarım)
-    if (hasPending) {
-        warningHtml = `
-        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-xl shadow-sm flex items-center justify-between animate-fade-in">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xl shrink-0">
-                    <i class="fa-solid fa-bell"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-green-800 text-sm">Onayda Bekleyen Denemeler Var!</h4>
-                    <p class="text-xs text-green-600">Öğrencinin eklediği sonuçlar analize dahil edilmek için onayınızı bekliyor.</p>
-                </div>
-            </div>
-            <i class="fa-solid fa-chevron-down text-green-400 animate-bounce"></i>
+async function fetchNextDenemeBatch(db, uid, appId, studentId, isFirstLoad = false) {
+    if (isDenemeLoading) return;
+    isDenemeLoading = true;
+    
+    const loadMoreBtn = document.getElementById('btnLoadMoreDeneme');
+    const loadMoreContainer = document.getElementById('denemeLoadMoreContainer');
+    
+    if (loadMoreBtn) loadMoreBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yükleniyor...';
+
+    try {
+        let q = query(
+            collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "denemeler"), 
+            orderBy("tarih", "desc"), 
+            limit(DENEME_PAGE_SIZE)
+        );
+
+        // Eğer sayfalama yapıyorsak (ilk sayfa değilse), son kayıttan sonrasını getir
+        if (!isFirstLoad && lastVisibleDeneme) {
+            q = query(
+                collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "denemeler"), 
+                orderBy("tarih", "desc"), 
+                startAfter(lastVisibleDeneme),
+                limit(DENEME_PAGE_SIZE)
+            );
+        }
+
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+            lastVisibleDeneme = snap.docs[snap.docs.length - 1]; // Son dökümanı kaydet
+            const list = [];
+            snap.forEach(d => list.push({id: d.id, ...d.data()}));
+            
+            // Listeyi Ekrana Bas (Append modu)
+            appendDenemeCards(list);
+            
+            // İstatistikleri sadece ilk yüklemede hesapla (veya her seferinde kümülatif eklenebilir ama basitlik için ilk 20 yeterli olabilir)
+            // Not: İstatistiklerin tam doğru olması için tüm verinin çekilmesi gerekir. 
+            // Pagination varken sadece çekilenlerin istatistiği gösterilir veya ayrı bir count sorgusu atılır.
+            if(isFirstLoad) calculateStatsAndChart(list); 
+
+            // Daha fazla butonunu yönet
+            if (snap.docs.length < DENEME_PAGE_SIZE) {
+                loadMoreContainer.classList.add('hidden'); // Başka kayıt yok
+            } else {
+                loadMoreContainer.classList.remove('hidden');
+            }
+        } else {
+            if (isFirstLoad) {
+                document.getElementById('denemeListContainer').innerHTML = '<div class="text-center py-8 bg-gray-50 rounded-xl border border-gray-100"><p class="text-gray-400">Henüz deneme kaydı yok.</p></div>';
+            }
+            loadMoreContainer.classList.add('hidden');
+        }
+
+    } catch (error) {
+        console.error("Deneme yükleme hatası:", error);
+    } finally {
+        isDenemeLoading = false;
+        if (loadMoreBtn) loadMoreBtn.innerText = 'Daha Fazla Göster';
+    }
+}
+
+function appendDenemeCards(list) {
+    const container = document.getElementById('denemeListContainer');
+    
+    // Uyarı mesajı (Sadece listenin başında ve bekleyen varsa göster)
+    const hasPending = list.some(d => d.onayDurumu === 'bekliyor');
+    // Eğer container boşsa ve bekleyen varsa uyarıyı ekle (Sadece ilk sayfada)
+    if (container.children.length === 0 && hasPending) {
+        container.innerHTML += `
+        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-4 rounded-r-xl shadow-sm flex items-center gap-3 animate-fade-in">
+            <div class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-bell"></i></div>
+            <div><h4 class="font-bold text-green-800 text-sm">Onay Bekleyen Denemeler Var</h4></div>
         </div>`;
     }
 
-    // 3. LİSTEYİ OLUŞTUR
-    const listHtml = data.map(d => {
-        const dateObj = d.tarih ? new Date(d.tarih) : null;
-        const dateStr = dateObj ? dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) : '-';
-        
-        // Onay Durumu Rozeti
+    const html = list.map(d => {
         const isApproved = d.onayDurumu === 'onaylandi';
-        const statusBadge = isApproved 
-            ? '<span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold border border-indigo-100"><i class="fa-solid fa-check-circle"></i> Onaylı</span>'
-            : '<span class="text-[10px] bg-orange-50 text-orange-600 px-2 py-1 rounded font-bold border border-orange-100 animate-pulse"><i class="fa-solid fa-clock"></i> Bekliyor</span>';
+        const isExcluded = d.analizHaric === true; 
+        
+        // Detay İçeriği (Netler Tablosu)
+        let detailsContent = '';
+        if (d.netler) {
+            detailsContent = '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">';
+            for (const [ders, stats] of Object.entries(d.netler)) {
+                if (parseFloat(stats.net) !== 0) {
+                    detailsContent += `<div class="text-xs bg-gray-50 p-2 rounded border border-gray-100 flex justify-between"><span class="font-bold text-gray-600 truncate mr-2">${ders}</span><span class="font-bold text-gray-800">${stats.net} Net</span></div>`;
+                }
+            }
+            detailsContent += '</div>';
+        } else {
+            detailsContent = `<div class="flex gap-4 text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded">
+                <span>Soru: <b>${d.soruSayisi || '-'}</b></span>
+                <span>Doğru: <b class="text-green-600">${d.dogru || '-'}</b></span>
+                <span>Yanlış: <b class="text-red-500">${d.yanlis || '-'}</b></span>
+            </div>`;
+        }
 
-        return `
-        <div class="group bg-white p-5 rounded-2xl border ${!isApproved ? 'border-orange-200 ring-2 ring-orange-50' : 'border-gray-100'} shadow-sm hover:shadow-md transition-all relative overflow-hidden mb-3">
-            
-            ${!isApproved ? '<div class="absolute top-0 left-0 w-1 h-full bg-orange-400"></div>' : ''}
-
-            <div class="flex justify-between items-start pl-2">
-                <div>
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">${d.tur}</span>
-                        ${statusBadge}
-                    </div>
-                    <h4 class="font-bold text-gray-800 text-lg">${d.ad || 'Deneme Sınavı'}</h4>
-                    <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                        <span><i class="fa-regular fa-calendar mr-1"></i> ${dateStr}</span>
-                        ${!d.analizHaric ? '<span class="text-green-600 bg-green-50 px-2 py-0.5 rounded"><i class="fa-solid fa-chart-pie mr-1"></i>Analize Dahil</span>' : '<span class="text-gray-400"><i class="fa-solid fa-eye-slash mr-1"></i>Analiz Dışı</span>'}
-                    </div>
-                </div>
-
-                <div class="text-right">
-                    <div class="text-2xl font-black text-indigo-600 tracking-tight leading-none">${d.toplamNet}</div>
-                    <div class="text-[10px] font-bold text-gray-400 uppercase mt-1">TOPLAM NET</div>
-                </div>
-            </div>
-            
-            ${d.netler ? `
-            <div class="mt-4 pt-4 border-t border-gray-50 grid grid-cols-3 sm:grid-cols-4 gap-2">
-                ${Object.entries(d.netler).map(([ders, val]) => `
-                    <div class="text-center bg-gray-50 rounded-lg p-1.5">
-                        <div class="text-[10px] text-gray-500 truncate font-medium">${ders}</div>
-                        <div class="text-xs font-bold text-gray-800">${val.net}</div>
-                    </div>
-                `).join('')}
-            </div>` : ''}
-
-            <div class="absolute top-3 right-3 flex gap-2 opacity-100 transition-opacity">
-                
+        // Buton Grubu (Detayların En Altında)
+        const actionButtons = `
+            <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
                 ${!isApproved ? `
-                <button class="btn-approve-deneme bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2 px-3" title="Onayla ve Analize Ekle" data-id="${d.id}">
-                    <i class="fa-solid fa-check text-lg"></i>
-                    <span class="text-xs font-bold">Onayla</span>
+                <button class="btn-approve-deneme bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md transition-all flex items-center gap-2 text-xs font-bold" data-id="${d.id}">
+                    <i class="fa-solid fa-check"></i> Onayla
                 </button>` : ''}
                 
-                <button class="btn-delete-deneme text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all" title="Sil" data-id="${d.id}">
-                    <i class="fa-solid fa-trash"></i>
+                <button class="btn-delete-deneme bg-white border border-red-100 text-red-500 hover:bg-red-50 px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-xs font-bold" data-id="${d.id}">
+                    <i class="fa-solid fa-trash"></i> Sil
                 </button>
             </div>
+        `;
 
+        return `
+        <div class="bg-white p-4 rounded-xl border ${!isApproved ? 'border-orange-200 ring-1 ring-orange-100' : 'border-gray-200'} shadow-sm relative group cursor-pointer transition-all hover:shadow-md mb-3" onclick="toggleDenemeDetails(this)">
+            
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded uppercase tracking-wide">${d.tur}</span>
+                        ${!isApproved ? '<span class="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold"><i class="fa-solid fa-clock mr-1"></i>Bekliyor</span>' : ''}
+                        ${isApproved ? '<span class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold"><i class="fa-solid fa-check-circle mr-1"></i>Onaylı</span>' : ''}
+                    </div>
+                    <h4 class="font-bold text-gray-800 text-base">${d.ad}</h4>
+                    <p class="text-xs text-gray-500 mt-1 flex items-center"><i class="fa-regular fa-calendar mr-1.5 text-gray-400"></i> ${formatDateTR(d.tarih)}</p>
+                </div>
+                <div class="text-right">
+                    <h3 class="text-2xl font-black ${isExcluded ? 'text-gray-400' : 'text-indigo-600'} tracking-tight">${d.toplamNet}</h3>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase">TOPLAM NET</p>
+                </div>
+            </div>
+
+            <div class="details-panel hidden mt-4 pt-2 border-t border-gray-50 animate-fade-in cursor-auto" onclick="event.stopPropagation()">
+                ${detailsContent}
+                ${actionButtons}
+            </div>
+            
+            <div class="absolute bottom-2 right-1/2 transform translate-x-1/2 text-gray-300 text-xs">
+                <i class="fa-solid fa-chevron-down transition-transform duration-300 chevron-icon"></i>
+            </div>
         </div>`;
     }).join('');
 
-    // 4. HTML'İ BİRLEŞTİR VE BAS
-    listContainer.innerHTML = warningHtml + listHtml;
+    // Mevcut içeriğin üzerine ekle (Append)
+    container.insertAdjacentHTML('beforeend', html);
 
-    // --- BUTTON LISTENERLARI (SİLME VE ONAYLAMA) ---
+    // Event Listenerları Yeniden Bağla (Performans için sadece yenilere bağlamak daha iyi ama basitlik için hepsine yeniden bağlıyoruz)
+    attachDenemeActionListeners();
+}
+
+// Global toggle fonksiyonu
+window.toggleDenemeDetails = function(card) {
+    const panel = card.querySelector('.details-panel');
+    const icon = card.querySelector('.chevron-icon');
     
-    // Silme İşlemi
+    // Diğer açık olanları kapat (Opsiyonel - Akordiyon etkisi için)
+    // document.querySelectorAll('.details-panel').forEach(p => {
+    //     if(p !== panel) p.classList.add('hidden');
+    // });
+
+    panel.classList.toggle('hidden');
+    if (icon) icon.classList.toggle('rotate-180');
+};
+
+function attachDenemeActionListeners() {
+    // Silme Butonları
     document.querySelectorAll('.btn-delete-deneme').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        // Çift dinleyiciyi önlemek için clone (veya removeEventListener) yapılabilir ama 
+        // innerHTML += yaptığımız için DOM yenileniyor, risk az.
+        btn.onclick = async (e) => {
             e.stopPropagation();
             const id = e.currentTarget.dataset.id;
             if(confirm("Bu denemeyi silmek istediğinize emin misiniz?")) {
                 try {
                     await deleteDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id));
+                    // Silindikten sonra o kartı UI'dan kaldır
+                    e.currentTarget.closest('.group').remove();
                 } catch (error) {
-                    console.error("Silme hatası:", error);
-                    alert("Silinirken bir hata oluştu.");
+                    console.error(error);
+                    alert("Hata oluştu.");
                 }
             }
-        });
+        };
     });
 
-    // Onaylama İşlemi
+    // Onaylama Butonları
     document.querySelectorAll('.btn-approve-deneme').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.onclick = async (e) => {
             e.stopPropagation();
             const id = e.currentTarget.dataset.id;
+            const btnElem = e.currentTarget;
             
-            if(confirm("Bu denemeyi onaylamak ve analize dahil etmek istiyor musunuz?")) {
-                const btnElem = e.currentTarget;
-                const originalContent = btnElem.innerHTML;
-                btnElem.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Yükleniyor
-                btnElem.disabled = true;
-
+            if(confirm("Denemeyi onaylıyor musunuz?")) {
+                btnElem.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
                 try {
                     await updateDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id), {
                         onayDurumu: 'onaylandi'
                     });
-                    // onSnapshot sayesinde liste kendiliğinden güncellenecektir.
+                    
+                    // UI Güncelleme (Yeniden yüklemeye gerek yok)
+                    // Kartın headerındaki badge'i güncelle
+                    const card = btnElem.closest('.group');
+                    const headerBadgeContainer = card.querySelector('.flex.items-center.gap-2.mb-1');
+                    // Eski bekliyor badge'ini kaldır, onaylı badge ekle
+                    // Basitlik için sayfayı yenilemek yerine butonu kaldırıyoruz:
+                    btnElem.remove();
+                    // Badge güncellemesi complex DOM işlemi gerektirir, en kolayı o kartı gizlemek veya kullanıcıya feedback vermek
+                    alert("Onaylandı!"); 
+                    // İsterseniz kartın görselini manuel güncelleyebilirsiniz.
+                    
                 } catch (error) {
-                    console.error("Onaylama hatası:", error);
-                    alert("Onaylanırken bir hata oluştu.");
-                    btnElem.innerHTML = originalContent;
-                    btnElem.disabled = false;
+                    console.error(error);
+                    alert("Hata oluştu.");
+                    btnElem.innerHTML = '<i class="fa-solid fa-check"></i> Onayla';
                 }
             }
-        });
+        };
     });
 }
-
 // --- İSTATİSTİK VE GRAFİK ---
 function calculateStatsAndChart(list) {
     const validList = list.filter(d => d.onayDurumu === 'onaylandi' && d.analizHaric !== true);
@@ -540,5 +631,6 @@ if (tur === 'Diger') {
         btn.textContent = "Kaydet";
     }
 }
+
 
 

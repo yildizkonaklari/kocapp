@@ -356,55 +356,91 @@ window.toggleDenemeDetails = function(card) {
 };
 
 function attachDenemeActionListeners() {
-    // Silme Butonları
-    document.querySelectorAll('.btn-delete-deneme').forEach(btn => {
-        // Çift dinleyiciyi önlemek için clone (veya removeEventListener) yapılabilir ama 
-        // innerHTML += yaptığımız için DOM yenileniyor, risk az.
+    // --- SİLME BUTONLARI ---
+    const deleteBtns = document.querySelectorAll('.btn-delete-deneme');
+    deleteBtns.forEach(btn => {
         btn.onclick = async (e) => {
-            e.stopPropagation();
-            const id = e.currentTarget.dataset.id;
+            e.stopPropagation(); // Kartın detayını açmayı engelle
+            
+            // Tıklanan butonu garanti altına al
+            const targetBtn = e.currentTarget || e.target.closest('.btn-delete-deneme');
+            if (!targetBtn) return;
+
+            const id = targetBtn.dataset.id;
+            
             if(confirm("Bu denemeyi silmek istediğinize emin misiniz?")) {
                 try {
+                    // 1. Veritabanından Sil
                     await deleteDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id));
-                    // Silindikten sonra o kartı UI'dan kaldır
-                    e.currentTarget.closest('.group').remove();
+                    
+                    // 2. UI'dan Sil (Manuel Güncelleme)
+                    const card = targetBtn.closest('.group');
+                    if (card) {
+                        card.style.transition = 'all 0.3s ease';
+                        card.style.opacity = '0'; // Kaybolma efekti
+                        setTimeout(() => card.remove(), 300); // DOM'dan kaldır
+                    }
                 } catch (error) {
-                    console.error(error);
-                    alert("Hata oluştu.");
+                    console.error("Silme hatası:", error);
+                    alert("Silinirken bir hata oluştu.");
                 }
             }
         };
     });
 
-    // Onaylama Butonları
-    document.querySelectorAll('.btn-approve-deneme').forEach(btn => {
+    // --- ONAYLAMA BUTONLARI ---
+    const approveBtns = document.querySelectorAll('.btn-approve-deneme');
+    approveBtns.forEach(btn => {
         btn.onclick = async (e) => {
             e.stopPropagation();
-            const id = e.currentTarget.dataset.id;
-            const btnElem = e.currentTarget;
             
-            if(confirm("Denemeyi onaylıyor musunuz?")) {
-                btnElem.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            const targetBtn = e.currentTarget || e.target.closest('.btn-approve-deneme');
+            if (!targetBtn) return;
+
+            const id = targetBtn.dataset.id;
+            
+            if(confirm("Bu denemeyi onaylamak istiyor musunuz?")) {
+                const originalHtml = targetBtn.innerHTML;
+                targetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                targetBtn.disabled = true;
+
                 try {
+                    // 1. Veritabanını Güncelle
                     await updateDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id), {
                         onayDurumu: 'onaylandi'
                     });
                     
-                    // UI Güncelleme (Yeniden yüklemeye gerek yok)
-                    // Kartın headerındaki badge'i güncelle
-                    const card = btnElem.closest('.group');
-                    const headerBadgeContainer = card.querySelector('.flex.items-center.gap-2.mb-1');
-                    // Eski bekliyor badge'ini kaldır, onaylı badge ekle
-                    // Basitlik için sayfayı yenilemek yerine butonu kaldırıyoruz:
-                    btnElem.remove();
-                    // Badge güncellemesi complex DOM işlemi gerektirir, en kolayı o kartı gizlemek veya kullanıcıya feedback vermek
-                    alert("Onaylandı!"); 
-                    // İsterseniz kartın görselini manuel güncelleyebilirsiniz.
-                    
+                    // 2. UI Güncelle (Manuel)
+                    const card = targetBtn.closest('.group');
+                    if(card) {
+                        // Kartın üst kısmındaki 'Bekliyor' yazısını bul ve değiştir
+                        const headerBadgeArea = card.querySelector('.flex.items-center.gap-2.mb-1');
+                        
+                        // Eski badge'i kaldır
+                        const oldBadge = headerBadgeArea.querySelector('.bg-orange-100'); 
+                        if(oldBadge) oldBadge.remove();
+
+                        // Yeni 'Onaylı' badge'i ekle
+                        const newBadge = document.createElement('span');
+                        newBadge.className = 'text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold border border-indigo-100 animate-fade-in';
+                        newBadge.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i>Onaylı';
+                        headerBadgeArea.appendChild(newBadge);
+
+                        // Kartın rengini güncelle (Turuncudan griye)
+                        card.classList.remove('border-orange-200', 'ring-1', 'ring-orange-100');
+                        card.classList.add('border-gray-200');
+
+                        // Onayla butonunu kaldır
+                        targetBtn.remove();
+                        
+                        alert("Deneme onaylandı ve analize dahil edildi.");
+                    }
+
                 } catch (error) {
-                    console.error(error);
-                    alert("Hata oluştu.");
-                    btnElem.innerHTML = '<i class="fa-solid fa-check"></i> Onayla';
+                    console.error("Onaylama hatası:", error);
+                    alert("İşlem sırasında hata oluştu.");
+                    targetBtn.innerHTML = originalHtml;
+                    targetBtn.disabled = false;
                 }
             }
         };
@@ -631,7 +667,6 @@ if (tur === 'Diger') {
         btn.textContent = "Kaydet";
     }
 }
-
 
 
 

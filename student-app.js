@@ -44,31 +44,43 @@ function getLocalDateString(date) {
     return `${year}-${month}-${day}`;
 }
 
+// Sayfa Değiştirme (Geçmişe kaydeder)
+window.navigateToTab = function(tabId) {
+    // Açık menüleri kapat
+    document.getElementById('notificationDropdown')?.classList.add('hidden');
+    
+    // Geçmişe ekle
+    window.history.pushState({ tab: tabId }, '', `#${tabId.replace('tab-', '')}`);
+    switchTabUI(tabId);
+};
+
+// GLOBAL GERİ TUŞU (NATIVE HİSSİYAT)
 window.addEventListener('popstate', (event) => {
-    // 1. Modalları Kapat
+    // 1. Önce açık Modalları kapat
     const openModals = document.querySelectorAll('.fixed.inset-0:not(.hidden)');
     if (openModals.length > 0) {
         openModals.forEach(m => m.classList.add('hidden'));
-        return; // Modal kapattıysak başka işlem yapma
+        return;
     }
 
-    // 2. Sekme (Tab) Geçmişi Varsa Geri Dön
-    // Eğer history state içinde tab bilgisi varsa ona dön
+    // 2. Sekme Değişimi
     if (event.state && event.state.tab) {
-        // Döngüye girmemek için pushState yapmadan sadece UI değiştiriyoruz
         switchTabUI(event.state.tab);
     } else {
-        // Varsayılan olarak anasayfaya dön veya uygulamadan çık (tarayıcı yönetir)
-        // Eğer hiçbir tab açık değilse (örneğin ilk yükleme), ana sayfaya atabiliriz
-        if (!document.getElementById('tab-home').classList.contains('hidden')) {
-             // Zaten ana sayfadayız, işlem yok.
-        } else {
-             switchTabUI('tab-home');
-        }
+        switchTabUI('tab-home'); // Varsayılan
     }
 });
 
-
+// Modal Açıcı (Helpers içinde yoksa burası çalışır)
+if (!window.openModalWithBackHistory) {
+    window.openModalWithBackHistory = function(modalId) {
+        const m = document.getElementById(modalId);
+        if(m) {
+            window.history.pushState({ modal: modalId }, '', window.location.hash);
+            m.classList.remove('hidden');
+        }
+    }
+}
 
 // =================================================================
 // 1. BAŞLATMA
@@ -86,18 +98,41 @@ function attachEventListeners() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.onclick = (e) => window.navigateToTab(e.currentTarget.dataset.target);
     });
-    document.querySelectorAll('.close-modal').forEach(b => b.onclick = () => window.history.back());
-    
+
+    // ESKİ: document.querySelectorAll('.close-modal').forEach(b => b.onclick = () => window.history.back());
+
+    // YENİ: event delegation (dinamik/sonradan açılan modallarda da çalışır)
+    document.addEventListener('click', (e) => {
+        const closeBtn = e.target.closest('.close-modal');
+        if (!closeBtn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const modalEl = closeBtn.closest('.fixed.inset-0') || closeBtn.closest('[role="dialog"]');
+        closeModalSmart(modalEl);
+    }, true);
+
+    // (Opsiyonel ama önerilir) Overlay'e tıklayınca kapat: sadece arka plan alanına tıklanınca
+    document.addEventListener('click', (e) => {
+        const overlay = e.target.closest('.modal-overlay');
+        if (!overlay) return;
+
+        // İçerik yerine overlay'in kendisine tıklanmışsa kapat
+        if (e.target === overlay) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeModalSmart(overlay);
+        }
+    }, true);
+
     // Hızlı Butonlar
     const btnQuickSoru = document.getElementById('btnQuickSoru');
     if(btnQuickSoru) btnQuickSoru.onclick = window.openSoruModal;
-    
-    // Deneme butonu artık Modal açmıyor, Deneme sayfasına gidiyor
-    // const btnQuickDeneme = document.getElementById('btnQuickDeneme');
-    // if(btnQuickDeneme) btnQuickDeneme.onclick = () => window.navigateToTab('tab-denemeler');
 
     document.getElementById('btnLogout').onclick = () => signOut(auth);
 }
+
 
 async function initializeStudentApp(uid) {
     try {
@@ -800,58 +835,182 @@ function initStudentNotifications() {
     });
 }
 
-// Global Modallar
+// =================================================================
+// DENEME EKLEME VE KAYDETME (DÜZELTİLMİŞ VERSİYON)
+// =================================================================
+
+// 1. Modalı Açma Fonksiyonu
 window.openDenemeModal = function () {
-    const profileClass = document.getElementById('profileClass').textContent;
+    // Öğrencinin sınıf seviyesini belirle (Ortaokul mu Lise mi?)
+    const profileClassElem = document.getElementById('profileClass');
+    const profileClass = profileClassElem ? profileClassElem.textContent : '12. Sınıf'; // Varsayılan 12
     const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(profileClass);
+    
+    // Config'den uygun deneme türlerini al (TYT, AYT, LGS vb.)
     const types = CLASS_LEVEL_RULES[isOrtaokul ? 'ORTAOKUL' : 'LISE'].types;
-    document.getElementById('inpDenemeTur').innerHTML = types.map(t => `<option value="${t}">${t}</option>`).join('');
+    
+    // Select kutusunu doldur
+    const selectBox = document.getElementById('inpDenemeTur');
+    selectBox.innerHTML = types.map(t => `<option value="${t}">${t}</option>`).join('');
+    
+    // İlk seçeneğe göre inputları oluştur
     renderDenemeInputs(types[0]);
-    document.getElementById('inpDenemeTarih').value = getLocalDateString(new Date());
+    
+    // Tarihi bugüne ayarla
+    document.getElementById('inpDenemeTarih').value = new Date().toISOString().split('T')[0];
+    
+    // Değişiklik olunca inputları yeniden çiz (Listener burada eklenmeli)
+    selectBox.onchange = (e) => renderDenemeInputs(e.target.value);
+
+    // Modalı aç
     openModalWithBackHistory('modalDenemeEkle');
 };
 
+// 2. Inputları Oluşturan Fonksiyon
 function renderDenemeInputs(tur) {
-    const c = document.getElementById('denemeDersContainer'); if (!c) return; c.innerHTML = '';
-    const config = EXAM_CONFIG[tur]; if (!config) return;
+    const c = document.getElementById('denemeDersContainer'); 
+    if (!c) return; 
+    c.innerHTML = ''; // Önce temizle
+
+    const config = EXAM_CONFIG[tur]; 
+    if (!config) return;
+
     if (tur === 'Diger') {
-        c.innerHTML = `<div class="bg-orange-50 p-3 rounded-xl text-xs text-orange-700 mb-2 text-center">Analiz dışı.</div><div class="flex gap-2"><input type="number" id="inpDigerDogru" placeholder="Doğru" class="w-1/2 p-3 border rounded-xl"><input type="number" id="inpDigerYanlis" placeholder="Yanlış" class="w-1/2 p-3 border rounded-xl"></div>`;
+        // Analiz dışı manuel giriş
+        c.innerHTML = `
+            <div class="bg-orange-50 p-3 rounded-xl text-xs text-orange-700 mb-2 text-center">Analiz dışı deneme.</div>
+            <div class="flex gap-2">
+                <input type="number" id="inpDigerDogru" placeholder="Doğru" class="w-1/2 p-3 border rounded-xl text-center">
+                <input type="number" id="inpDigerYanlis" placeholder="Yanlış" class="w-1/2 p-3 border rounded-xl text-center">
+            </div>`;
     } else {
+        // Ders bazlı giriş (TYT, AYT vb.)
         config.subjects.forEach(sub => {
-            c.innerHTML += `<div class="flex justify-between items-center py-2 border-b border-gray-100"><span class="text-sm font-bold text-gray-700 w-24 truncate">${sub.name}</span><div class="flex gap-2"><input type="number" placeholder="D" class="inp-deneme-d w-12 p-2 border border-green-200 rounded-lg text-center font-bold text-green-700 bg-green-50"><input type="number" placeholder="Y" class="inp-deneme-y w-12 p-2 border border-red-200 rounded-lg text-center font-bold text-red-700 bg-red-50"></div></div>`;
+            // KRİTİK DÜZELTME: data-ders="${sub.name}" özelliği eklendi.
+            // Bu olmadan kaydederken hangi dersin neti olduğunu anlayamazsınız.
+            c.innerHTML += `
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                <span class="text-sm font-bold text-gray-700 w-24 truncate">${sub.name}</span>
+                <div class="flex gap-2">
+                    <input type="number" data-ders="${sub.name}" placeholder="D" class="inp-deneme-d w-14 p-2 border border-green-200 rounded-lg text-center font-bold text-green-700 bg-green-50 focus:ring-2 focus:ring-green-500 outline-none">
+                    <input type="number" placeholder="Y" class="inp-deneme-y w-14 p-2 border border-red-200 rounded-lg text-center font-bold text-red-700 bg-red-50 focus:ring-2 focus:ring-red-500 outline-none">
+                </div>
+            </div>`;
         });
     }
 }
 
-document.getElementById('inpDenemeTur').onchange = (e) => renderDenemeInputs(e.target.value);
+// 3. KAYDETME İŞLEMİ (GARANTİLİ YÖNTEM)
+// HTML'de buton ID'si 'btnSaveDeneme' veya 'saveDenemeButton' olabilir. İkisini de kontrol ediyoruz.
+const btnSave = document.getElementById('btnSaveDeneme') || document.getElementById('saveDenemeButton');
 
-document.getElementById('btnSaveDeneme').onclick = async () => {
-    const tur = document.getElementById('inpDenemeTur').value;
-    const tarih = document.getElementById('inpDenemeTarih').value;
-    if (!tarih) return alert('Tarih seçin');
-    
-    let payload = { ad: document.getElementById('inpDenemeAd').value || "Deneme", tur, tarih, onayDurumu: 'bekliyor', kocId: coachId, studentId: studentDocId, studentAd: document.getElementById('headerStudentName').textContent, eklenmeTarihi: serverTimestamp() };
-    const config = EXAM_CONFIG[tur];
+if (btnSave) {
+    btnSave.onclick = async () => {
+        // A) Validasyon
+        const tur = document.getElementById('inpDenemeTur').value;
+        const tarih = document.getElementById('inpDenemeTarih').value;
+        const ad = document.getElementById('inpDenemeAd').value || `${tur} Denemesi`;
 
-    if (tur === 'Diger') {
-        const d = parseInt(document.getElementById('inpDigerDogru').value)||0;
-        const y = parseInt(document.getElementById('inpDigerYanlis').value)||0;
-        payload.toplamNet = (d - (y/config.wrongRatio)).toFixed(2);
-        payload.analizHaric = true;
-    } else {
-        let totalNet=0, netler={};
-        document.querySelectorAll('.inp-deneme-d').forEach(i => {
-            const d=parseInt(i.value)||0, y=parseInt(i.parentElement.querySelector('.inp-deneme-y').value)||0;
-            if(d>0 || y>0) { const n = d - (y/config.wrongRatio || 0); totalNet+=n; netler[i.dataset.ders]={d,y,net:n.toFixed(2)}; }
-        });
-        payload.toplamNet = totalNet.toFixed(2);
-        payload.netler = netler;
-        payload.analizHaric = false;
-    }
-    
-    await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), payload);
-    window.history.back();
-};
+        if (!tarih) { alert('Lütfen tarih seçiniz.'); return; }
+
+        // B) Butonu Kilitle
+        btnSave.disabled = true;
+        btnSave.textContent = "Kaydediliyor...";
+
+        try {
+            // C) Veri Hazırlığı
+            let payload = {
+                ad: ad,
+                tur: tur,
+                tarih: tarih,
+                onayDurumu: 'bekliyor',
+                kocId: coachId,
+                studentId: studentDocId,
+                // Öğrenci adı header'dan alınamazsa varsayılanı kullan
+                studentAd: document.getElementById('headerStudentName')?.textContent || "Öğrenci",
+                eklenmeTarihi: serverTimestamp()
+            };
+
+            const config = EXAM_CONFIG[tur];
+
+            if (tur === 'Diger') {
+    const d = parseInt(document.getElementById('inpDigerDogru')?.value) || 0;
+    const y = parseInt(document.getElementById('inpDigerYanlis')?.value) || 0;
+
+    const ratio = config?.wrongRatio || 4;
+    const net = d - (y / ratio);
+
+    payload.dogru = d;
+    payload.yanlis = y;
+    payload.soruSayisi = d + y;
+    payload.toplamNet = net.toFixed(2);
+    payload.analizHaric = true;
+            } else {
+                // Standart sınav hesaplama
+                let totalNet = 0;
+                let netler = {};
+                let hasEntry = false;
+
+                // Tüm doğru inputlarını gez
+                document.querySelectorAll('.inp-deneme-d').forEach(inpDogru => {
+                    const dersAdi = inpDogru.dataset.ders; // Veri özelliğinden ders adını al
+                    const dogru = parseInt(inpDogru.value) || 0;
+                    // Yanlış inputunu bul (Aynı satırdaki kardeşi)
+                    const inpYanlis = inpDogru.parentElement.querySelector('.inp-deneme-y');
+                    const yanlis = parseInt(inpYanlis.value) || 0;
+
+                    if (dogru > 0 || yanlis > 0) {
+                        hasEntry = true;
+                        const ratio = config?.wrongRatio || 4;
+                        const net = dogru - (yanlis / ratio);
+                        totalNet += net;
+                        
+                        // Objeye kaydet
+                        netler[dersAdi] = { 
+                            d: dogru, 
+                            y: yanlis, 
+                            net: net.toFixed(2) 
+                        };
+                    }
+                });
+
+                if (!hasEntry) {
+                    throw new Error("Lütfen en az bir ders için doğru/yanlış giriniz.");
+                }
+
+                payload.toplamNet = totalNet.toFixed(2);
+                payload.netler = netler;
+                payload.analizHaric = false;
+            }
+
+            // D) Firestore'a Yaz
+            await addDoc(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "denemeler"), payload);
+
+            // E) Başarı Durumu
+            alert("Deneme başarıyla kaydedildi!");
+            const modal = document.getElementById('modalDenemeEkle');
+            if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            }
+
+
+            // Eğer denemeler listesi açıksa yenile
+            const denemeTab = document.getElementById('tab-denemeler');
+            if (denemeTab && !denemeTab.classList.contains('hidden')) {
+            loadDenemelerTab();
+            }
+
+        } catch (error) {
+            console.error("Kayıt Hatası:", error);
+            alert("Hata: " + error.message);
+        } finally {
+            // F) Butonu Aç
+            btnSave.disabled = false;
+            btnSave.textContent = "Kaydet";
+        }
+    };
+}
 
 window.openSoruModal = function () {
     document.getElementById('inpModalSoruTarih').value = getLocalDateString(new Date());
@@ -878,6 +1037,47 @@ document.getElementById('btnSaveModalSoru')?.addEventListener('click', async () 
     window.history.back();
     if (!document.getElementById('tab-tracking').classList.contains('hidden')) renderSoruTakibiGrid();
 });
+function closeModalSmart(modalEl) {
+    if (!modalEl) return;
 
+    // Modal'ı kapat (garanti)
+    modalEl.classList.add('hidden');
+    modalEl.style.display = 'none';
+
+    // Eğer bu modal history üzerinden açıldıysa geri al (popstate zaten açık modalı kapatıyor)
+    // Ama history yoksa/uyumsuzsa sadece hide yeterli.
+    const st = window.history.state || {};
+    if (st && (st.modal === modalEl.id || st.modalId === modalEl.id)) {
+        // Bu durumda back ile geri alalım; popstate handler kapatır.
+        try { window.history.back(); } catch(e) {}
+    }
+}
+
+// =================================================================
+// GLOBAL MODAL KAPATMA SİSTEMİ (X, İPTAL, DIŞ TIKLAMA)
+// =================================================================
+function initGlobalModalCloseHandlers() {
+
+    // X ve İptal butonları
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.history.back(); // 🔥 ASIL OLAY BU
+        };
+    });
+
+    // Modal dışına tıklayınca kapat (mobil native hissi)
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                window.history.back();
+            }
+        };
+    });
+}
+
+// Sayfa yüklenince bir kez çalıştır
+document.addEventListener('DOMContentLoaded', initGlobalModalCloseHandlers);
 
 window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };

@@ -91,9 +91,15 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm">
                     <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Ekstra Öğrenci Kontenjanı</div>
-                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Detaylı Deneme Analizleri</div>
-                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Otomatik Ödev Takibi</div>
-                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> 7/24 Teknik Destek</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Yapay Zeka Performans Asistanı</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Seans Takibi</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Ödev ve Hedef Takibi</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Soru ve Günlük Rutin Takibi</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Deneme Takibi</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Deneme Analizi ve Grafikleri</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Muhasebe Modülü</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Mesaj Modülü</div>
+                    <div class="flex items-center"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i> Teknik Destek</div>
                 </div>
             </div>
         </div>
@@ -244,11 +250,21 @@ function createContactModal() {
     <div id="upgradeContactModal" class="fixed inset-0 bg-gray-900/80 z-[200] hidden items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
             <button id="btnCloseContactModalX" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+            
             <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm"><i class="fa-solid fa-headset"></i></div>
+            
             <h3 class="text-xl font-bold text-gray-800 mb-1 text-center">Paket Yükseltme</h3>
             <p id="modalContactPlanTitle" class="text-indigo-600 font-bold text-center text-sm mb-4">Plan Seçimi</p>
             <p class="text-sm text-gray-500 mb-6 text-center leading-relaxed">Paket yükseltme işlemleri ve özel teklifler için müşteri temsilcimizle iletişime geçin.</p>
-            <a id="btnWhatsappLink" href="#" target="_blank" class="w-full bg-green-500 text-white py-3 rounded-xl font-bold mb-3 hover:bg-green-600 transition-colors shadow-lg shadow-green-200 flex items-center justify-center gap-2"><i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp ile Yaz</a>
+            
+            <a id="btnWhatsappLink" href="#" target="_blank" class="w-full bg-green-500 text-white py-3 rounded-xl font-bold mb-2 hover:bg-green-600 transition-colors shadow-lg shadow-green-200 flex items-center justify-center gap-2">
+                <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp ile Yaz
+            </a>
+
+            <a id="btnInstagramLink" href="https://www.instagram.com/net.koc" target="_blank" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold mb-3 hover:opacity-90 transition-opacity shadow-lg shadow-purple-200 flex items-center justify-center gap-2">
+                <i class="fa-brands fa-instagram text-lg"></i> Instagram ile Yaz
+            </a>
+            
             <button id="btnCloseContactModal" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium py-2 rounded-xl hover:bg-gray-50 transition-colors">Kapat</button>
         </div>
     </div>`;
@@ -268,4 +284,3 @@ function createContactModal() {
     document.getElementById('btnCloseContactModal').onclick = closeModal;
     document.getElementById('btnCloseContactModalX').onclick = closeModal;
 }
-

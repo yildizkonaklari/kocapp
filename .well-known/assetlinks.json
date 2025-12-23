@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.tyosis.netkoc.twa",
+        "sha256_cert_fingerprints": ["28:AD:7D:BA:9F:E8:02:C3:22:98:A8:D1:D9:D5:E3:4D:D7:B5:D8:0C:90:52:0C:99:74:D6:FB:5D:BF:5F:6B:B4"]
+      }
+    }]

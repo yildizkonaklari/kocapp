@@ -21,7 +21,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
 
 // --- GÜNCELLENMİŞ MODÜLLERİ İÇE AKTAR ---
-import { cleanUpListeners, formatDateTR } from './modules/helpers.js';
+import { cleanUpListeners, formatDateTR, renderStudentOptions } from './modules/helpers.js';
 import { renderAnaSayfa } from './modules/anasayfa.js';
 import { renderOgrenciSayfasi, renderOgrenciDetaySayfasi, saveNewStudent, saveStudentChanges, deleteStudentFull } from './modules/ogrencilerim.js';
 import { renderAjandaSayfasi, saveNewRandevu } from './modules/ajanda.js';
@@ -523,6 +523,147 @@ window.navigateToPage = async (target) => {
         console.error("Öğrenci detayına giderken hata:", error);
     }
 };
+// =================================================================
+// 8. MODAL YÖNETİMİ: KAPATMA, KAYDETME VE GERİ TUŞU ENTEGRASYONU
+// =================================================================
+document.addEventListener('DOMContentLoaded', () => {
 
+    // --- A) OTOMATİK GERİ TUŞU DESTEĞİ (MUTATION OBSERVER) ---
+    // Modalların açıldığını (hidden sınıfının kalkmasını) otomatik algılar 
+    // ve geçmişe ekler. Böylece Android geri tuşu çalışır.
+    const modalObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const target = mutation.target;
+                const isVisible = !target.classList.contains('hidden');
+                
+                if (isVisible) {
+                    // Modal açıldı: Geçmişe ekle (Eğer zaten ekli değilse)
+                    if (!history.state || history.state.modalId !== target.id) {
+                        window.history.pushState({ modalId: target.id }, '', window.location.hash);
+                    }
+                }
+            }
+        });
+    });
+
+    // Takip edilecek modallar
+    ['addStudentModal', 'addRandevuModal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) modalObserver.observe(el, { attributes: true });
+    });
+
+
+    // --- B) AKILLI KAPATMA FONKSİYONU ---
+    window.closeModalSmart = function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        // Eğer modal geçmiş üzerinden açılmışsa, geri gelerek kapat (Native hissi)
+        if (history.state && history.state.modalId === modalId) {
+            window.history.back();
+        } else {
+            // Manuel kapat (Fallback)
+            modal.classList.add('hidden');
+            // Form varsa resetle (Opsiyonel)
+            const form = modal.querySelector('form');
+            if(form) form.reset();
+        }
+    };
+
+
+    // --- C) BUTONLARI YENİDEN YAPILANDIR (X, İPTAL, KAYDET) ---
+    
+    // 1. Öğrenci Ekleme Modalı Kontrolleri
+    const btnSaveStudent = document.getElementById('saveStudentButton');
+    if (btnSaveStudent) {
+        // Eski listener'ı temizlemek için klonla
+        const newBtn = btnSaveStudent.cloneNode(true);
+        btnSaveStudent.parentNode.replaceChild(newBtn, btnSaveStudent);
+
+        newBtn.addEventListener('click', async () => {
+            newBtn.disabled = true;
+            newBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kaydediliyor...';
+            
+            try {
+                // Modülden gelen kaydetme fonksiyonu
+                await saveNewStudent(db, currentUserId, appId);
+                // Başarılıysa kapat
+                closeModalSmart('addStudentModal');
+                // Listeyi yenile (gerekirse)
+                if(document.getElementById('nav-ogrencilerim').classList.contains('active')) {
+                    navigateToPage('ogrencilerim', false);
+                }
+            } catch (error) {
+                console.error(error);
+                // Hata varsa kapatma, kullanıcı görsün
+            } finally {
+                newBtn.disabled = false;
+                newBtn.textContent = 'Kaydet';
+            }
+        });
+    }
+
+    // 2. Randevu Ekleme Modalı Kontrolleri
+    const btnSaveRandevu = document.getElementById('saveRandevuButton');
+    if (btnSaveRandevu) {
+        const newBtn = btnSaveRandevu.cloneNode(true);
+        btnSaveRandevu.parentNode.replaceChild(newBtn, btnSaveRandevu);
+
+        newBtn.addEventListener('click', async () => {
+            newBtn.disabled = true;
+            newBtn.textContent = 'Kaydediliyor...';
+            try {
+                await saveNewRandevu(db, currentUserId, appId);
+                closeModalSmart('addRandevuModal');
+                // Ajandayı yenile
+                if(document.getElementById('nav-ajandam').classList.contains('active')) {
+                    navigateToPage('ajandam', false);
+                }
+            } catch (e) { console.error(e); } 
+            finally { 
+                newBtn.disabled = false; 
+                newBtn.textContent = 'Kaydet'; 
+            }
+        });
+    }
+
+    // 3. X ve İptal Butonlarını Bağla
+    const closeActions = [
+        { modal: 'addStudentModal', btns: ['closeModalButton', 'cancelModalButton'] },
+        { modal: 'addRandevuModal', btns: ['closeRandevuModalButton', 'cancelRandevuModalButton'] }
+    ];
+
+    closeActions.forEach(item => {
+        item.btns.forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    closeModalSmart(item.modal);
+                };
+            }
+        });
+
+        // Boşluğa tıklayınca kapatma
+        const modalEl = document.getElementById(item.modal);
+        if (modalEl) {
+            modalEl.onclick = (e) => {
+                if (e.target === modalEl) closeModalSmart(item.modal);
+            }
+        }
+    });
+
+    // 4. Sınıf Seçimi Dinleyicisi (Tekrar Garanti Altına Alalım)
+    const classSelect = document.getElementById('studentClass');
+    if (classSelect) {
+        classSelect.addEventListener('change', (e) => {
+            // helpers.js import'u yapılmış olmalı
+            if(typeof renderStudentOptions === 'function'){
+                renderStudentOptions(e.target.value, 'studentOptionsContainer', 'studentDersSecimiContainer');
+            }
+        });
+    }
+});
 // BAŞLAT
 main();

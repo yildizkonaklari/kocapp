@@ -71,6 +71,28 @@ window.addEventListener('popstate', (event) => {
     }
 });
 
+if (typeof window.uiOpenDate === 'undefined') {
+    window.uiOpenDate = null;
+}
+
+// Akordiyonu açıp kapatan ve tarihi hafızaya alan fonksiyon
+window.handleAccordionClick = function(dateStr, btnElement) {
+    // 1. Tarihi kaydet
+    window.uiOpenDate = dateStr;
+    
+    // 2. Görsel aç/kapa (toggleAccordion fonksiyonunu çağır)
+    // Eğer toggleAccordion fonksiyonunuz varsa onu kullanır, yoksa manuel yaparız:
+    const item = btnElement.closest('.accordion-item');
+    const content = item.querySelector('.accordion-content');
+    const icon = btnElement.querySelector('.fa-chevron-down');
+    
+    // Diğerlerini kapat (Opsiyonel - Sadece biri açık kalsın isterseniz)
+    // document.querySelectorAll('.accordion-content').forEach(c => c.classList.add('hidden'));
+    
+    content.classList.toggle('hidden');
+    if(icon) icon.classList.toggle('rotate-180');
+};
+
 // Modal Açıcı (Helpers içinde yoksa burası çalışır)
 if (!window.openModalWithBackHistory) {
     window.openModalWithBackHistory = function(modalId) {
@@ -305,7 +327,6 @@ async function loadStudentStats(db, uid, appId, sid, period) {
     let bestLesson = { name: '-', avg: -Infinity };
     for (const [name, stat] of Object.entries(subjectStats)) { const avg = stat.total / stat.count; if (avg > bestLesson.avg) bestLesson = { name, avg }; }
     document.getElementById('kpiBestLesson').textContent = bestLesson.name !== '-' ? `${bestLesson.name} (${bestLesson.avg.toFixed(1)})` : '-';
-// ... (loadStudentStats fonksiyonunun mevcut kodları buraya kadar gelecek) ...
 
     // ======================================================
     // YENİ: GAMIFICATION (ROZET SİSTEMİ)
@@ -566,7 +587,10 @@ function getWeekDates(offset) {
 
 async function renderSoruTakibiGrid() {
     const container = document.getElementById('weeklyAccordion'); if(!container) return;
-    container.innerHTML = '<p class="text-center text-gray-400">Yükleniyor...</p>';
+    
+    // 1. DÜZELTME: Global değişkeni kullan
+    if (!window.uiOpenDate) window.uiOpenDate = getLocalDateString(new Date());
+
     const dates = getWeekDates(currentWeekOffset);
     document.getElementById('weekRangeTitle').textContent = `${formatDateTR(dates[0].dateStr)} - ${formatDateTR(dates[6].dateStr)}`;
     
@@ -577,11 +601,16 @@ async function renderSoruTakibiGrid() {
 
     const q = query(collection(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId, "soruTakibi"), where("tarih", ">=", dates[0].dateStr), where("tarih", "<=", dates[6].dateStr));
     
+    if (activeListeners.soruTakibiUnsubscribe) activeListeners.soruTakibiUnsubscribe();
+
     activeListeners.soruTakibiUnsubscribe = onSnapshot(q, (snap) => {
         const data = []; snap.forEach(d => data.push({id:d.id, ...d.data()}));
         
         container.innerHTML = dates.map(day => {
             const isToday = day.isToday;
+            // 2. DÜZELTME: Açık kalma durumunu global değişkene göre kontrol et
+            const isOpen = day.dateStr === window.uiOpenDate;
+
             const createCard = (label, isRoutine = false) => {
                 const r = data.find(d => d.tarih === day.dateStr && d.ders === label);
                 const val = r ? r.adet : '';
@@ -600,7 +629,33 @@ async function renderSoruTakibiGrid() {
                 </div>`;
             };
 
-            return `<div class="accordion-item border-b border-gray-100 last:border-0"><button class="accordion-header w-full flex justify-between items-center p-4 ${isToday ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600' : 'bg-white text-gray-700'}" onclick="toggleAccordion(this)"><div class="flex items-center gap-3"><span class="text-lg font-bold">${day.dayNum}</span><span class="text-sm font-medium opacity-80">${day.dayName}</span></div><i class="fa-solid fa-chevron-down transition-transform ${isToday ? 'rotate-180' : ''}"></i></button><div class="accordion-content ${isToday ? '' : 'hidden'} px-4 pb-4 bg-white pt-2"><div class="mb-4"><h4 class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="fa-solid fa-star"></i> Rutinler</h4><div class="grid grid-cols-3 gap-2">${studentRutinler.map(r => createCard(r, true)).join('')}</div></div><div><h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="fa-solid fa-book"></i> Dersler</h4><div class="grid grid-cols-3 gap-2">${studentDersler.length > 0 ? studentDersler.map(d => createCard(d)).join('') : '<p class="text-xs text-gray-400 col-span-3">Ders eklenmemiş.</p>'}</div></div></div></div>`;
+            // 3. DÜZELTME: onclick olayını yeni global fonksiyona bağla
+            return `
+            <div class="accordion-item border-b border-gray-100 last:border-0">
+                <button class="accordion-header w-full flex justify-between items-center p-4 ${isToday ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600' : 'bg-white text-gray-700'}" 
+                        onclick="window.handleAccordionClick('${day.dateStr}', this)">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg font-bold">${day.dayNum}</span>
+                        <span class="text-sm font-medium opacity-80">${day.dayName}</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down transition-transform ${isOpen ? 'rotate-180' : ''}"></i>
+                </button>
+                
+                <div class="accordion-content ${isOpen ? '' : 'hidden'} px-4 pb-4 bg-white pt-2">
+                    <div class="mb-4">
+                        <h4 class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="fa-solid fa-star"></i> Rutinler</h4>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                            ${studentRutinler.map(r => createCard(r, true)).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="fa-solid fa-book"></i> Dersler</h4>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                            ${studentDersler.length > 0 ? studentDersler.map(d => createCard(d)).join('') : '<p class="text-xs text-gray-400 col-span-3">Ders eklenmemiş.</p>'}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
         }).join('');
     });
 }
@@ -1300,4 +1355,31 @@ function initGlobalModalCloseHandlers() {
 // Sayfa yüklenince bir kez çalıştır
 document.addEventListener('DOMContentLoaded', initGlobalModalCloseHandlers);
 
-window.selectAvatar = async (icon) => { await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); window.history.back(); loadDashboardData(); };
+// =================================================================
+// GLOBAL AVATAR SEÇİM FONKSİYONU
+// =================================================================
+window.selectAvatar = async (icon) => { 
+    console.log("Avatar seçiliyor:", icon);
+
+    // 1. Modalı hemen gizle
+    const modal = document.getElementById('modalAvatarSelect');
+    if(modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none'; // Garanti olsun diye
+    }
+
+    // 2. Veritabanını güncelle
+    try {
+        await updateDoc(doc(db, "artifacts", appId, "users", coachId, "ogrencilerim", studentDocId), { avatarIcon: icon }); 
+    } catch (e) {
+        console.error("Avatar kayıt hatası:", e);
+    }
+    
+    // 3. Geçmişten (History) sil
+    if (window.history.state && window.history.state.modal === 'modalAvatarSelect') {
+        window.history.back();
+    }
+
+    // 4. Sayfayı yenile (Profil resmini güncellemek için)
+    loadDashboardData();
+};

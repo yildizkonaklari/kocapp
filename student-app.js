@@ -305,6 +305,226 @@ async function loadStudentStats(db, uid, appId, sid, period) {
     let bestLesson = { name: '-', avg: -Infinity };
     for (const [name, stat] of Object.entries(subjectStats)) { const avg = stat.total / stat.count; if (avg > bestLesson.avg) bestLesson = { name, avg }; }
     document.getElementById('kpiBestLesson').textContent = bestLesson.name !== '-' ? `${bestLesson.name} (${bestLesson.avg.toFixed(1)})` : '-';
+// ... (loadStudentStats fonksiyonunun mevcut kodları buraya kadar gelecek) ...
+
+    // ======================================================
+    // YENİ: GAMIFICATION (ROZET SİSTEMİ)
+    // ======================================================
+    
+    // 1. Rozet Kuralları ve Seviyeleri
+    const badgeRules = {
+        goals: {
+            title: 'Hedef Ustası',
+            icon: 'fa-bullseye', // FontAwesome class
+            levels: [
+                { limit: 5, label: 'Bronz', color: 'text-orange-700 bg-orange-100 border-orange-200' },
+                { limit: 15, label: 'Gümüş', color: 'text-gray-600 bg-gray-100 border-gray-300' },
+                { limit: 30, label: 'Altın', color: 'text-yellow-600 bg-yellow-100 border-yellow-300' },
+                { limit: 60, label: 'Elmas', color: 'text-blue-600 bg-blue-100 border-blue-300' },
+                { limit: 100, label: 'Efsane', color: 'text-purple-600 bg-purple-100 border-purple-300' }
+            ]
+        },
+        homework: {
+            title: 'Ödev Canavarı',
+            icon: 'fa-book-open',
+            levels: [
+                { limit: 10, label: 'Bronz', color: 'text-orange-700 bg-orange-100 border-orange-200' },
+                { limit: 30, label: 'Gümüş', color: 'text-gray-600 bg-gray-100 border-gray-300' },
+                { limit: 60, label: 'Altın', color: 'text-yellow-600 bg-yellow-100 border-yellow-300' },
+                { limit: 120, label: 'Elmas', color: 'text-blue-600 bg-blue-100 border-blue-300' },
+                { limit: 250, label: 'Efsane', color: 'text-purple-600 bg-purple-100 border-purple-300' }
+            ]
+        },
+        questions: {
+            title: 'Soru Kurdu',
+            icon: 'fa-brain',
+            levels: [
+                { limit: 100, label: 'Bronz', color: 'text-orange-700 bg-orange-100 border-orange-200' },
+                { limit: 500, label: 'Gümüş', color: 'text-gray-600 bg-gray-100 border-gray-300' },
+                { limit: 2500, label: 'Altın', color: 'text-yellow-600 bg-yellow-100 border-yellow-300' },
+                { limit: 5000, label: 'Elmas', color: 'text-blue-600 bg-blue-100 border-blue-300' },
+                { limit: 10000, label: 'Efsane', color: 'text-purple-600 bg-purple-100 border-purple-300' }
+            ]
+        }
+    };
+
+    // 2. Seviye Hesaplama Fonksiyonu
+    const calculateLevel = (currentVal, rules) => {
+        let currentLevel = null;
+        let nextLevel = rules[0];
+
+        for (let i = 0; i < rules.length; i++) {
+            if (currentVal >= rules[i].limit) {
+                currentLevel = rules[i];
+                nextLevel = rules[i + 1] || null; // Sonraki seviye var mı?
+            } else {
+                nextLevel = rules[i];
+                break;
+            }
+        }
+        return { current: currentLevel, next: nextLevel };
+    };
+
+    // 3. Durumları Hesapla (Mevcut değişkenleri kullanıyoruz)
+    const statusGoals = calculateLevel(completedGoals, badgeRules.goals.levels);
+    const statusHomework = calculateLevel(completedHomework, badgeRules.homework.levels);
+    const statusQuestions = calculateLevel(totalQ, badgeRules.questions.levels);
+
+    // 4. HTML Oluşturucu (Yardımcı)
+    const createBadgeHTML = (rule, status, currentVal) => {
+        // Eğer hiç seviye atlamadıysa (Kilitli Görünüm)
+        if (!status.current) {
+            const progress = Math.min(100, (currentVal / status.next.limit) * 100);
+            return `
+            <div class="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl border border-gray-100 opacity-60">
+                <div class="w-12 h-12 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-xl mb-2 relative">
+                    <i class="fa-solid ${rule.icon}"></i>
+                    <i class="fa-solid fa-lock absolute -bottom-1 -right-1 text-xs bg-white rounded-full p-0.5"></i>
+                </div>
+                <h4 class="text-xs font-bold text-gray-500">${rule.title}</h4>
+                <div class="w-full bg-gray-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div class="bg-gray-400 h-full" style="width: ${progress}%"></div>
+                </div>
+                <span class="text-[9px] text-gray-400 mt-1">${currentVal} / ${status.next.limit}</span>
+            </div>`;
+        }
+
+        // Seviye Kazanılmışsa (Renkli Görünüm)
+        const isMax = !status.next;
+        const limit = isMax ? status.current.limit : status.next.limit;
+        const progress = isMax ? 100 : Math.min(100, (currentVal / limit) * 100);
+        
+        return `
+        <div class="flex flex-col items-center justify-center p-3 bg-white rounded-xl border shadow-sm transition-transform hover:scale-105 ${status.current.color.replace('text-', 'border-').split(' ')[2]}">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-2 shadow-inner ${status.current.color}">
+                <i class="fa-solid ${rule.icon}"></i>
+            </div>
+            <h4 class="text-xs font-bold text-gray-800">${status.current.label}</h4>
+            <p class="text-[9px] text-gray-500 uppercase tracking-wide mb-1">${rule.title}</p>
+            
+            ${!isMax ? `
+            <div class="w-full bg-gray-100 h-1.5 rounded-full mt-1 overflow-hidden" title="Sonraki seviyeye kalan">
+                <div class="h-full rounded-full ${status.current.color.split(' ')[1].replace('bg-', 'bg-')}" style="width: ${progress}%"></div>
+            </div>
+            <span class="text-[9px] text-gray-400 mt-0.5">${currentVal} / ${limit}</span>
+            ` : '<span class="text-[9px] font-bold text-green-500 mt-1">TAMAMLANDI! 🏆</span>'}
+        </div>`;
+    };
+
+    // 5. Rozet Alanını Ekrana Bas (Tab-Profile içine ekle)
+    const profileTab = document.getElementById('tab-profile');
+    let badgeContainer = document.getElementById('studentBadgesContainer');
+    
+    // Eğer container yoksa profil resminin altına ekle
+    if (!badgeContainer && profileTab) {
+        badgeContainer = document.createElement('div');
+        badgeContainer.id = 'studentBadgesContainer';
+        badgeContainer.className = 'grid grid-cols-3 gap-3 mt-4';
+        
+        // "Ayarlar" başlığından önceye ekle
+        const settingsHeader = Array.from(profileTab.querySelectorAll('h4')).find(h => h.textContent.includes('Ayarlar'));
+        if(settingsHeader) {
+            settingsHeader.parentNode.insertBefore(badgeContainer, settingsHeader);
+            // Başlık ekle
+            const title = document.createElement('h4');
+            title.className = "text-xs font-bold text-gray-400 uppercase tracking-wider pl-1 mb-2 mt-4";
+            title.textContent = "Başarı Rozetleri";
+            badgeContainer.parentNode.insertBefore(title, badgeContainer);
+        }
+    }
+
+    if (badgeContainer) {
+        badgeContainer.innerHTML = 
+            createBadgeHTML(badgeRules.goals, statusGoals, completedGoals) +
+            createBadgeHTML(badgeRules.homework, statusHomework, completedHomework) +
+            createBadgeHTML(badgeRules.questions, statusQuestions, totalQ);
+    }
+// ... (Önceki rozet hesaplama kodları burada bitiyor) ...
+
+    // ======================================================
+    // YENİ: KUTLAMA VE BİLDİRİM SİSTEMİ (CONFETTI)
+    // ======================================================
+
+    // 1. Kutlama Fonksiyonu (Konfeti ve Modal)
+    const triggerCelebration = (badgeName, levelName, iconClass, colorClass) => {
+        // A) Konfeti Patlat
+        const duration = 3000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+        const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+        const interval = setInterval(function() {
+            const timeLeft = animationEnd - Date.now();
+
+            if (timeLeft <= 0) {
+                return clearInterval(interval);
+            }
+
+            const particleCount = 50 * (timeLeft / duration);
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+        }, 250);
+
+        // B) Tebrik Modalını Oluştur ve Göster
+        const modalHtml = `
+        <div id="celebrationModal" class="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-scale-in">
+            <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center relative shadow-2xl border-4 border-yellow-400">
+                <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center border-4 border-white shadow-lg text-4xl text-white animate-bounce">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                
+                <h2 class="text-2xl font-black text-gray-800 mt-8 mb-2">TEBRİKLER! 🎉</h2>
+                <p class="text-gray-500 text-sm mb-6">Harika gidiyorsun! Yeni bir seviyeye ulaştın.</p>
+                
+                <div class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100">
+                    <div class="text-4xl mb-2 ${colorClass}"><i class="fa-solid ${iconClass}"></i></div>
+                    <h3 class="text-lg font-bold text-gray-800">${badgeName}</h3>
+                    <div class="text-sm font-bold text-indigo-600 uppercase tracking-widest">${levelName} SEVİYESİ</div>
+                </div>
+
+                <button onclick="document.getElementById('celebrationModal').remove()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:scale-105 transition-transform">
+                    Harikayım! 😎
+                </button>
+            </div>
+        </div>`;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Ses efekti (Opsiyonel - Kısa bir başarı sesi)
+        // const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+        // audio.play().catch(e => console.log(e)); 
+    };
+
+    // 2. Kontrol Mekanizması (Sadece yeni kazanıldıysa çalışır)
+    const checkAndCelebrate = (key, status, rule) => {
+        if (!status.current) return; // Henüz hiç seviye yoksa çık
+        
+        // Tarayıcı hafızasından eski seviyeyi al
+        const storageKey = `badge_${studentDocId}_${key}`;
+        const lastLevel = localStorage.getItem(storageKey);
+        const currentLabel = status.current.label;
+
+        // Eğer eski kayıt yoksa veya seviye yükseldiyse
+        if (lastLevel !== currentLabel) {
+            // Yeni seviyeyi kaydet
+            localStorage.setItem(storageKey, currentLabel);
+            
+            // Eğer bu ilk yükleme değilse (yani kullanıcı sayfayı yenilemeden işlem yaptıysa veya daha düşük bir seviyeden geldiyse)
+            // Not: İlk girişte "Bronz"u kutlamamak için lastLevel null kontrolü yapabilirsin, 
+            // ama öğrenci ilk girdiğinde de motive olsun dersen bu hali kalsın.
+            
+            triggerCelebration(rule.title, currentLabel, rule.icon, status.current.color.split(' ')[0]);
+        }
+    };
+
+    // 3. Kontrolleri Çalıştır
+    // (Öğrenci verileri yüklendiğinde bu kontroller yapılır)
+    checkAndCelebrate('goals', statusGoals, badgeRules.goals);
+    checkAndCelebrate('homework', statusHomework, badgeRules.homework);
+    checkAndCelebrate('questions', statusQuestions, badgeRules.questions);
+
+
 }
 
 async function loadActiveGoalsForDashboard() {

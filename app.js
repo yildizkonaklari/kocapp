@@ -548,12 +548,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Takip edilecek modallar
-    ['addStudentModal', 'addRandevuModal'].forEach(id => {
+    ['addStudentModal', 'addRandevuModal', 'btnDashAddStudent','btnDashAddRandevu'].forEach(id => {
         const el = document.getElementById(id);
         if (el) modalObserver.observe(el, { attributes: true });
     });
-
-
+    
     // --- B) AKILLI KAPATMA FONKSİYONU ---
     window.closeModalSmart = function(modalId) {
         const modal = document.getElementById(modalId);
@@ -699,3 +698,4 @@ document.addEventListener('click', (e) => {
 });
 // BAŞLAT
 main();
+

@@ -552,7 +552,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById(id);
         if (el) modalObserver.observe(el, { attributes: true });
     });
-
+document.querySelectorAll('.modal').forEach(el => {
+    modalObserver.observe(el, { attributes: true });
+});
 
     // --- B) AKILLI KAPATMA FONKSİYONU ---
     window.closeModalSmart = function(modalId) {
@@ -560,8 +562,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modal) return;
 
         // Eğer modal geçmiş üzerinden açılmışsa, geri gelerek kapat (Native hissi)
-        if (history.state && history.state.modalId === modalId) {
-            window.history.back();
+window.closeModalSmart = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+
+    const form = modal.querySelector('form');
+    if (form) form.reset();
+
+    if (history.state && history.state.modalId === modalId) {
+        history.back();
+    }
+};
+
         } else {
             // Manuel kapat (Fallback)
             modal.classList.add('hidden');
@@ -665,5 +680,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+window.addEventListener('popstate', () => {
+    document.querySelectorAll('.modal').forEach(modal => {
+        if (!modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+    });
+});
+document.addEventListener('click', (e) => {
+    const modalId = e.target.getAttribute('data-close-modal');
+    if (modalId) {
+        e.preventDefault();
+        closeModalSmart(modalId);
+    }
+});
+
+
+
+
+
 // BAŞLAT
 main();
+

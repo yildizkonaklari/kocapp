@@ -572,4 +572,38 @@ function loadUnreadMessages(db, currentUserId, appId) {
             countEl.classList.add('hidden'); 
         }
     });
+
 }
+
+window.addEventListener('popstate', () => {
+    document.querySelectorAll('.modal').forEach(modal => {
+        if (!modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+    });
+});
+window.closeModalSmart = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+
+    const form = modal.querySelector('form');
+    if (form) form.reset();
+
+    if (history.state && history.state.modalId === modalId) {
+        history.back();
+    }
+};
+document.querySelectorAll('.modal').forEach(el => {
+    modalObserver.observe(el, { attributes: true });
+});
+document.addEventListener('click', (e) => {
+    const modalId = e.target.getAttribute('data-close-modal');
+    if (modalId) {
+        e.preventDefault();
+        closeModalSmart(modalId);
+    }
+});

@@ -1,4 +1,4 @@
-// === MODULES/MUHASEBE.JS (GÜNCELLENMİŞ & GÜVENLİ) ===
+// === MODULES/MUHASEBE.JS (MOBİL UYUMLU & GERİ TUŞU DESTEKLİ) ===
 
 import { 
     doc, 
@@ -9,13 +9,15 @@ import {
     serverTimestamp,
     increment,
     limit,
-    writeBatch // EKLENDİ: Toplu işlem için
+    writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// openModalWithBackHistory import edildi
 import { 
     activeListeners, 
     formatCurrency, 
-    populateStudentSelect 
+    populateStudentSelect,
+    openModalWithBackHistory 
 } from './helpers.js';
 
 export function renderMuhasebeSayfasi(db, currentUserId, appId) {
@@ -25,48 +27,63 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
     mainContentTitle.textContent = "Muhasebe & Finans";
     
     mainContentArea.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500">
-                <p class="text-sm text-gray-500 font-medium">Toplam Tahsilat (Genel)</p>
-                <h3 id="kpiTotalTahsilat" class="text-2xl font-bold text-gray-800">0,00 ₺</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-green-100 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-16 h-16 bg-green-50 rounded-bl-full -mr-2 -mt-2 z-0"></div>
+                <div class="relative z-10">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Toplam Tahsilat</p>
+                    <h3 id="kpiTotalTahsilat" class="text-2xl font-black text-gray-800">0,00 ₺</h3>
+                </div>
+                <div class="mt-4 w-full bg-green-50 h-1.5 rounded-full"><div class="bg-green-500 h-1.5 rounded-full" style="width: 100%"></div></div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-red-500">
-                <p class="text-sm text-gray-500 font-medium">Toplam Alacak (Bekleyen)</p>
-                <h3 id="kpiTotalAlacak" class="text-2xl font-bold text-gray-800">0,00 ₺</h3>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-red-100 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-16 h-16 bg-red-50 rounded-bl-full -mr-2 -mt-2 z-0"></div>
+                <div class="relative z-10">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Bekleyen Alacak</p>
+                    <h3 id="kpiTotalAlacak" class="text-2xl font-black text-gray-800">0,00 ₺</h3>
+                </div>
+                <div class="mt-4 w-full bg-red-50 h-1.5 rounded-full"><div class="bg-red-500 h-1.5 rounded-full" style="width: 75%"></div></div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500">
-                <p class="text-sm text-gray-500 font-medium">Toplam Hizmet Hacmi</p>
-                <h3 id="kpiTotalHizmet" class="text-2xl font-bold text-gray-800">0,00 ₺</h3>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-2 -mt-2 z-0"></div>
+                <div class="relative z-10">
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Hizmet Hacmi</p>
+                    <h3 id="kpiTotalHizmet" class="text-2xl font-black text-gray-800">0,00 ₺</h3>
+                </div>
+                <div class="mt-4 w-full bg-blue-50 h-1.5 rounded-full"><div class="bg-blue-500 h-1.5 rounded-full" style="width: 100%"></div></div>
             </div>
         </div>
 
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h2 class="text-xl font-semibold text-gray-700">Öğrenci Bakiyeleri</h2>
-            <div class="flex gap-2 w-full md:w-auto">
-                <button id="showAddBorcButton" type="button" class="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center shadow-sm active:scale-95 transition-transform">
-                    <i class="fa-solid fa-plus mr-2"></i> Hizmet/Borç
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+            <h2 class="text-lg font-bold text-gray-800">Öğrenci Bakiyeleri</h2>
+            <div class="grid grid-cols-2 gap-2 w-full sm:w-auto">
+                <button id="showAddBorcButton" type="button" class="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm hover:bg-blue-700 flex items-center justify-center shadow-lg shadow-blue-200 active:scale-95 transition-transform">
+                    <i class="fa-solid fa-plus mr-2"></i> Hizmet Ekle
                 </button>
-                <button id="showAddTahsilatButton" type="button" class="flex-1 md:flex-none bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 flex items-center justify-center shadow-sm active:scale-95 transition-transform">
-                    <i class="fa-solid fa-wallet mr-2"></i> Tahsilat
+                <button id="showAddTahsilatButton" type="button" class="bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm hover:bg-green-700 flex items-center justify-center shadow-lg shadow-green-200 active:scale-95 transition-transform">
+                    <i class="fa-solid fa-wallet mr-2"></i> Tahsilat Ekle
                 </button>
             </div>
         </div>
 
-        <div id="muhasebeListContainer" class="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
+        <div id="muhasebeListContainer" class="space-y-3 pb-4">
             <p class="text-gray-500 text-center py-8">Veriler yükleniyor...</p>
         </div>
 
-        <div class="mt-8">
-            <h3 class="text-lg font-semibold text-gray-700 mb-4">Son İşlem Geçmişi</h3>
-            <div id="transactionLogContainer" class="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
-                <p class="text-gray-500 text-center py-4">Geçmiş yükleniyor...</p>
-            </div>
+        <div class="mt-6 mb-4">
+            <h3 class="text-lg font-bold text-gray-800">Son İşlemler</h3>
         </div>
 
-        <div class="h-32 lg:h-12 w-full"></div>
+        <div id="transactionLogContainer" class="space-y-2 pb-24">
+            <p class="text-gray-500 text-center py-4">Geçmiş yükleniyor...</p>
+        </div>
     `;
 
-    // Buton Bağlantıları
+    // --- BUTON OLAYLARI (MODAL AÇMA - GERİ TUŞU DESTEKLİ) ---
+    
+    // Hizmet/Borç Ekle Butonu
     const btnBorc = document.getElementById("showAddBorcButton");
     if (btnBorc) {
         btnBorc.addEventListener("click", async () => {
@@ -76,7 +93,10 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
                 document.getElementById("borcAciklama").value = "";
                 document.getElementById("borcTarih").value = new Date().toISOString().split('T')[0];
                 document.getElementById("borcModalErrorMessage").classList.add("hidden");
-                document.getElementById("addBorcModal").style.display = "block";
+                
+                // ESKİ: document.getElementById("addBorcModal").style.display = "block";
+                // YENİ: Helpers üzerinden History push ile aç
+                openModalWithBackHistory("addBorcModal");
             } catch (e) {
                 console.error("Borç modalı hatası:", e);
                 alert("Öğrenci listesi yüklenemedi: " + e.message);
@@ -84,6 +104,7 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
         });
     }
 
+    // Tahsilat Ekle Butonu
     const btnTahsilat = document.getElementById("showAddTahsilatButton");
     if (btnTahsilat) {
         btnTahsilat.addEventListener("click", async () => {
@@ -93,7 +114,10 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
                 document.getElementById("tahsilatAciklama").value = "";
                 document.getElementById("tahsilatTarih").value = new Date().toISOString().split('T')[0];
                 document.getElementById("tahsilatModalErrorMessage").classList.add("hidden");
-                document.getElementById("addTahsilatModal").style.display = "block";
+                
+                // ESKİ: ...style.display = "block"
+                // YENİ:
+                openModalWithBackHistory("addTahsilatModal");
             } catch (e) {
                 console.error("Tahsilat modalı hatası:", e);
                 alert("Öğrenci listesi yüklenemedi: " + e.message);
@@ -105,6 +129,10 @@ export function renderMuhasebeSayfasi(db, currentUserId, appId) {
     loadMuhasebeVerileri(db, currentUserId, appId);
     loadIslemGecmisi(db, currentUserId, appId);
 }
+
+// -----------------------------------------------------------------------------
+// VERİ YÜKLEME VE RENDER (MOBİL UYUMLU KART SİSTEMİ)
+// -----------------------------------------------------------------------------
 
 function loadMuhasebeVerileri(db, currentUserId, appId) {
     const listContainer = document.getElementById("muhasebeListContainer");
@@ -134,7 +162,7 @@ function loadMuhasebeVerileri(db, currentUserId, appId) {
             
         }, (error) => {
             console.error("Muhasebe verileri hatası:", error);
-            if(listContainer) listContainer.innerHTML = `<p class="text-red-500 text-center py-8">Veri hatası: ${error.message}</p>`;
+            if(listContainer) listContainer.innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm">Veri hatası: ${error.message}</div>`;
         });
     } catch (e) {
         console.error("Muhasebe sorgu hatası:", e);
@@ -144,47 +172,117 @@ function loadMuhasebeVerileri(db, currentUserId, appId) {
 function renderMuhasebeList(students) {
     const container = document.getElementById("muhasebeListContainer");
     if (students.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-center py-8">Henüz öğrenci kaydı yok.</p>';
+        container.innerHTML = '<div class="bg-white p-8 rounded-xl border border-gray-100 text-center text-gray-400"><i class="fa-solid fa-users-slash text-3xl mb-2 opacity-50"></i><p>Henüz öğrenci kaydı yok.</p></div>';
         return;
     }
 
-    container.innerHTML = `
-        <div class="overflow-x-auto">
+    // MOBİL İÇİN KART GÖRÜNÜMÜ + MASAÜSTÜ İÇİN TABLO (Responsive Layout)
+    const tableHeader = `
+        <div class="hidden md:block overflow-hidden bg-white rounded-xl border border-gray-100 shadow-sm">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Öğrenci</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Hizmet</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Ödenen</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Bakiye</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Durum</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Öğrenci</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Hizmet</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Ödenen</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Bakiye</th>
+                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Durum</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    ${students.map(s => {
-                        const borc = s.toplamBorc || 0;
-                        const odenen = s.toplamOdenen || 0;
-                        const bakiye = borc - odenen;
-                        
-                        let durumBadge = '';
-                        if (bakiye > 0) durumBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 whitespace-nowrap">Ödeme Bekliyor</span>';
-                        else if (bakiye < 0) durumBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 whitespace-nowrap">Fazla Ödeme</span>';
-                        else durumBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 whitespace-nowrap">Hesap Kapalı</span>';
+                <tbody class="bg-white divide-y divide-gray-100">
+    `;
 
-                        return `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${s.ad} ${s.soyad}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">${formatCurrency(borc)}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">${formatCurrency(odenen)}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold ${bakiye > 0 ? 'text-red-600' : 'text-gray-800'}">
-                                    ${bakiye > 0 ? '-' : ''}${formatCurrency(Math.abs(bakiye))}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center">${durumBadge}</td>
-                            </tr>
-                        `;
-                    }).join('')}
+    const itemsHtml = students.map(s => {
+        const borc = s.toplamBorc || 0;
+        const odenen = s.toplamOdenen || 0;
+        const bakiye = borc - odenen;
+        
+        let durumBadge = '';
+        let rowClass = '';
+        if (bakiye > 0) {
+            durumBadge = '<span class="px-2 py-1 text-[10px] font-bold rounded-full bg-red-100 text-red-700 whitespace-nowrap">Ödeme Bekliyor</span>';
+            rowClass = 'border-l-4 border-red-500'; // Mobil kart için sol çizgi
+        }
+        else if (bakiye < 0) {
+            durumBadge = '<span class="px-2 py-1 text-[10px] font-bold rounded-full bg-green-100 text-green-700 whitespace-nowrap">Fazla Ödeme</span>';
+            rowClass = 'border-l-4 border-green-500';
+        }
+        else {
+            durumBadge = '<span class="px-2 py-1 text-[10px] font-bold rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">Hesap Kapalı</span>';
+            rowClass = 'border-l-4 border-gray-300';
+        }
+
+        // 1. MASAÜSTÜ SATIRI (Hidden on Mobile)
+        const desktopRow = `
+            <tr class="hover:bg-gray-50 transition-colors hidden md:table-row">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">${s.ad} ${s.soyad}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">${formatCurrency(borc)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">${formatCurrency(odenen)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold ${bakiye > 0 ? 'text-red-600' : 'text-gray-800'}">
+                    ${bakiye > 0 ? '-' : ''}${formatCurrency(Math.abs(bakiye))}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">${durumBadge}</td>
+            </tr>
+        `;
+
+        // 2. MOBİL KARTI (Visible on Mobile)
+        const mobileCard = `
+            <div class="md:hidden bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3 ${rowClass} relative">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="font-bold text-gray-800 text-sm">${s.ad} ${s.soyad}</h4>
+                        <div class="mt-1">${durumBadge}</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-xs text-gray-400 uppercase font-bold">Bakiye</span>
+                        <span class="text-lg font-black ${bakiye > 0 ? 'text-red-600' : 'text-gray-800'}">
+                            ${bakiye > 0 ? '-' : ''}${formatCurrency(Math.abs(bakiye))}
+                        </span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center pt-3 border-t border-gray-50 text-xs">
+                    <div class="text-gray-500">
+                        <span class="block font-bold text-gray-400 text-[10px] uppercase">Hizmet Tutarı</span>
+                        ${formatCurrency(borc)}
+                    </div>
+                    <div class="text-right text-green-600">
+                        <span class="block font-bold text-gray-400 text-[10px] uppercase">Toplam Ödenen</span>
+                        ${formatCurrency(odenen)}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return mobileCard + desktopRow;
+    }).join('');
+
+    container.innerHTML = `
+        ${students.map(s => { /* Bu blok yukarıda işlendi, sadece logic gösterimi için */ }).join('')} 
+        ${tableHeader} ${itemsHtml} </tbody></table></div>
+        <div class="md:hidden">${itemsHtml.replace(/<tr[\s\S]*?<\/tr>/g, '')}</div> 
+    `;
+    
+    // Temiz bir render için innerHTML'i doğrudan yukarıdaki logic ile oluşturmak daha sağlıklı:
+    container.innerHTML = `
+        <div class="hidden md:block overflow-hidden bg-white rounded-xl border border-gray-100 shadow-sm">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Öğrenci</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Hizmet</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Ödenen</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Bakiye</th>
+                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Durum</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                    ${itemsHtml.match(/<tr[\s\S]*?<\/tr>/g)?.join('') || ''}
                 </tbody>
             </table>
+        </div>
+        
+        <div class="md:hidden space-y-3">
+            ${itemsHtml.replace(/<tr[\s\S]*?<\/tr>/g, '')}
         </div>
     `;
 }
@@ -192,7 +290,6 @@ function renderMuhasebeList(students) {
 function loadIslemGecmisi(db, currentUserId, appId) {
     const container = document.getElementById("transactionLogContainer");
     
-    // İşlem geçmişini "eklenmeZamani"na göre sırala
     const q = query(
         collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"), 
         orderBy("eklenmeZamani", "desc"), 
@@ -206,50 +303,49 @@ function loadIslemGecmisi(db, currentUserId, appId) {
         snapshot.forEach(doc => transactions.push({ id: doc.id, ...doc.data() }));
         
         if (transactions.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-4">Henüz işlem geçmişi yok.</p>';
+            container.innerHTML = '<div class="bg-white p-6 rounded-xl border border-gray-100 text-center text-gray-400 text-sm italic">Henüz işlem geçmişi yok.</div>';
             return;
         }
 
-        container.innerHTML = `
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tarih</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Öğrenci</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">İşlem</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Açıklama</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tutar</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        ${transactions.map(t => `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${t.tarih}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${t.ogrenciAd}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-sm">
-                                    <span class="px-2 py-1 rounded-full text-xs font-semibold ${t.tur === 'borc' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
-                                        ${t.tur === 'borc' ? 'Hizmet/Borç' : 'Tahsilat'}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-600">${t.aciklama || '-'}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-sm text-right font-bold ${t.tur === 'borc' ? 'text-blue-600' : 'text-green-600'}">
-                                    ${formatCurrency(t.tutar)}
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
+        // RESPONSIVE YAPILANDIRMA
+        const listHtml = transactions.map(t => {
+            const isBorc = t.tur === 'borc';
+            const icon = isBorc 
+                ? '<div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-plus text-xs"></i></div>' 
+                : '<div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-check text-xs"></i></div>';
+            
+            const amountColor = isBorc ? 'text-blue-600' : 'text-green-600';
+            const label = isBorc ? 'Hizmet/Borç' : 'Tahsilat';
+
+            return `
+                <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        ${icon}
+                        <div class="min-w-0">
+                            <h4 class="text-sm font-bold text-gray-800 truncate">${t.ogrenciAd}</h4>
+                            <p class="text-xs text-gray-500 truncate">${t.aciklama || label}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 ml-2">
+                        <span class="block font-bold text-sm ${amountColor}">${formatCurrency(t.tutar)}</span>
+                        <span class="text-[10px] text-gray-400">${t.tarih}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = listHtml;
+
     }, (error) => {
         console.error("İşlem geçmişi hatası:", error);
-        container.innerHTML = `<p class="text-red-500 text-center py-4">Veri yüklenemedi: ${error.message}</p>`;
+        container.innerHTML = `<div class="text-red-500 text-center py-4 text-sm">Veri yüklenemedi.</div>`;
     });
 }
 
 
-// --- 3. GÜVENLİ & ATOMİK KAYDETME FONKSİYONLARI ---
+// -----------------------------------------------------------------------------
+// KAYDETME İŞLEMLERİ (GERİ TUŞU ENTEGRASYONLU)
+// -----------------------------------------------------------------------------
 
 export async function saveNewBorc(db, currentUserId, appId) {
     const studentId = document.getElementById("borcStudentId").value;
@@ -271,10 +367,9 @@ export async function saveNewBorc(db, currentUserId, appId) {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
 
-        // BATCH İŞLEMİ (Atomik)
         const batch = writeBatch(db);
 
-        // 1. İşlem Kaydını Oluştur
+        // 1. İşlem Kaydı
         const transactionRef = doc(collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"));
         batch.set(transactionRef, {
             ogrenciId: studentId,
@@ -286,16 +381,18 @@ export async function saveNewBorc(db, currentUserId, appId) {
             eklenmeZamani: serverTimestamp()
         });
 
-        // 2. Öğrenci Bakiyesini Güncelle
+        // 2. Bakiye Güncelleme
         const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
         batch.update(studentRef, {
             toplamBorc: increment(tutar)
         });
 
-        // Hepsini aynı anda uygula
         await batch.commit();
 
-        document.getElementById("addBorcModal").style.display = "none";
+        // MODAL KAPATMA (GERİ TUŞU UYUMLU)
+        // Eğer modal pushState ile açıldıysa, history.back() onu kapatır.
+        window.history.back();
+
     } catch (error) {
         console.error("Borç ekleme hatası:", error);
         errorEl.textContent = "Hata: " + error.message;
@@ -326,10 +423,9 @@ export async function saveNewTahsilat(db, currentUserId, appId) {
         saveButton.disabled = true;
         saveButton.textContent = "Kaydediliyor...";
 
-        // BATCH İŞLEMİ (Atomik)
         const batch = writeBatch(db);
 
-        // 1. İşlem Kaydını Oluştur
+        // 1. İşlem Kaydı
         const transactionRef = doc(collection(db, "artifacts", appId, "users", currentUserId, "muhasebe"));
         batch.set(transactionRef, {
             ogrenciId: studentId,
@@ -341,16 +437,17 @@ export async function saveNewTahsilat(db, currentUserId, appId) {
             eklenmeZamani: serverTimestamp()
         });
 
-        // 2. Öğrenci Bakiyesini Güncelle
+        // 2. Bakiye Güncelleme
         const studentRef = doc(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId);
         batch.update(studentRef, {
             toplamOdenen: increment(tutar)
         });
 
-        // Hepsini aynı anda uygula
         await batch.commit();
 
-        document.getElementById("addTahsilatModal").style.display = "none";
+        // MODAL KAPATMA (GERİ TUŞU UYUMLU)
+        window.history.back();
+
     } catch (error) {
         console.error("Tahsilat ekleme hatası:", error);
         errorEl.textContent = "Hata: " + error.message;

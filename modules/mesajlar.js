@@ -18,13 +18,13 @@ import { activeListeners, formatDateTR } from './helpers.js';
 let currentChatStudentId = null;
 
 // =================================================================
-// 1. MESAJLAR SAYFASI ANA YAPISI (HTML & ID TANIMLAMALARI)
+// 1. MESAJLAR SAYFASI ANA YAPISI
 // =================================================================
 export function renderMesajlarSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Mesajlar";
     const mainContentArea = document.getElementById("mainContentArea");
     
-    // Mobil Uyumlu İskelet
+    // HTML İskeleti
     mainContentArea.innerHTML = `
         <div class="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
             
@@ -63,10 +63,6 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
                             <span id="chatHeaderStatus" class="text-xs text-gray-400 block">Sohbet başlatmak için bir öğrenci seçin</span>
                         </div>
                     </div>
-
-                    <button id="chatDeleteBtn" onclick="deleteChatHistory('${currentUserId}', '${appId}', db)" class="text-gray-400 hover:text-red-500 transition-colors p-2 hidden" title="Sohbeti Temizle">
-                        <i class="fa-regular fa-trash-can"></i>
-                    </button>
                 </div>
 
                 <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth relative">
@@ -91,17 +87,44 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
     `;
 
     // 2. Fonksiyonları Başlat
+    setupSearchFunctionality(); // Arama Motoru Başlat
     startStudentListListener(db, currentUserId, appId);
     setupChatForm(db, currentUserId, appId);
 
-    // Global Değişkenler (Fonksiyonların erişebilmesi için)
+    // Global Değişkenler
     window.currentDb = db; 
     window.globalUserId = currentUserId; 
     window.globalAppId = appId;
 }
 
 // =================================================================
-// 2. ÖĞRENCİ LİSTESİNİ DİNLEME VE LİSTELEME
+// 2. ARAMA FONKSİYONU (YENİ EKLENDİ)
+// =================================================================
+function setupSearchFunctionality() {
+    const searchInput = document.getElementById('studentSearchInput');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const filter = e.target.value.toLowerCase();
+            const listItems = document.querySelectorAll('#msgStudentList li');
+            
+            listItems.forEach(item => {
+                // data-search-name attribute'undan ismi alıp kontrol ediyoruz
+                const name = item.getAttribute('data-search-name').toLowerCase();
+                if (name.includes(filter)) {
+                    item.classList.remove('hidden');
+                    item.classList.add('flex'); // Flex yapısını korumak için
+                } else {
+                    item.classList.add('hidden');
+                    item.classList.remove('flex');
+                }
+            });
+        });
+    }
+}
+
+// =================================================================
+// 3. ÖĞRENCİ LİSTESİNİ DİNLEME (DÜZELTİLDİ: Loading Kaldırma Eklendi)
 // =================================================================
 function startStudentListListener(db, currentUserId, appId) {
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
@@ -110,122 +133,197 @@ function startStudentListListener(db, currentUserId, appId) {
 
     activeListeners.msgStudentList = onSnapshot(q, (snapshot) => {
         const listContainer = document.getElementById('msgStudentList');
-        if (!listContainer) return; // Hata koruması
+        if (!listContainer) return;
 
+        // 1. Durum: Hiç öğrenci yoksa
         if (snapshot.empty) {
             listContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400"><i class="fa-solid fa-users-slash text-3xl mb-2"></i><p class="text-sm">Henüz öğrenci eklenmemiş.</p></div>';
             return;
         }
 
-        let listHtml = '';
-        
-        snapshot.forEach(doc => {
-            const s = doc.data();
-            // Avatar Mantığı: Emoji > Baş Harf > ?
-            const avatarContent = s.avatarIcon || (s.ad ? s.ad[0].toUpperCase() : '?');
-            
-            listHtml += `
-            <li id="student-list-item-${doc.id}" 
-                onclick="window.selectChatStudent('${doc.id}', '${s.ad} ${s.soyad}', '${avatarContent}')" 
-                class="group p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-0 transition-all duration-300 relative">
-                
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center font-bold border-2 border-white shadow-sm text-xl shrink-0 group-hover:scale-105 transition-transform">
-                        ${avatarContent}
-                    </div>
-                    
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-center mb-0.5">
-                            <h4 class="font-bold text-gray-800 text-sm truncate group-hover:text-indigo-700 transition-colors">${s.ad} ${s.soyad}</h4>
-                            <span class="text-[10px] text-gray-400 font-medium">${s.sinif || ''}</span>
-                        </div>
-                        <p class="text-xs text-gray-500 truncate group-hover:text-gray-600">Sohbeti görüntülemek için dokunun</p>
-                    </div>
-
-                    <div id="unread-${doc.id}" class="hidden w-6 h-6 bg-red-500 text-white text-[11px] font-bold rounded-full items-center justify-center shadow-md border-2 border-white transform scale-100 transition-transform animate-pulse z-10">
-                        0
-                    </div>
-                    
-                    <i class="fa-solid fa-chevron-right text-gray-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"></i>
-                </div>
-            </li>`;
+        // 2. Durum: Öğrenciler geldi
+        // Önce ekrandaki mevcut öğrencileri (LI etiketlerini) kontrol et
+        const existingItems = {};
+        listContainer.querySelectorAll('li').forEach(li => {
+            existingItems[li.id] = li;
         });
 
-        listContainer.innerHTML = listHtml;
+        // DÜZELTME BURADA: 
+        // Eğer ekranda henüz hiç 'li' yoksa (yani ilk yükleme ise ve loading spinner varsa),
+        // container'ın içini tamamen temizle. Böylece "Yükleniyor" yazısı gider.
+        if (Object.keys(existingItems).length === 0) {
+            listContainer.innerHTML = '';
+        }
 
-        // Okunmamış Mesaj Kontrolünü Başlat
+        // Listeyi oluştur / güncelle
         snapshot.forEach(doc => {
-            checkUnreadMessages(db, currentUserId, appId, doc.id);
+            const s = doc.data();
+            const avatarContent = s.avatarIcon || (s.ad ? s.ad[0].toUpperCase() : '?');
+            const fullName = `${s.ad} ${s.soyad}`;
+            const itemId = `student-list-item-${doc.id}`;
+
+            // Eğer item ekranda yoksa ekle
+            if (!existingItems[itemId]) {
+                const li = document.createElement('li');
+                li.id = itemId;
+                li.setAttribute('data-search-name', fullName); 
+                li.setAttribute('data-last-msg-time', 0); 
+                li.className = "group p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-0 transition-all duration-300 relative flex";
+                li.onclick = () => window.selectChatStudent(doc.id, fullName, avatarContent);
+                
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 w-full">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center font-bold border-2 border-white shadow-sm text-xl shrink-0 group-hover:scale-105 transition-transform">
+                            ${avatarContent}
+                        </div>
+                        
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <h4 class="font-bold text-gray-800 text-sm truncate group-hover:text-indigo-700 transition-colors">${fullName}</h4>
+                                <span class="text-[10px] text-gray-400 font-medium last-msg-date"></span>
+                            </div>
+                            <p class="text-xs text-gray-500 truncate group-hover:text-gray-600 last-msg-preview">Sohbeti görüntülemek için dokunun</p>
+                        </div>
+
+                        <div id="unread-${doc.id}" class="hidden w-6 h-6 bg-red-500 text-white text-[11px] font-bold rounded-full items-center justify-center shadow-md border-2 border-white transform scale-100 transition-transform animate-pulse z-10 shrink-0">
+                            0
+                        </div>
+                    </div>`;
+                
+                listContainer.appendChild(li);
+                
+                // Bu öğrenci için sohbet detaylarını dinlemeye başla
+                setupStudentChatListeners(db, currentUserId, appId, doc.id);
+            }
         });
     });
 }
 
 // =================================================================
-// 3. OKUNMAMIŞ MESAJ SAYISI VE SIRALAMA (Zıplama Özelliği)
+// 4. CHAT DİNLEYİCİLERİ (SIRALAMA VE BİLDİRİM - WHATSAPP TARZI)
 // =================================================================
-function checkUnreadMessages(db, currentUserId, appId, studentId) {
-    const q = query(
+function setupStudentChatListeners(db, currentUserId, appId, studentId) {
+    // A. OKUNMAMIŞ MESAJ SAYISI (Kırmızı Rozet)
+    const unreadQuery = query(
         collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar"),
         where("gonderen", "==", "ogrenci"),
         where("okundu", "==", false)
     );
 
-    if (activeListeners[`unreadMsg_${studentId}`]) activeListeners[`unreadMsg_${studentId}`]();
+    // B. SON MESAJ (Sıralama ve Önizleme İçin)
+    const lastMsgQuery = query(
+        collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar"),
+        orderBy("tarih", "desc"),
+        limit(1)
+    );
 
-    activeListeners[`unreadMsg_${studentId}`] = onSnapshot(q, (snapshot) => {
+    // Dinleyicileri temizlemek için isim oluştur
+    const unreadKey = `unread_${studentId}`;
+    const lastMsgKey = `lastmsg_${studentId}`;
+
+    if (activeListeners[unreadKey]) activeListeners[unreadKey]();
+    if (activeListeners[lastMsgKey]) activeListeners[lastMsgKey]();
+
+    // 1. Okunmamış Mesaj Listener
+    activeListeners[unreadKey] = onSnapshot(unreadQuery, (snapshot) => {
         const count = snapshot.size;
         const badge = document.getElementById(`unread-${studentId}`);
-        const studentListItem = document.getElementById(`student-list-item-${studentId}`);
-        const listContainer = document.getElementById('msgStudentList');
-
-        if (badge && studentListItem) {
+        const listItem = document.getElementById(`student-list-item-${studentId}`);
+        
+        if (badge && listItem) {
             if (count > 0) {
-                // Sayıyı Göster
                 badge.textContent = count > 99 ? '99+' : count;
                 badge.classList.remove('hidden');
                 badge.classList.add('flex');
-                
-                // En Başa Taşı
-                if (listContainer) listContainer.prepend(studentListItem);
-
-                // Arkaplanı Vurgula
-                studentListItem.classList.add('bg-red-50');
+                listItem.classList.add('bg-red-50'); // Okunmamış varsa renklendir
             } else {
                 badge.classList.add('hidden');
                 badge.classList.remove('flex');
-                studentListItem.classList.remove('bg-red-50');
+                listItem.classList.remove('bg-red-50');
             }
         }
     });
+
+    // 2. Son Mesaj Listener (SIRALAMA İŞLEMİ BURADA)
+    activeListeners[lastMsgKey] = onSnapshot(lastMsgQuery, (snapshot) => {
+        const listItem = document.getElementById(`student-list-item-${studentId}`);
+        if (!listItem) return;
+
+        if (!snapshot.empty) {
+            const msg = snapshot.docs[0].data();
+            const dateObj = msg.tarih ? msg.tarih.toDate() : new Date();
+            const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // DOM Güncelleme (Önizleme ve Tarih)
+            const previewEl = listItem.querySelector('.last-msg-preview');
+            const dateEl = listItem.querySelector('.last-msg-date');
+            
+            if (previewEl) {
+                // Mesajı kısalt
+                let text = msg.text.length > 30 ? msg.text.substring(0, 30) + '...' : msg.text;
+                if(msg.gonderen === 'koc') text = `siz: ${text}`;
+                previewEl.textContent = text;
+                
+                // Yeni mesaj geldiyse kalın yap
+                if(msg.gonderen === 'ogrenci' && !msg.okundu) {
+                    previewEl.classList.add('font-bold', 'text-gray-800');
+                } else {
+                    previewEl.classList.remove('font-bold', 'text-gray-800');
+                }
+            }
+            if (dateEl) dateEl.textContent = timeStr;
+
+            // SIRALAMA İÇİN DATA SET
+            // Milisaniye cinsinden zamanı attribute'a yazıyoruz
+            listItem.setAttribute('data-last-msg-time', dateObj.getTime());
+
+        } else {
+            // Hiç mesaj yoksa en sona at
+            listItem.setAttribute('data-last-msg-time', 0);
+        }
+
+        // LİSTEYİ YENİDEN SIRALA
+        sortStudentList();
+    });
+}
+
+// Listeyi data-last-msg-time'a göre sıralayan fonksiyon
+function sortStudentList() {
+    const list = document.getElementById('msgStudentList');
+    const items = Array.from(list.children);
+
+    items.sort((a, b) => {
+        const timeA = parseInt(a.getAttribute('data-last-msg-time') || '0');
+        const timeB = parseInt(b.getAttribute('data-last-msg-time') || '0');
+        return timeB - timeA; // Büyükten küçüğe (En yeni en üstte)
+    });
+
+    // DOM'a tekrar ekleyerek sıralamayı uygula
+    items.forEach(item => list.appendChild(item));
 }
 
 // =================================================================
-// 4. SOHBET SEÇİMİ (MOBİL VE DESKTOP UYUMLU)
+// 5. SOHBET SEÇİMİ VE DETAYLAR
 // =================================================================
 window.selectChatStudent = function(studentId, studentName, avatarContent) {
     currentChatStudentId = studentId;
 
-    // A) Mobil Görünüm Geçişi
+    // Mobil Geçiş
     const listPanel = document.getElementById('msgStudentListPanel');
     const chatPanel = document.getElementById('msgChatPanel');
-    
     if (window.innerWidth < 768) {
-        listPanel.classList.add('-translate-x-full', 'absolute'); // Gizle
-        chatPanel.classList.remove('translate-x-full', 'hidden'); // Göster
+        listPanel.classList.add('-translate-x-full', 'absolute');
+        chatPanel.classList.remove('translate-x-full', 'hidden');
         chatPanel.classList.add('translate-x-0', 'flex');
     } else {
-        chatPanel.classList.remove('hidden'); // Masaüstünde her zaman göster
+        chatPanel.classList.remove('hidden');
     }
 
-    // B) Başlık Bilgilerini Güncelle (HATA BURADAYDI, ARTIK ID'LER GARANTİ)
-    const nameEl = document.getElementById('chatHeaderName');
-    const statusEl = document.getElementById('chatHeaderStatus');
+    // Başlık Güncelleme
+    document.getElementById('chatHeaderName').textContent = studentName;
+    document.getElementById('chatHeaderStatus').textContent = "";
+
     const avatarContainer = document.getElementById('chatHeaderAvatarContainer');
-
-    if (nameEl) nameEl.textContent = studentName;
-    if (statusEl) statusEl.textContent = "Çevrimiçi";
-
-    // Avatarı Kutu Olarak Güncelle
     if (avatarContainer) {
         avatarContainer.innerHTML = `
             <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center font-bold border border-gray-200 text-lg">
@@ -233,25 +331,24 @@ window.selectChatStudent = function(studentId, studentName, avatarContent) {
             </div>`;
     }
 
-    // C) Butonları Aktif Et
+    // Butonları Aktif Et
     document.getElementById('messageInput').disabled = false;
     document.getElementById('sendMessageBtn').disabled = false;
-    document.getElementById('chatDeleteBtn').classList.remove('hidden');
 
-    // D) Mesajları Yükle
+    // Mesajları Getir
     loadChatMessages(window.currentDb, window.globalUserId, window.globalAppId, studentId);
     
-    // E) Okundu Yap
+    // Okundu Yap
     markMessagesAsRead(window.currentDb, window.globalUserId, window.globalAppId, studentId);
     
-    // F) Inputa Odaklan (Masaüstü ise)
+    // Input Odak
     if (window.innerWidth >= 768) {
         document.getElementById('messageInput').focus();
     }
 };
 
 // =================================================================
-// 5. MESAJLARI YÜKLEME VE RENDER
+// 6. MESAJLARI YÜKLE
 // =================================================================
 function loadChatMessages(db, currentUserId, appId, studentId) {
     const container = document.getElementById('chatMessages');
@@ -278,20 +375,16 @@ function loadChatMessages(db, currentUserId, appId, studentId) {
             const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const dateStr = dateObj.toLocaleDateString();
 
-            // Tarih Ayırıcı
             if (dateStr !== lastDate) {
                 html += `<div class="flex justify-center my-4"><span class="bg-gray-100 text-gray-500 text-[10px] px-3 py-1 rounded-full font-bold shadow-sm">${dateStr}</span></div>`;
                 lastDate = dateStr;
             }
 
-            // Mesaj Balonu
             html += `
             <div class="flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in group mb-1">
                 <div class="max-w-[75%] md:max-w-[60%] px-4 py-2 rounded-2xl text-sm shadow-sm relative break-words 
                     ${isMe ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-white text-gray-800 rounded-tl-sm border border-gray-100'}">
-                    
                     <p class="leading-relaxed whitespace-pre-wrap">${msg.text}</p>
-                    
                     <div class="flex items-center justify-end gap-1 mt-1 opacity-70 select-none">
                         <span class="text-[10px] ${isMe ? 'text-indigo-100' : 'text-gray-400'}">${timeStr}</span>
                         ${isMe ? (msg.okundu ? '<i class="fa-solid fa-check-double text-[10px]"></i>' : '<i class="fa-solid fa-check text-[10px]"></i>') : ''}
@@ -306,7 +399,7 @@ function loadChatMessages(db, currentUserId, appId, studentId) {
 }
 
 // =================================================================
-// 6. MESAJ GÖNDERME
+// 7. MESAJ GÖNDERME VE YARDIMCILAR
 // =================================================================
 function setupChatForm(db, currentUserId, appId) {
     const form = document.getElementById('chatForm');
@@ -318,7 +411,7 @@ function setupChatForm(db, currentUserId, appId) {
 
         if (!text || !currentChatStudentId) return;
 
-        input.value = ''; // Hemen temizle
+        input.value = '';
         input.focus();
 
         try {
@@ -329,17 +422,11 @@ function setupChatForm(db, currentUserId, appId) {
                 okundu: false
             });
         } catch (error) {
-            console.error("Mesaj gönderme hatası:", error);
-            alert("Mesaj gönderilemedi.");
+            console.error(error);
         }
     });
 }
 
-// =================================================================
-// 7. YARDIMCI FONKSİYONLAR (GERİ DÖN, SİL, OKUNDU YAP)
-// =================================================================
-
-// Mobilde Geri Dönüş
 window.backToStudentList = function() {
     currentChatStudentId = null;
     const listPanel = document.getElementById('msgStudentListPanel');
@@ -348,33 +435,16 @@ window.backToStudentList = function() {
     listPanel.classList.remove('-translate-x-full', 'absolute');
     chatPanel.classList.add('translate-x-full', 'hidden');
     chatPanel.classList.remove('translate-x-0', 'flex');
-    
-    // Listeye geri dönünce badge'leri güncellemek iyi olur ama zaten listener çalışıyor
 };
 
-// Okundu Olarak İşaretle
 async function markMessagesAsRead(db, currentUserId, appId, studentId) {
     const q = query(
         collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar"),
         where("gonderen", "==", "ogrenci"),
         where("okundu", "==", false)
     );
-
     const snapshot = await getDocs(q);
     const batch = writeBatch(db);
-
-    snapshot.forEach(doc => {
-        batch.update(doc.ref, { okundu: true });
-    });
-
+    snapshot.forEach(doc => batch.update(doc.ref, { okundu: true }));
     if (!snapshot.empty) await batch.commit();
 }
-
-// Sohbeti Sil (Opsiyonel Buton)
-window.deleteChatHistory = async function(userId, appId, db) {
-    if(!confirm("Bu öğrenciyle olan tüm mesaj geçmişi silinecek. Emin misiniz?")) return;
-    
-    // Batch silme işlemi (detaylar önceki kodlarda mevcuttu, istenirse eklenebilir)
-    // Şimdilik alert verip geçelim, çünkü ana istek bu değil.
-    alert("Silme fonksiyonu çağrıldı.");
-};

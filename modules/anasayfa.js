@@ -140,7 +140,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
                             <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mr-3 group-hover:bg-orange-600 group-hover:text-white transition-colors">
                                 <i class="fa-regular fa-calendar-plus"></i>
                             </div>
-                            <span class="font-medium text-gray-700 group-hover:text-orange-700 text-sm">Randevu Oluştur</span>
+                            <span class="font-medium text-gray-700 group-hover:text-orange-700 text-sm">Seans Oluştur</span>
                         </button>
                         
                         <button id="btnDashGoMesajlar" class="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors group relative">

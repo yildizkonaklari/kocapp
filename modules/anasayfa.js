@@ -29,7 +29,7 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");
     
-    mainContentTitle.textContent = "NetKoç✔️";
+    mainContentTitle.innerHTML = '<img src="/public/logo.png" alt="NetKoç Logo" style="height: 1.2em; vertical-align: text-bottom; margin-right: 8px;">NetKoç';
     
     // 1. İskeleti Oluştur
     mainContentArea.innerHTML = `
@@ -607,3 +607,4 @@ document.addEventListener('click', (e) => {
         closeModalSmart(modalId);
     }
 });
+

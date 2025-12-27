@@ -29,8 +29,16 @@ export function renderAnaSayfa(db, currentUserId, appId) {
     const mainContentTitle = document.getElementById("mainContentTitle");
     const mainContentArea = document.getElementById("mainContentArea");
     
-    mainContentTitle.innerHTML = '<img src="/public/logo.png" alt="NetKoç Logo" style="height: 1.2em; vertical-align: text-bottom; margin-right: 8px;">NetKoç';
-    
+// mainContentTitle elementini seç
+const titleElement = document.getElementById("mainContentTitle");
+
+// Flex yapısı kullanarak yan yana ve dikey ortalı hizala
+titleElement.innerHTML = `
+    <div class="flex items-center gap-2">
+        <img src="public/logo.png" alt="Logo" class="h-8 w-auto object-contain">
+        <span>NetKoç</span>
+    </div>
+`;    
     // 1. İskeleti Oluştur
     mainContentArea.innerHTML = `
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg mb-8 flex justify-between items-center relative overflow-hidden">
@@ -607,4 +615,5 @@ document.addEventListener('click', (e) => {
         closeModalSmart(modalId);
     }
 });
+
 

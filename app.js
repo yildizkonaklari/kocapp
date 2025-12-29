@@ -17,7 +17,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     getFirestore, doc, getDoc, updateDoc, 
-    collection, query, where, orderBy, onSnapshot, limit, collectionGroup // DÜZELTME: collectionGroup EKLENDİ
+    collection, query, where, orderBy, onSnapshot, limit, collectionGroup, getCountFromServer // DÜZELTME: collectionGroup EKLENDİ
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
 
 // --- GÜNCELLENMİŞ MODÜLLERİ İÇE AKTAR ---
@@ -100,6 +100,7 @@ async function main() {
             
             // Global Bildirim Dinleyicileri
             initCoachNotifications(user.uid); 
+            checkAndPromptFirstStudent(db, user.uid, appId);
             
         } else {
             window.location.href = 'login.html';
@@ -554,6 +555,74 @@ const btnSaveRandevu = document.getElementById('saveRandevuButton');
             }
         });
     }
+
+// =================================================================
+// İLK ÖĞRENCİ KONTROLÜ VE KARŞILAMA MODALI
+// =================================================================
+async function checkAndPromptFirstStudent(db, uid, appId) {
+    try {
+        // Öğrenci koleksiyonundaki belge sayısını hızlıca say
+        const coll = collection(db, "artifacts", appId, "users", uid, "ogrencilerim");
+        const snapshot = await getCountFromServer(coll);
+        const count = snapshot.data().count;
+
+        // Eğer hiç öğrenci yoksa (count === 0) modalı göster
+        if (count === 0) {
+            showEmptyStateModal();
+        }
+    } catch (error) {
+        console.error("Öğrenci sayısı kontrol edilemedi:", error);
+    }
+}
+
+function showEmptyStateModal() {
+    // Eğer zaten varsa tekrar oluşturma
+    if(document.getElementById('firstStudentModal')) return;
+
+    const modalHtml = `
+    <div id="firstStudentModal" class="fixed inset-0 bg-gray-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm animate-scale-in">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center relative shadow-2xl border-4 border-indigo-100">
+            
+            <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg text-4xl text-white animate-bounce">
+                <i class="fa-solid fa-user-plus"></i>
+            </div>
+            
+            <h2 class="text-2xl font-black text-gray-800 mt-8 mb-2">Hoş Geldiniz! 👋</h2>
+            <p class="text-gray-500 text-sm mb-6 leading-relaxed">
+                Koçluk serüvenine başlamak için hazırsınız. Hemen ilk öğrencinizi ekleyerek sistemi keşfetmeye başlayın!
+            </p>
+            
+            <div class="space-y-3">
+                <button id="btnGoToStudents" class="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> İlk Öğrencimi Ekle
+                </button>
+                
+                <button onclick="document.getElementById('firstStudentModal').remove()" class="w-full text-gray-400 hover:text-gray-600 text-xs font-bold py-2">
+                    Daha Sonra
+                </button>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Butona tıklanınca yapılacaklar
+    document.getElementById('btnGoToStudents').onclick = () => {
+        // 1. Modalı kapat
+        document.getElementById('firstStudentModal').remove();
+        
+        // 2. Öğrenciler sayfasına git
+        navigateToPage('ogrencilerim');
+        
+        // 3. (Opsiyonel) Öğrenciler sayfası açılınca direkt "Yeni Öğrenci Ekle" modalını tetikle
+        // Sayfa geçişi biraz sürdüğü için kısa bir gecikme ekliyoruz
+        setTimeout(() => {
+            const addBtn = document.getElementById('showAddStudentModalButton');
+            if(addBtn) addBtn.click();
+        }, 500);
+    };
+}
 // BAŞLAT
 main();
+
 

@@ -896,7 +896,7 @@ function showCredentialsModal(username, password, title = "Kayıt Başarılı") 
     if(oldModal) oldModal.remove();
 
     // Hazır mesaj şablonu
-    const copyText = `Merhaba! 👋\nKoçluk sistemi giriş bilgilerin aşağıdadır:\n\n👤 *Kullanıcı Adı:* ${username}\n🔑 *Şifre:* ${password}\n\nUygulamaya giriş yapabilirsin. Başarılar! 🚀`;
+    const copyText = `Merhaba! 👋\nKoçluk sistemi giriş bilgilerin aşağıdadır:\n\n👤 *Kullanıcı Adı:* ${username}\n🔑 *Şifre:* ${password}\n\nUygulamaya giriş yapabilirsin. Başarılar! 🚀\nhttps://netkoc.com/student-login`;
 
     const modalHtml = `
     <div id="credentialModal" class="fixed inset-0 bg-gray-900/80 z-[150] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
@@ -951,3 +951,4 @@ function showCredentialsModal(username, password, title = "Kayıt Başarılı") 
         });
     };
 }
+

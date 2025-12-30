@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hesap Silme Talebi - NetKoç</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f3f4f6; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #1f2937; }
+        .container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; margin: 20px; }
+        .logo { text-align: center; margin-bottom: 20px; font-size: 24px; font-weight: 700; color: #4F46E5; }
+        .logo span { color: #27C3C8; }
+        h1 { font-size: 20px; text-align: center; margin-bottom: 10px; }
+        p { text-align: center; color: #6b7280; font-size: 14px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        button { width: 100%; background: #ef4444; color: white; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: #dc2626; }
+        .info-box { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; padding: 12px; border-radius: 8px; font-size: 12px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="logo">Net<span>Koç</span></div>
+        <h1>Hesap Silme Talebi</h1>
+        <p>Verilerinizin kalıcı olarak silinmesini talep etmek için formu doldurun.</p>
+
+        <div class="info-box">
+            <i class="fa-solid fa-circle-info"></i> 
+            Bu işlem geri alınamaz. Talebiniz alındıktan sonra 30 gün içinde hesabınız ve tüm verileriniz (ödevler, analizler vb.) kalıcı olarak silinecektir.
+        </div>
+
+        <form id="deletionForm">
+            <div class="form-group">
+                <label>Kayıtlı E-Posta Adresiniz</label>
+                <input type="email" id="email" required placeholder="ornek@mail.com">
+            </div>
+            
+            <div class="form-group">
+                <label>Silme Nedeni (Opsiyonel)</label>
+                <textarea id="reason" rows="3" placeholder="Bize neden ayrıldığınızı söylemek ister misiniz?"></textarea>
+            </div>
+
+            <button type="submit" id="submitBtn">Hesabımı Silinmesini Talep Et</button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Sizin Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
+            authDomain: "kocluk-99ad2.firebaseapp.com",
+            projectId: "kocluk-99ad2",
+            storageBucket: "kocluk-99ad2.firebasestorage.app",
+            messagingSenderId: "784379379600",
+            appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.getElementById('deletionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const originalText = btn.innerText;
+            
+            btn.disabled = true;
+            btn.innerText = "İşleniyor...";
+
+            const email = document.getElementById('email').value;
+            const reason = document.getElementById('reason').value;
+
+            try {
+                // Talebi veritabanına kaydet
+                await addDoc(collection(db, "deletionRequests"), {
+                    email: email,
+                    reason: reason,
+                    status: "pending", // Beklemede
+                    requestDate: serverTimestamp()
+                });
+
+                alert("Talebiniz başarıyla alındı. Hesabınız yasal süre içinde silinecektir.");
+                document.getElementById('deletionForm').reset();
+            } catch (error) {
+                console.error("Hata:", error);
+                alert("Bir hata oluştu. Lütfen daha sonra tekrar deneyin veya info@netkoc.com adresine mail atın.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        });
+    </script>
+</body>
+</html>

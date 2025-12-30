@@ -120,3 +120,17 @@ input, textarea, select {
     border: 4px solid #ffffff;
     margin-bottom: 5px; /* Yukarı taşma efekti */
 }
+
+/* style.css içine ekleyin */
+
+body {
+    overscroll-behavior-y: none; /* Sayfayı aşağı çekince yenilemeyi engeller */
+    -webkit-tap-highlight-color: transparent; /* Tıklama rengini kaldırır */
+    user-select: none; /* Metin seçimini engeller (Inputlar hariç) */
+    -webkit-user-select: none;
+}
+
+input, textarea {
+    user-select: text; /* Inputlarda seçime izin ver */
+    -webkit-user-select: text;
+}

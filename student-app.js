@@ -317,52 +317,133 @@ async function loadUpcomingAppointments(db, uid, appId, sid) {
 }
 
 async function loadStudentStats(db, uid, appId, sid, period) {
-    const now = new Date(); let startDate = null;
-    if (period !== 'all') { const days = parseInt(period); const pastDate = new Date(now); pastDate.setDate(now.getDate() - days); startDate = getLocalDateString(pastDate); } else startDate = '2000-01-01';
+    const now = new Date(); 
+    let startDate = null;
     
-    const [snapGoals, snapHomework, snapExams, snapQuestions, snapSessions] = await Promise.all([
+    // 1. DASHBOARD İÇİN TARİH FİLTRESİ
+    if (period !== 'all') { 
+        const days = parseInt(period); 
+        const pastDate = new Date(now); 
+        pastDate.setDate(now.getDate() - days); 
+        startDate = getLocalDateString(pastDate); 
+    } else { 
+        startDate = '2000-01-01'; 
+    }
+    
+    // --------------------------------------------------------------------------
+    // A) VERİ ÇEKME (KPI ve ROZETLER İÇİN AYRI AYRI)
+    // --------------------------------------------------------------------------
+    const [
+        // KPI SNAPS (Tarih Filtreli - Dashboard Kartları İçin)
+        snapKpiGoals, 
+        snapKpiHomework, 
+        snapKpiExams, 
+        snapKpiQuestions, 
+        snapKpiSessions,
+
+        // ROZET SNAPS (Tüm Zamanlar - Rozetler İçin)
+        snapAllGoals,
+        snapAllHomework,
+        snapAllQuestions
+    ] = await Promise.all([
+        // KPI Sorguları (startDate filtresi var)
         getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("bitisTarihi", ">=", startDate))),
         getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("bitisTarihi", ">=", startDate))),
         getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "denemeler"), where("tarih", ">=", startDate))),
         getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", startDate))),
-        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid)))
+        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("studentId", "==", sid))),
+
+        // Rozet Sorguları (Tarih filtresi YOK - Sadece tamamlananlar)
+        // Not: Sadece 'tamamlandi' olanları çekmek performans açısından daha iyidir.
+        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "hedefler"), where("durum", "==", "tamamlandi"))),
+        getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "odevler"), where("durum", "==", "tamamlandi"))),
+        // Soru takibinde durum olmadığı için hepsini çekip toplayacağız
+        getDocs(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"))
     ]);
 
-    let completedGoals = 0; snapGoals.forEach(doc => { if (doc.data().durum === 'tamamlandi') completedGoals++; });
-    document.getElementById('kpiCompletedGoals').textContent = completedGoals;
+    // --------------------------------------------------------------------------
+    // B) DASHBOARD KARTLARINI GÜNCELLE (FİLTRELİ VERİ)
+    // --------------------------------------------------------------------------
     
-    let completedHomework = 0; snapHomework.forEach(doc => { if (doc.data().durum === 'tamamlandi') completedHomework++; });
-    document.getElementById('kpiCompletedHomework').textContent = completedHomework;
+    // KPI: Tamamlanan Hedefler
+    let kpiCompletedGoals = 0; 
+    snapKpiGoals.forEach(doc => { if (doc.data().durum === 'tamamlandi') kpiCompletedGoals++; });
+    document.getElementById('kpiCompletedGoals').textContent = kpiCompletedGoals;
     
-    document.getElementById('kpiTotalExams').textContent = snapExams.size;
+    // KPI: Tamamlanan Ödevler
+    let kpiCompletedHomework = 0; 
+    snapKpiHomework.forEach(doc => { if (doc.data().durum === 'tamamlandi') kpiCompletedHomework++; });
+    document.getElementById('kpiCompletedHomework').textContent = kpiCompletedHomework;
     
-    let completedSessions = 0; snapSessions.forEach(doc => { const d = doc.data(); if (d.tarih >= startDate && d.durum === 'tamamlandi') completedSessions++; });
+    // KPI: Toplam Deneme
+    document.getElementById('kpiTotalExams').textContent = snapKpiExams.size;
+    
+    // KPI: Tamamlanan Seanslar
+    let completedSessions = 0; 
+    snapKpiSessions.forEach(doc => { const d = doc.data(); if (d.tarih >= startDate && d.durum === 'tamamlandi') completedSessions++; });
     document.getElementById('kpiTotalSessions').textContent = completedSessions;
     
-    let totalQ = 0; let totalRead = 0;
-    snapQuestions.forEach(doc => { const d = doc.data(); const adet = parseInt(d.adet) || 0; if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) totalRead += adet; else totalQ += adet; });
-    document.getElementById('kpiTotalQuestions').textContent = totalQ;
-    document.getElementById('kpiReading').textContent = totalRead;
+    // KPI: Soru ve Kitap Sayıları
+    let kpiTotalQ = 0; 
+    let kpiTotalRead = 0;
+    snapKpiQuestions.forEach(doc => { 
+        const d = doc.data(); 
+        const adet = parseInt(d.adet) || 0; 
+        if (d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap'))) kpiTotalRead += adet; 
+        else kpiTotalQ += adet; 
+    });
+    document.getElementById('kpiTotalQuestions').textContent = kpiTotalQ;
+    document.getElementById('kpiReading').textContent = kpiTotalRead;
     
-    let totalNet = 0; let subjectStats = {}; 
-    snapExams.forEach(doc => { const d = doc.data(); if(d.analizHaric === true) return; totalNet += (parseFloat(d.toplamNet) || 0); if(d.netler) { for (const [ders, stats] of Object.entries(d.netler)) { if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 }; subjectStats[ders].total += (parseFloat(stats.net) || 0); subjectStats[ders].count++; } } });
+    // KPI: Ortalama Net
+    let totalNet = 0; 
+    let subjectStats = {}; 
+    snapKpiExams.forEach(doc => { 
+        const d = doc.data(); 
+        if(d.analizHaric === true) return; 
+        totalNet += (parseFloat(d.toplamNet) || 0); 
+        if(d.netler) { 
+            for (const [ders, stats] of Object.entries(d.netler)) { 
+                if (!subjectStats[ders]) subjectStats[ders] = { total: 0, count: 0 }; 
+                subjectStats[ders].total += (parseFloat(stats.net) || 0); 
+                subjectStats[ders].count++; 
+            } 
+        } 
+    });
     
-    const avgNet = snapExams.size > 0 ? (totalNet / snapExams.size).toFixed(2) : '-';
+    const avgNet = snapKpiExams.size > 0 ? (totalNet / snapKpiExams.size).toFixed(2) : '-';
     document.getElementById('kpiAvgNet').textContent = avgNet;
     
+    // KPI: En İyi Ders
     let bestLesson = { name: '-', avg: -Infinity };
-    for (const [name, stat] of Object.entries(subjectStats)) { const avg = stat.total / stat.count; if (avg > bestLesson.avg) bestLesson = { name, avg }; }
+    for (const [name, stat] of Object.entries(subjectStats)) { 
+        const avg = stat.total / stat.count; 
+        if (avg > bestLesson.avg) bestLesson = { name, avg }; 
+    }
     document.getElementById('kpiBestLesson').textContent = bestLesson.name !== '-' ? `${bestLesson.name} (${bestLesson.avg.toFixed(1)})` : '-';
 
-    // ======================================================
-    // YENİ: GAMIFICATION (ROZET SİSTEMİ)
-    // ======================================================
+    // --------------------------------------------------------------------------
+    // C) ROZET HESAPLAMA (TÜM ZAMANLAR - FİLTRESİZ VERİ)
+    // --------------------------------------------------------------------------
     
+    // Rozet Verileri (All Time)
+    const allTimeCompletedGoals = snapAllGoals.size; // Zaten 'tamamlandi' filtresiyle çektik
+    const allTimeCompletedHomework = snapAllHomework.size; // Zaten 'tamamlandi' filtresiyle çektik
+    
+    let allTimeTotalQ = 0;
+    snapAllQuestions.forEach(doc => {
+        const d = doc.data();
+        // Kitap okuma hariç sadece soruları topla
+        if (!(d.ders === 'Kitap Okuma' || (d.konu && d.konu.includes('Kitap')))) {
+            allTimeTotalQ += (parseInt(d.adet) || 0);
+        }
+    });
+
     // 1. Rozet Kuralları ve Seviyeleri
     const badgeRules = {
         goals: {
             title: 'Hedef Ustası',
-            icon: 'fa-bullseye', // FontAwesome class
+            icon: 'fa-bullseye',
             levels: [
                 { limit: 5, label: 'Bronz', color: 'text-orange-700 bg-orange-100 border-orange-200' },
                 { limit: 15, label: 'Gümüş', color: 'text-gray-600 bg-gray-100 border-gray-300' },
@@ -403,7 +484,7 @@ async function loadStudentStats(db, uid, appId, sid, period) {
         for (let i = 0; i < rules.length; i++) {
             if (currentVal >= rules[i].limit) {
                 currentLevel = rules[i];
-                nextLevel = rules[i + 1] || null; // Sonraki seviye var mı?
+                nextLevel = rules[i + 1] || null;
             } else {
                 nextLevel = rules[i];
                 break;
@@ -412,166 +493,275 @@ async function loadStudentStats(db, uid, appId, sid, period) {
         return { current: currentLevel, next: nextLevel };
     };
 
-    // 3. Durumları Hesapla (Mevcut değişkenleri kullanıyoruz)
-    const statusGoals = calculateLevel(completedGoals, badgeRules.goals.levels);
-    const statusHomework = calculateLevel(completedHomework, badgeRules.homework.levels);
-    const statusQuestions = calculateLevel(totalQ, badgeRules.questions.levels);
+    // 3. Durumları Hesapla (DÜZELTİLDİ: Artık AllTime değişkenlerini kullanıyor)
+    const statusGoals = calculateLevel(allTimeCompletedGoals, badgeRules.goals.levels);
+    const statusHomework = calculateLevel(allTimeCompletedHomework, badgeRules.homework.levels);
+    const statusQuestions = calculateLevel(allTimeTotalQ, badgeRules.questions.levels);
 
-    // 4. HTML Oluşturucu (Yardımcı)
+    // 4. HTML Oluşturucu (Yardımcı) - BELİRGİN OK VE SAYILAR
+    // 4. HTML Oluşturucu (Yardımcı) - RENKLİ İLERLEME ÇUBUKLARI
     const createBadgeHTML = (rule, status, currentVal) => {
-        // Eğer hiç seviye atlamadıysa (Kilitli Görünüm)
+        // DURUM 1: Henüz hiç seviye atlamamış (Başlangıç)
         if (!status.current) {
-            const progress = Math.min(100, (currentVal / status.next.limit) * 100);
+            const nextLevel = status.next;
+            const progress = Math.min(100, (currentVal / nextLevel.limit) * 100);
             return `
-            <div class="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl border border-gray-100 opacity-60">
-                <div class="w-12 h-12 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center text-xl mb-2 relative">
-                    <i class="fa-solid ${rule.icon}"></i>
-                    <i class="fa-solid fa-lock absolute -bottom-1 -right-1 text-xs bg-white rounded-full p-0.5"></i>
-                </div>
-                <h4 class="text-xs font-bold text-gray-500">${rule.title}</h4>
-                <div class="w-full bg-gray-200 h-1.5 rounded-full mt-2 overflow-hidden">
-                    <div class="bg-gray-400 h-full" style="width: ${progress}%"></div>
-                </div>
-                <span class="text-[9px] text-gray-400 mt-1">${currentVal} / ${status.next.limit}</span>
+            <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 relative overflow-hidden group hover:shadow-md transition-all">
+                 <div class="flex justify-between items-center mb-3">
+                     <h4 class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">${rule.title}</h4>
+                     <span class="text-[11px] font-black text-gray-600 bg-white border border-gray-200 px-2 py-0.5 rounded shadow-sm">${currentVal} / ${nextLevel.limit}</span>
+                 </div>
+                 
+                 <div class="flex items-center justify-between gap-2">
+                     <div class="flex flex-col items-center opacity-60">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-play"></i>
+                        </div>
+                        <span class="text-[9px] font-bold mt-1 text-gray-500">Başlangıç</span>
+                     </div>
+
+                     <div class="flex-1 flex flex-col items-center px-1">
+                        <i class="fa-solid fa-chevron-right text-gray-400 text-sm mb-1 animate-pulse font-bold"></i>
+                        <div class="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden border border-gray-300">
+                            <div class="bg-indigo-500 h-full transition-all duration-500" style="width: ${progress}%"></div>
+                        </div>
+                     </div>
+
+                     <div class="flex flex-col items-center relative grayscale opacity-70">
+                         <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm border border-gray-200 ${nextLevel.color.replace('text-', 'bg-').split(' ')[0]} text-white relative">
+                             <i class="fa-solid ${rule.icon}"></i>
+                              <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-lock text-xs text-white/90"></i>
+                              </div>
+                         </div>
+                         <span class="text-[9px] font-bold mt-1 text-gray-600">${nextLevel.label}</span>
+                     </div>
+                 </div>
             </div>`;
         }
 
-        // Seviye Kazanılmışsa (Renkli Görünüm)
         const isMax = !status.next;
-        const limit = isMax ? status.current.limit : status.next.limit;
-        const progress = isMax ? 100 : Math.min(100, (currentVal / limit) * 100);
         
+        // DURUM 2: Maksimum Seviye (Efsane - Tamamlandı)
+        if (isMax) {
+            return `
+            <div class="p-3 bg-gradient-to-br from-white to-purple-50 rounded-xl border border-purple-100 shadow-sm relative overflow-hidden text-center hover:scale-[1.02] transition-transform">
+                <div class="absolute inset-0 opacity-10 bg-repeat z-0" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+                <h4 class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2 relative z-10">${rule.title}</h4>
+                <div class="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-2xl mb-2 shadow-lg relative z-10 ${status.current.color} animate-wiggle-slow">
+                    <i class="fa-solid ${rule.icon}"></i>
+                    <i class="fa-solid fa-crown absolute -top-2 -right-2 text-yellow-400 text-sm bg-white rounded-full p-0.5 border border-yellow-100"></i>
+                </div>
+                <h4 class="text-sm font-black text-gray-800 relative z-10">${status.current.label}</h4>
+                <span class="text-[9px] font-bold text-green-600 mt-1 inline-block bg-green-50 px-2 py-0.5 rounded-full relative z-10">TAMAMLANDI! 🏆</span>
+            </div>`;
+        }
+
+        // DURUM 3: İlerleme Halinde (RENKLİ GÖRÜNÜM)
+        const limit = status.next.limit;
+        const progress = Math.min(100, (currentVal / limit) * 100);
+        
+        // Rengi dinamik olarak ayıkla (Örn: 'orange', 'blue' vb.)
+        // status.current.color stringi şöyledir: "text-orange-700 bg-orange-100 ..."
+        // Biz buradan 'orange' kelimesini çekip kendi canlı renklerimizi üreteceğiz.
+        const colorClass = status.current.color; 
+        const baseColor = colorClass.match(/bg-(\w+)-100/)?.[1] || 'indigo'; // Renk ismini bul (bulamazsa indigo yap)
+        
+        // Canlı renkleri oluştur
+        const barColor = `bg-${baseColor}-500`;           // İlerleme çubuğu (Canlı)
+        const counterBg = `bg-${baseColor}-50`;           // Sayaç Arka Planı (Soluk)
+        const counterText = `text-${baseColor}-700`;      // Sayaç Yazısı (Koyu)
+        const counterBorder = `border-${baseColor}-200`;  // Sayaç Kenarlığı
+        const arrowColor = `text-${baseColor}-400`;       // Ok Rengi
+
         return `
-        <div class="flex flex-col items-center justify-center p-3 bg-white rounded-xl border shadow-sm transition-transform hover:scale-105 ${status.current.color.replace('text-', 'border-').split(' ')[2]}">
-            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-2 shadow-inner ${status.current.color}">
-                <i class="fa-solid ${rule.icon}"></i>
-            </div>
-            <h4 class="text-xs font-bold text-gray-800">${status.current.label}</h4>
-            <p class="text-[9px] text-gray-500 uppercase tracking-wide mb-1">${rule.title}</p>
-            
-            ${!isMax ? `
-            <div class="w-full bg-gray-100 h-1.5 rounded-full mt-1 overflow-hidden" title="Sonraki seviyeye kalan">
-                <div class="h-full rounded-full ${status.current.color.split(' ')[1].replace('bg-', 'bg-')}" style="width: ${progress}%"></div>
-            </div>
-            <span class="text-[9px] text-gray-400 mt-0.5">${currentVal} / ${limit}</span>
-            ` : '<span class="text-[9px] font-bold text-green-500 mt-1">TAMAMLANDI! 🏆</span>'}
+        <div class="p-3 bg-white rounded-xl border shadow-sm relative overflow-hidden transition-all hover:shadow-md hover:-translate-y-1 group">
+             <div class="flex justify-between items-center mb-3">
+                 <h4 class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">${rule.title}</h4>
+                 
+                 <span class="text-[11px] font-black ${counterText} ${counterBg} border ${counterBorder} px-2.5 py-0.5 rounded shadow-sm">
+                    ${currentVal} / ${limit}
+                 </span>
+             </div>
+
+             <div class="flex items-center justify-between gap-2">
+                 <div class="flex flex-col items-center relative z-10">
+                     <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-md ${status.current.color} transition-transform group-hover:scale-110">
+                         <i class="fa-solid ${rule.icon}"></i>
+                     </div>
+                     <span class="text-[9px] font-bold mt-1 ${status.current.color.split(' ')[0]}">${status.current.label}</span>
+                 </div>
+
+                 <div class="flex-1 flex flex-col items-center px-1">
+                    <i class="fa-solid fa-chevron-right ${arrowColor} text-sm mb-1 animate-pulse font-extrabold drop-shadow-sm"></i>
+                    
+                    <div class="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden shadow-inner border border-gray-200">
+                        <div class="h-full rounded-full ${barColor} transition-all duration-1000 ease-out relative" style="width: ${progress}%">
+                            <div class="absolute inset-0 bg-white/30 animate-shimmer" style="background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);"></div>
+                        </div>
+                    </div>
+                 </div>
+
+                 <div class="flex flex-col items-center relative filter grayscale opacity-60 hover:opacity-100 transition-all cursor-help" title="Sonraki Hedef: ${status.next.label}">
+                     <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm border-2 border-dashed border-gray-300 bg-gray-50 text-gray-400 relative">
+                         <i class="fa-solid ${rule.icon}"></i>
+                         <div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm">
+                            <i class="fa-solid fa-lock text-[9px] text-gray-400"></i>
+                         </div>
+                     </div>
+                     <span class="text-[9px] font-bold mt-1 text-gray-600">${status.next.label}</span>
+                 </div>
+             </div>
         </div>`;
     };
 
-    // 5. Rozet Alanını Ekrana Bas (Tab-Profile içine ekle)
+// --------------------------------------------------------------------------
+    // 5. ROZET ALANINI EKRANA BAS (GÜNCELLENMİŞ: BİLGİLENDİRME MODALI İLE)
+    // --------------------------------------------------------------------------
     const profileTab = document.getElementById('tab-profile');
     let badgeContainer = document.getElementById('studentBadgesContainer');
     
-    // Eğer container yoksa profil resminin altına ekle
+    // Rozet Container'ı Yoksa Oluştur
     if (!badgeContainer && profileTab) {
         badgeContainer = document.createElement('div');
         badgeContainer.id = 'studentBadgesContainer';
-        badgeContainer.className = 'grid grid-cols-3 gap-3 mt-4';
+        badgeContainer.className = 'grid grid-cols-1 md:grid-cols-3 gap-3 mt-4';
         
-        // "Ayarlar" başlığından önceye ekle
         const settingsHeader = Array.from(profileTab.querySelectorAll('h4')).find(h => h.textContent.includes('Ayarlar'));
         if(settingsHeader) {
             settingsHeader.parentNode.insertBefore(badgeContainer, settingsHeader);
-            // Başlık ekle
-            const title = document.createElement('h4');
-            title.className = "text-xs font-bold text-gray-400 uppercase tracking-wider pl-1 mb-2 mt-4";
-            title.textContent = "Başarı Rozetleri";
-            badgeContainer.parentNode.insertBefore(title, badgeContainer);
+            
+            // --- YENİ: BİLGİ İKONLU BAŞLIK ---
+            const titleContainer = document.createElement('div');
+            titleContainer.className = "flex items-center gap-2 mb-2 mt-4 pl-1";
+            titleContainer.innerHTML = `
+                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Başarı Rozetleri</h4>
+                <button onclick="window.showBadgeRules()" class="text-indigo-400 hover:text-indigo-600 transition-colors">
+                    <i class="fa-solid fa-circle-info text-sm"></i>
+                </button>
+            `;
+            badgeContainer.parentNode.insertBefore(titleContainer, badgeContainer);
         }
     }
 
+    // Rozetleri Render Et
     if (badgeContainer) {
         badgeContainer.innerHTML = 
-            createBadgeHTML(badgeRules.goals, statusGoals, completedGoals) +
-            createBadgeHTML(badgeRules.homework, statusHomework, completedHomework) +
-            createBadgeHTML(badgeRules.questions, statusQuestions, totalQ);
+            createBadgeHTML(badgeRules.goals, statusGoals, allTimeCompletedGoals) +
+            createBadgeHTML(badgeRules.homework, statusHomework, allTimeCompletedHomework) +
+            createBadgeHTML(badgeRules.questions, statusQuestions, allTimeTotalQ);
     }
-// ... (Önceki rozet hesaplama kodları burada bitiyor) ...
 
-    // ======================================================
-    // YENİ: KUTLAMA VE BİLDİRİM SİSTEMİ (CONFETTI)
-    // ======================================================
+    // --- YENİ: KURALLARI GÖSTEREN FONKSİYON VE MODAL ---
+    window.showBadgeRules = () => {
+        // Mevcut modal varsa sil (tekrar açılmasın)
+        const existing = document.getElementById('badgeRulesModal');
+        if(existing) existing.remove();
 
-    // 1. Kutlama Fonksiyonu (Konfeti ve Modal)
+        // Kural tablosu oluşturucu
+        const createRuleTable = (rule) => {
+            return `
+            <div class="mb-4 last:mb-0">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                        <i class="fa-solid ${rule.icon}"></i>
+                    </div>
+                    <h5 class="font-bold text-gray-700 text-sm">${rule.title}</h5>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 text-xs">
+                    ${rule.levels.map(l => `
+                        <div class="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                            <span class="${l.color.split(' ')[0]} font-bold">${l.label}</span>
+                            <span class="text-gray-500">${l.limit} ${rule.title.includes('Soru') ? 'Soru' : (rule.title.includes('Hedef') ? 'Hedef' : 'Ödev')}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        };
+
+        const modalHtml = `
+        <div id="badgeRulesModal" class="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onclick="if(event.target === this) this.remove()">
+            <div class="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-2xl">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                    <h3 class="font-bold text-gray-800">Nasıl Rozet Kazanırım?</h3>
+                    <button onclick="document.getElementById('badgeRulesModal').remove()" class="w-8 h-8 rounded-full bg-white text-gray-500 hover:text-red-500 flex items-center justify-center shadow-sm transition-colors">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+                <div class="p-5 overflow-y-auto custom-scrollbar">
+                    <p class="text-xs text-gray-500 mb-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <i class="fa-solid fa-circle-info mr-1"></i> 
+                        Rozetler <strong>tüm zamanlardaki</strong> başarılarına göre verilir.
+                    </p>
+                    ${createRuleTable(badgeRules.goals)}
+                    ${createRuleTable(badgeRules.homework)}
+                    ${createRuleTable(badgeRules.questions)}
+                </div>
+                <div class="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                    <button onclick="document.getElementById('badgeRulesModal').remove()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors">
+                        Tamam, Anladım 👍
+                    </button>
+                </div>
+            </div>
+        </div>`;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    };
+
+    // --------------------------------------------------------------------------
+    // D) KUTLAMA VE BİLDİRİM (CONFETTI)
+    // --------------------------------------------------------------------------
+
     const triggerCelebration = (badgeName, levelName, iconClass, colorClass) => {
-        // A) Konfeti Patlat
         const duration = 3000;
         const animationEnd = Date.now() + duration;
         const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
 
         const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
         const interval = setInterval(function() {
             const timeLeft = animationEnd - Date.now();
-
-            if (timeLeft <= 0) {
-                return clearInterval(interval);
-            }
-
+            if (timeLeft <= 0) return clearInterval(interval);
             const particleCount = 50 * (timeLeft / duration);
             confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
             confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
         }, 250);
 
-        // B) Tebrik Modalını Oluştur ve Göster
         const modalHtml = `
         <div id="celebrationModal" class="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-scale-in">
             <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center relative shadow-2xl border-4 border-yellow-400">
                 <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center border-4 border-white shadow-lg text-4xl text-white animate-bounce">
                     <i class="fa-solid fa-trophy"></i>
                 </div>
-                
                 <h2 class="text-2xl font-black text-gray-800 mt-8 mb-2">TEBRİKLER! 🎉</h2>
                 <p class="text-gray-500 text-sm mb-6">Harika gidiyorsun! Yeni bir seviyeye ulaştın.</p>
-                
                 <div class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100">
                     <div class="text-4xl mb-2 ${colorClass}"><i class="fa-solid ${iconClass}"></i></div>
                     <h3 class="text-lg font-bold text-gray-800">${badgeName}</h3>
                     <div class="text-sm font-bold text-indigo-600 uppercase tracking-widest">${levelName} SEVİYESİ</div>
                 </div>
-
                 <button onclick="document.getElementById('celebrationModal').remove()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:scale-105 transition-transform">
                     Harikayım! 😎
                 </button>
             </div>
         </div>`;
-        
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        // Ses efekti (Opsiyonel - Kısa bir başarı sesi)
-        // const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
-        // audio.play().catch(e => console.log(e)); 
     };
 
-    // 2. Kontrol Mekanizması (Sadece yeni kazanıldıysa çalışır)
     const checkAndCelebrate = (key, status, rule) => {
-        if (!status.current) return; // Henüz hiç seviye yoksa çık
-        
-        // Tarayıcı hafızasından eski seviyeyi al
+        if (!status.current) return;
         const storageKey = `badge_${studentDocId}_${key}`;
         const lastLevel = localStorage.getItem(storageKey);
         const currentLabel = status.current.label;
 
-        // Eğer eski kayıt yoksa veya seviye yükseldiyse
         if (lastLevel !== currentLabel) {
-            // Yeni seviyeyi kaydet
             localStorage.setItem(storageKey, currentLabel);
-            
-            // Eğer bu ilk yükleme değilse (yani kullanıcı sayfayı yenilemeden işlem yaptıysa veya daha düşük bir seviyeden geldiyse)
-            // Not: İlk girişte "Bronz"u kutlamamak için lastLevel null kontrolü yapabilirsin, 
-            // ama öğrenci ilk girdiğinde de motive olsun dersen bu hali kalsın.
-            
             triggerCelebration(rule.title, currentLabel, rule.icon, status.current.color.split(' ')[0]);
         }
     };
 
-    // 3. Kontrolleri Çalıştır
-    // (Öğrenci verileri yüklendiğinde bu kontroller yapılır)
     checkAndCelebrate('goals', statusGoals, badgeRules.goals);
     checkAndCelebrate('homework', statusHomework, badgeRules.homework);
     checkAndCelebrate('questions', statusQuestions, badgeRules.questions);
-
-
 }
 
 async function loadActiveGoalsForDashboard() {

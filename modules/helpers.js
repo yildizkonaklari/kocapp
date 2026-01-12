@@ -66,6 +66,7 @@ export const CLASS_LEVEL_RULES = {
 // =================================================================
 
 // Dinamik Ders Seçimi Render Fonksiyonu
+// Dinamik Ders Seçimi Render Fonksiyonu
 export function renderStudentOptions(sinif, optionsContainerId, subjectsContainerId, selectedSubjects = []) {
     const optionsContainer = document.getElementById(optionsContainerId);
     const subjectsContainer = document.getElementById(subjectsContainerId);
@@ -78,7 +79,13 @@ export function renderStudentOptions(sinif, optionsContainerId, subjectsContaine
     // --- ORTAOKUL (5-8) ---
     if (['5. Sınıf', '6. Sınıf', '7. Sınıf'].includes(sinif)) {
         SUBJECT_DATA.ORTAOKUL_5_6_7.forEach(d => activeSubjects.add(d));
-        if (sinif === '7. Sınıf') addCheckboxOption(optionsContainer, "LGS Hazırlık Dersleri Ekle", SUBJECT_DATA.LGS, activeSubjects, subjectsContainer, selectedSubjects);
+        
+        // 7. Sınıf LGS Seçeneği
+        if (sinif === '7. Sınıf') {
+            // Ana dersleri korumak için "protectedSet" oluşturuyoruz
+            const protectedSet = new Set(activeSubjects);
+            addCheckboxOption(optionsContainer, "LGS Hazırlık Dersleri Ekle", SUBJECT_DATA.LGS, activeSubjects, subjectsContainer, selectedSubjects, protectedSet);
+        }
     }
     else if (sinif === '8. Sınıf' || sinif === '8. Sınıf (LGS)') {
         SUBJECT_DATA.LGS.forEach(d => activeSubjects.add(d));
@@ -91,7 +98,11 @@ export function renderStudentOptions(sinif, optionsContainerId, subjectsContaine
     else if (sinif === '11. Sınıf') {
         optionsContainer.appendChild(createAreaSelect());
         SUBJECT_DATA.LISE_11.forEach(d => activeSubjects.add(d));
-        addCheckboxOption(optionsContainer, "TYT Çalışması Ekle", SUBJECT_DATA.TYT, activeSubjects, subjectsContainer, selectedSubjects);
+        
+        // TYT Seçeneği
+        // Ana dersleri korumak için "protectedSet" oluşturuyoruz
+        const protectedSet = new Set(activeSubjects);
+        addCheckboxOption(optionsContainer, "TYT Çalışması Ekle", SUBJECT_DATA.TYT, activeSubjects, subjectsContainer, selectedSubjects, protectedSet);
     }
     else if (['12. Sınıf', '12. Sınıf (YKS)', 'Mezun'].includes(sinif)) {
         optionsContainer.appendChild(createAreaSelect());
@@ -117,39 +128,46 @@ export function renderStudentOptions(sinif, optionsContainerId, subjectsContaine
 
         examDiv.querySelectorAll('.exam-opt').forEach(cb => cb.addEventListener('change', updateExams));
         
-        // Düzenleme modu için varsayılan seçimleri kontrol et (Basit mantık: Eğer listede AYT dersi varsa AYT'yi seçili yap)
         if (selectedSubjects.length > 0) {
             if (selectedSubjects.some(s => SUBJECT_DATA.TYT.includes(s))) examDiv.querySelector('input[value="TYT"]').checked = true;
             if (selectedSubjects.some(s => SUBJECT_DATA.AYT.includes(s))) examDiv.querySelector('input[value="AYT"]').checked = true;
             if (selectedSubjects.some(s => SUBJECT_DATA.YDS.includes(s))) examDiv.querySelector('input[value="YDS"]').checked = true;
-            updateExams(); // Listeyi güncelle
+            updateExams();
         } else {
-            // Varsayılan: TYT seçili gelsin
             examDiv.querySelector('input[value="TYT"]').click();
         }
-        return; // renderCheckboxes zaten updateExams içinde çağrıldı
+        return; 
     }
 
     renderCheckboxes(activeSubjects, subjectsContainer, selectedSubjects);
 }
 
-// Yardımcı: Checkbox Opsiyonu Ekleme
-function addCheckboxOption(container, labelText, dataSet, activeSet, renderTarget, selectedList) {
+// Yardımcı: Checkbox Opsiyonu Ekleme (GÜNCELLENEN KISIM)
+function addCheckboxOption(container, labelText, dataSet, activeSet, renderTarget, selectedList, protectedSet = null) {
     const div = document.createElement('div');
-    div.className = "flex items-center mt-2 p-2 bg-indigo-50 rounded border border-indigo-100";
+    div.className = "flex items-center mt-2 p-2 bg-indigo-50 rounded border border-indigo-100 animate-fade-in";
     const uniqueId = `opt-${Math.random().toString(36).substr(2,9)}`;
     div.innerHTML = `
-        <input type="checkbox" id="${uniqueId}" class="h-4 w-4 text-indigo-600 rounded border-gray-300">
-        <label for="${uniqueId}" class="ml-2 text-sm text-gray-700 font-medium cursor-pointer">${labelText}</label>
+        <input type="checkbox" id="${uniqueId}" class="h-4 w-4 text-indigo-600 rounded border-gray-300 cursor-pointer">
+        <label for="${uniqueId}" class="ml-2 text-sm text-gray-700 font-medium cursor-pointer select-none">${labelText}</label>
     `;
     container.appendChild(div);
+    
     div.querySelector('input').addEventListener('change', (e) => {
-        if (e.target.checked) dataSet.forEach(d => activeSet.add(d));
-        else {
-            // Basit reset yerine sadece eklenenleri çıkarmak daha karmaşık, 
-            // şimdilik kullanıcı deneyimi için kabul edilebilir: Set yapısı mükerrerliği önler.
-            // Çıkarmak için Set'i yeniden oluşturmak gerekebilir ama basitlik adına:
-            // Kullanıcı tiki kaldırırsa manuel seçim yapabilir.
+        if (e.target.checked) {
+            // Seçilirse listeye ekle
+            dataSet.forEach(d => activeSet.add(d));
+        } else {
+            // --- DÜZELTİLEN KISIM: TİK KALDIRILIRSA SİL ---
+            dataSet.forEach(d => {
+                // Eğer bu ders "korunan" (ana sınıf dersi) değilse sil.
+                // Örneğin: 7. Sınıfta "Matematik" zaten var. LGS seçilip kaldırılsa bile Matematik silinmemeli.
+                if (protectedSet && !protectedSet.has(d)) {
+                    activeSet.delete(d);
+                } else if (!protectedSet) {
+                    activeSet.delete(d);
+                }
+            });
         }
         renderCheckboxes(activeSet, renderTarget, selectedList);
     });

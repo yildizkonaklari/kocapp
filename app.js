@@ -246,50 +246,6 @@ function updateUIForLoggedInUser(user) {
         const el = document.getElementById(id);
         if(el) el.addEventListener('click', openProfileHandler);
     });
-    
-// Çıkış işlemini yönetecek yeni fonksiyon
-const handleLogout = (e) => {
-    if(e) e.preventDefault();
-    
-    const modal = document.getElementById('logoutModal');
-    if (modal) {
-        // Modalı göster
-        modal.classList.remove('hidden');
-        modal.style.display = 'flex'; // Flex yapısını korumak için
-    }
-};
-
-// Sayfa yüklendiğinde butonları tanımla
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Çıkış Butonlarını Bağla (Navigasyon vb.)
-    ["logoutButton", "btnMobileLogout"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('click', handleLogout);
-    });
-
-    // 2. Modal İçindeki Butonları Bağla
-    const btnCancel = document.getElementById('btnCancelLogout');
-    const btnConfirm = document.getElementById('btnConfirmLogout');
-    const modal = document.getElementById('logoutModal');
-
-    // Vazgeç butonu
-    if (btnCancel) {
-        btnCancel.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            modal.style.display = 'none';
-        });
-    }
-
-    // Onayla butonu (Asıl çıkış işlemi burada)
-    if (btnConfirm) {
-        btnConfirm.addEventListener('click', () => {
-            btnConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Loading efekti
-            signOut(auth).then(() => {
-                window.location.href = 'login.html';
-            });
-        });
-    }
-});
 }
 
 const mobileDrawer = document.getElementById('mobileMenuDrawer');
@@ -328,7 +284,62 @@ overlay?.addEventListener('click', handleCloseMenuAction);
 // =================================================================
 // 5. GLOBAL BUTON VE MODAL İŞLEMLERİ
 // =================================================================
+// =================================================================
+// ÇIKIŞ (LOGOUT) MODAL YÖNETİMİ
+// =================================================================
 
+// 1. Çıkış Butonlarına Tıklanınca Modalı Aç
+const handleLogoutOpen = (e) => {
+    e.preventDefault();
+    const modal = document.getElementById('logoutModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+};
+
+// Butonları Bul ve Bağla
+["logoutButton", "btnMobileLogout"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+        // Olası eski listenerları temizlemek için klonlama (Opsiyonel ama güvenli)
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', handleLogoutOpen);
+    }
+});
+
+// 2. Modal İçindeki Buton İşlemleri (Vazgeç / Onayla)
+const btnCancelLogout = document.getElementById('btnCancelLogout');
+const btnConfirmLogout = document.getElementById('btnConfirmLogout');
+const logoutModal = document.getElementById('logoutModal');
+
+if (btnCancelLogout) {
+    btnCancelLogout.addEventListener('click', () => {
+        if(logoutModal) {
+            logoutModal.classList.add('hidden');
+            logoutModal.style.display = 'none';
+        }
+    });
+}
+
+if (btnConfirmLogout) {
+    btnConfirmLogout.addEventListener('click', async () => {
+        // Loading Efekti
+        btnConfirmLogout.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Çıkılıyor...';
+        btnConfirmLogout.disabled = true;
+        
+        try {
+            await signOut(auth);
+            window.location.href = 'login.html';
+        } catch (error) {
+            console.error("Çıkış hatası:", error);
+            alert("Çıkış yapılırken bir hata oluştu.");
+            btnConfirmLogout.innerHTML = 'Çıkış Yap';
+            btnConfirmLogout.disabled = false;
+        }
+    });
+}
 document.getElementById('saveStudentButton')?.addEventListener('click', () => saveNewStudent(db, currentUserId, appId));
 document.getElementById('saveStudentChangesButton')?.addEventListener('click', () => saveStudentChanges(db, currentUserId, appId));
 document.getElementById('btnDeleteStudent')?.addEventListener('click', () => deleteStudentFull(db, currentUserId, appId));
@@ -599,5 +610,6 @@ if (btnSaveRandevu) {
 }
 
 main();
+
 
 

@@ -247,16 +247,48 @@ function updateUIForLoggedInUser(user) {
         if(el) el.addEventListener('click', openProfileHandler);
     });
     
-const handleLogout = () => {
-    // Çıkış onayı sor
-    if (confirm("Çıkış yapmak istediğinize emin misiniz?")) {
-        signOut(auth).then(() => window.location.href = 'login.html');
+// Çıkış işlemini yönetecek yeni fonksiyon
+const handleLogout = (e) => {
+    if(e) e.preventDefault();
+    
+    const modal = document.getElementById('logoutModal');
+    if (modal) {
+        // Modalı göster
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex'; // Flex yapısını korumak için
     }
 };
 
-["logoutButton", "btnMobileLogout"].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('click', handleLogout);
+// Sayfa yüklendiğinde butonları tanımla
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Çıkış Butonlarını Bağla (Navigasyon vb.)
+    ["logoutButton", "btnMobileLogout"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', handleLogout);
+    });
+
+    // 2. Modal İçindeki Butonları Bağla
+    const btnCancel = document.getElementById('btnCancelLogout');
+    const btnConfirm = document.getElementById('btnConfirmLogout');
+    const modal = document.getElementById('logoutModal');
+
+    // Vazgeç butonu
+    if (btnCancel) {
+        btnCancel.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        });
+    }
+
+    // Onayla butonu (Asıl çıkış işlemi burada)
+    if (btnConfirm) {
+        btnConfirm.addEventListener('click', () => {
+            btnConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Loading efekti
+            signOut(auth).then(() => {
+                window.location.href = 'login.html';
+            });
+        });
+    }
 });
 }
 
@@ -567,4 +599,5 @@ if (btnSaveRandevu) {
 }
 
 main();
+
 

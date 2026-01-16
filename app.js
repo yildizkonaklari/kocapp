@@ -92,8 +92,12 @@ async function main() {
             
             updateUIForLoggedInUser(user);
             
-            window.history.replaceState({ page: 'anasayfa' }, '', '#anasayfa');
-            navigateToPage('anasayfa', false);
+// Önce sahte bir 'root' geçmişi oluşturuyoruz
+window.history.replaceState({ page: 'root' }, '', window.location.pathname);
+// Üzerine ana sayfayı ekliyoruz
+window.history.pushState({ page: 'anasayfa' }, '', '#anasayfa');
+
+navigateToPage('anasayfa', false);
             
             // Global Bildirimler
             initCoachNotifications(user.uid);
@@ -156,13 +160,15 @@ function updateActiveLinkStyles(pageId) {
 }
 
 window.addEventListener('popstate', (event) => {
-    // 1. AÇIK MODALLARI KAPAT (Mobile Overlay hariç)
+    // 1. AÇIK MODALLARI KAPAT
     const openModals = document.querySelectorAll('.fixed.inset-0:not(.hidden):not(#mobileOverlay)');
     if (openModals.length > 0) {
         openModals.forEach(modal => {
             modal.classList.add('hidden');
             modal.style.display = 'none';
         });
+        // Modalı kapattıysak ve geriye bastıysak, history'i düzeltmek gerekebilir
+        // ama basit kullanımda kullanıcı tekrar ileri gitmezse sorun olmaz.
         return;
     }
 
@@ -172,6 +178,20 @@ window.addEventListener('popstate', (event) => {
         closeMobileMenu();
         return;
     }
+
+    // --- YENİ EKLENEN KISIM: ÇIKIŞ ONAYI ---
+    // Eğer kullanıcı 'root' (başlangıç) state'ine geri döndüyse (yani ana sayfadan geri bastıysa)
+    if (event.state && event.state.page === 'root') {
+        if (confirm("Uygulamadan çıkmak istiyor musunuz?")) {
+            // Evet derse, tarayıcının daha da gerisine gitmesine izin ver (Uygulamadan çıkar veya login'e döner)
+            window.history.back();
+        } else {
+            // Hayır derse, tekrar ana sayfayı history'e ekle ve orada kal
+            window.history.pushState({ page: 'anasayfa' }, '', '#anasayfa');
+        }
+        return;
+    }
+    // ----------------------------------------
 
     // 3. SAYFA DEĞİŞİMİ
     if (event.state && event.state.page) {
@@ -227,11 +247,17 @@ function updateUIForLoggedInUser(user) {
         if(el) el.addEventListener('click', openProfileHandler);
     });
     
-    const handleLogout = () => signOut(auth).then(() => window.location.href = 'login.html');
-    ["logoutButton", "btnMobileLogout"].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.addEventListener('click', handleLogout);
-    });
+const handleLogout = () => {
+    // Çıkış onayı sor
+    if (confirm("Çıkış yapmak istediğinize emin misiniz?")) {
+        signOut(auth).then(() => window.location.href = 'login.html');
+    }
+};
+
+["logoutButton", "btnMobileLogout"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('click', handleLogout);
+});
 }
 
 const mobileDrawer = document.getElementById('mobileMenuDrawer');
@@ -541,3 +567,4 @@ if (btnSaveRandevu) {
 }
 
 main();
+

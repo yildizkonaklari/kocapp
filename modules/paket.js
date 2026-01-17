@@ -235,7 +235,7 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
             const waLink = document.getElementById('btnWhatsappLink');
             if(waLink) {
                 const msg = `Merhaba, ${count} öğrenci limiti için ${plan} paket hakkında bilgi almak ve satın alma işlemini gerçekleştirmek istiyorum.`;
-                waLink.href = `https://wa.me/905555555555?text=${encodeURIComponent(msg)}`;
+                waLink.href = `https://wa.me/905064083637?text=${encodeURIComponent(msg)}`;
             }
 
             openModalWithBackHistory('upgradeContactModal');
@@ -284,3 +284,4 @@ function createContactModal() {
     document.getElementById('btnCloseContactModal').onclick = closeModal;
     document.getElementById('btnCloseContactModalX').onclick = closeModal;
 }
+

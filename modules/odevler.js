@@ -61,14 +61,30 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
             </div>
         </div>
 
-        <div id="odevDashboardView" class="animate-fade-in">
-            <h3 class="text-lg font-bold text-gray-800 mb-4 px-1 border-l-4 border-orange-500 pl-3">Onay Bekleyen Ödevler</h3>
-            <div id="odevDashboardStatsContainer" class="space-y-3 pb-20">
-                <div class="text-center text-gray-400 py-12">
-                    <i class="fa-solid fa-spinner fa-spin text-3xl opacity-30"></i>
-                    <p class="mt-2 text-sm">Ödev durumları analiz ediliyor...</p>
+        <div id="odevDashboardView" class="animate-fade-in pb-20">
+            
+            <div class="mb-8">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 px-1 border-l-4 border-orange-500 pl-3">Onay Bekleyen Ödevler</h3>
+                <div id="odevDashboardStatsContainer" class="space-y-3">
+                    <div class="text-center text-gray-400 py-6">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl opacity-30"></i>
+                        <p class="mt-2 text-xs">Yükleniyor...</p>
+                    </div>
                 </div>
             </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-gray-800 mb-1 px-1 border-l-4 border-red-500 pl-3">Tamamlanmayan Ödevler</h3>
+                <p class="text-xs text-gray-500 mb-4 ml-4 italic">(Öğrencinin zamanında tamamlamadığı ödevler)</p>
+                
+                <div id="odevIncompleteStatsContainer" class="space-y-3">
+                    <div class="text-center text-gray-400 py-6">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl opacity-30"></i>
+                        <p class="mt-2 text-xs">Yükleniyor...</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <div id="odevDetailView" class="hidden animate-fade-in w-full">
@@ -81,7 +97,7 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
 
     // Başlangıç Yüklemeleri
     await setupOdevSearchableDropdown(db, currentUserId, appId);
-    loadPendingOdevsDashboard(db, currentUserId, appId);
+    loadAllDashboardStats(db, currentUserId, appId); // İSMİ GÜNCELLENDİ
 
     // Event Listenerlar
     document.getElementById('btnAddNewOdev').addEventListener('click', openAddOdevModal);
@@ -89,7 +105,6 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     document.getElementById('btnPrevWeek').addEventListener('click', () => changeWeek(-1));
     document.getElementById('btnNextWeek').addEventListener('click', () => changeWeek(1));
     
-    // Geri Dön Butonu
     document.getElementById('backToOdevDashboardBtn').addEventListener('click', switchToDashboardView);
 }
 
@@ -97,17 +112,14 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
 
 function switchToDetailView(studentId, studentName) {
     currentStudentId = studentId;
-    currentWeekOffset = 0; // Haftayı sıfırla
+    currentWeekOffset = 0;
 
-    // Görünümleri Ayarla
     document.getElementById('odevDashboardView').classList.add('hidden');
     document.getElementById('odevDetailView').classList.remove('hidden');
     
-    // Üst Bar Ayarları
     document.getElementById('backToOdevDashboardBtn').classList.remove('hidden');
     document.getElementById('weeklyControls').classList.remove('hidden');
     
-    // Dropdown Güncelle
     const label = document.getElementById('odevSelectedStudentText');
     const hiddenInput = document.getElementById('filterOdevStudentId');
     if(label) {
@@ -116,7 +128,6 @@ function switchToDetailView(studentId, studentName) {
     }
     if(hiddenInput) hiddenInput.value = studentId;
 
-    // Takvimi Başlat
     document.getElementById('odevEmptyState').classList.add('hidden');
     document.getElementById('calendarGrid').classList.remove('hidden');
     startOdevListener(currentDb, currentUserIdGlobal, currentAppIdGlobal, studentId);
@@ -125,15 +136,12 @@ function switchToDetailView(studentId, studentName) {
 function switchToDashboardView() {
     currentStudentId = null;
     
-    // Görünümleri Ayarla
     document.getElementById('odevDetailView').classList.add('hidden');
     document.getElementById('odevDashboardView').classList.remove('hidden');
 
-    // Üst Bar Ayarları
     document.getElementById('backToOdevDashboardBtn').classList.add('hidden');
     document.getElementById('weeklyControls').classList.add('hidden');
 
-    // Dropdown Reset
     const label = document.getElementById('odevSelectedStudentText');
     const hiddenInput = document.getElementById('filterOdevStudentId');
     if(label) {
@@ -142,24 +150,24 @@ function switchToDashboardView() {
     }
     if(hiddenInput) hiddenInput.value = "";
 
-    // Listener Temizle
     if (activeListeners.odevlerUnsubscribe) {
         activeListeners.odevlerUnsubscribe();
         activeListeners.odevlerUnsubscribe = null;
     }
 
-    // Dashboard'ı Yenile
-    loadPendingOdevsDashboard(currentDb, currentUserIdGlobal, currentAppIdGlobal);
+    loadAllDashboardStats(currentDb, currentUserIdGlobal, currentAppIdGlobal);
 }
 
-// --- DASHBOARD VERİSİ YÜKLEME ---
-async function loadPendingOdevsDashboard(db, uid, appId) {
-    const container = document.getElementById('odevDashboardStatsContainer');
+// --- DASHBOARD VERİSİ YÜKLEME (İKİ LİSTE BİRDEN) ---
+async function loadAllDashboardStats(db, uid, appId) {
+    const pendingContainer = document.getElementById('odevDashboardStatsContainer');
+    const incompleteContainer = document.getElementById('odevIncompleteStatsContainer');
     
     try {
         const studentsSnap = await getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad")));
         
-        let statsList = [];
+        let pendingList = [];
+        let incompleteList = [];
         const today = new Date();
         today.setHours(0,0,0,0);
         
@@ -167,104 +175,127 @@ async function loadPendingOdevsDashboard(db, uid, appId) {
 
         studentsSnap.forEach(studentDoc => {
             const studentData = studentDoc.data();
-            // Onay bekleyen ve tamamlanmış ödevleri çek
-            const p = getDocs(query(
+            const sName = `${studentData.ad} ${studentData.soyad}`;
+            const sClass = studentData.sinif || 'Belirtilmemiş';
+            
+            // 1. ONAY BEKLEYENLERİ ÇEK
+            const p1 = getDocs(query(
                 collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentDoc.id, "odevler"),
                 where("durum", "==", "tamamlandi"),
                 where("onayDurumu", "==", "bekliyor")
-            )).then(odevSnap => {
-                if (!odevSnap.empty) {
-                    let oldestDate = null;
-                    let maxOverdueDays = 0;
-                    
-                    odevSnap.forEach(o => {
-                        const oData = o.data();
-                        if (oData.bitisTarihi) {
-                            const endDate = new Date(oData.bitisTarihi);
-                            endDate.setHours(0,0,0,0);
-                            
-                            // En eski tarihi bul (Gecikme hesabı için)
-                            if (!oldestDate || endDate < oldestDate) {
-                                oldestDate = endDate;
+            )).then(snap => {
+                if (!snap.empty) {
+                    let maxOverdue = 0;
+                    snap.forEach(d => {
+                        const dd = d.data();
+                        if (dd.bitisTarihi) {
+                            const ed = new Date(dd.bitisTarihi); ed.setHours(0,0,0,0);
+                            if (ed < today) {
+                                const diff = Math.ceil(Math.abs(today - ed) / (86400000));
+                                if (diff > maxOverdue) maxOverdue = diff;
                             }
                         }
                     });
-
-                    // Gecikme hesapla (Bugün - En Eski Tarih)
-                    if (oldestDate && oldestDate < today) {
-                        const diffTime = Math.abs(today - oldestDate);
-                        maxOverdueDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    }
-
-                    statsList.push({
-                        id: studentDoc.id,
-                        name: `${studentData.ad} ${studentData.soyad}`,
-                        sinif: studentData.sinif || 'Belirtilmemiş',
-                        pendingCount: odevSnap.size,
-                        overdueDays: maxOverdueDays
-                    });
+                    pendingList.push({ id: studentDoc.id, name: sName, sinif: sClass, count: snap.size, overdue: maxOverdue });
                 }
             });
-            promises.push(p);
+
+            // 2. TAMAMLANMAYAN (GECİKEN) ÖDEVLERİ ÇEK
+            // Durumu 'devam' olanları çekip, tarihi geçmiş olanları filtreleyeceğiz
+            const p2 = getDocs(query(
+                collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentDoc.id, "odevler"),
+                where("durum", "==", "devam")
+            )).then(snap => {
+                let overdueCount = 0;
+                let maxOverdueDays = 0;
+
+                snap.forEach(d => {
+                    const dd = d.data();
+                    if (dd.bitisTarihi) {
+                        const ed = new Date(dd.bitisTarihi); 
+                        ed.setHours(0,0,0,0);
+                        
+                        // Eğer bitiş tarihi bugünden küçükse (geçmişse)
+                        if (ed < today) {
+                            overdueCount++;
+                            const diff = Math.ceil(Math.abs(today - ed) / (86400000));
+                            if (diff > maxOverdueDays) maxOverdueDays = diff;
+                        }
+                    }
+                });
+
+                if (overdueCount > 0) {
+                    incompleteList.push({ id: studentDoc.id, name: sName, sinif: sClass, count: overdueCount, overdue: maxOverdueDays });
+                }
+            });
+
+            promises.push(p1);
+            promises.push(p2);
         });
 
         await Promise.all(promises);
 
-        // Sıralama: Önce gecikme günü çok olan, sonra onay sayısı çok olan
-        statsList.sort((a, b) => {
-            if (b.overdueDays !== a.overdueDays) return b.overdueDays - a.overdueDays;
-            return b.pendingCount - a.pendingCount;
-        });
-
-        if (statsList.length === 0) {
-            container.innerHTML = `
-                <div class="bg-green-50 border border-green-100 rounded-xl p-8 text-center animate-fade-in">
-                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="fa-solid fa-clipboard-check text-2xl text-green-600"></i>
-                    </div>
-                    <h4 class="font-bold text-gray-800">Her Şey Yolunda!</h4>
-                    <p class="text-sm text-gray-600 mt-1">Onay bekleyen ödev bulunmuyor.</p>
+        // --- RENDER 1: ONAY BEKLEYENLER ---
+        pendingList.sort((a, b) => b.count - a.count); // En çok bekleyen üstte
+        if (pendingList.length === 0) {
+            pendingContainer.innerHTML = `
+                <div class="bg-green-50 border border-green-100 rounded-xl p-6 text-center">
+                    <i class="fa-solid fa-check-circle text-2xl text-green-500 mb-2"></i>
+                    <p class="text-sm text-gray-600">Onay bekleyen ödev yok.</p>
                 </div>`;
-            return;
+        } else {
+            pendingContainer.innerHTML = pendingList.map(item => createStudentCard(item, 'orange')).join('');
         }
 
-        container.innerHTML = statsList.map(item => `
-            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-pointer odev-card-click"
-                 data-id="${item.id}" data-name="${item.name}">
-                
-                <div class="flex items-center gap-4 pointer-events-none">
-                    <div class="w-12 h-12 rounded-full ${item.overdueDays > 0 ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'} flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-sm">
-                        ${item.pendingCount}
-                    </div>
-                    
-                    <div>
-                        <h4 class="font-bold text-gray-800 group-hover:text-purple-700 transition-colors">${item.name}</h4>
-                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                            <span class="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">${item.sinif}</span>
-                            ${item.overdueDays > 0 
-                                ? `<span class="text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded"><i class="fa-solid fa-clock-rotate-left"></i> ${item.overdueDays} gün gecikme</span>` 
-                                : `<span class="text-orange-500 font-bold bg-orange-50 px-2 py-0.5 rounded"><i class="fa-solid fa-hourglass-half"></i> Bekliyor</span>`}
-                        </div>
-                    </div>
-                </div>
+        // --- RENDER 2: TAMAMLANMAYANLAR ---
+        incompleteList.sort((a, b) => b.overdue - a.overdue); // En çok geciken üstte
+        if (incompleteList.length === 0) {
+            incompleteContainer.innerHTML = `
+                <div class="bg-green-50 border border-green-100 rounded-xl p-6 text-center">
+                    <i class="fa-solid fa-star text-2xl text-green-500 mb-2"></i>
+                    <p class="text-sm text-gray-600">Geciken ödev bulunmuyor. Harika!</p>
+                </div>`;
+        } else {
+            incompleteContainer.innerHTML = incompleteList.map(item => createStudentCard(item, 'red')).join('');
+        }
 
-                <div class="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-purple-600 group-hover:text-white transition-all pointer-events-none">
-                    <i class="fa-solid fa-arrow-right text-sm"></i>
-                </div>
-            </div>
-        `).join('');
-
-        // Event Listener Ekle
+        // Tıklama olayları
         document.querySelectorAll('.odev-card-click').forEach(item => {
-            item.addEventListener('click', () => {
-                switchToDetailView(item.getAttribute('data-id'), item.getAttribute('data-name'));
-            });
+            item.addEventListener('click', () => switchToDetailView(item.getAttribute('data-id'), item.getAttribute('data-name')));
         });
 
     } catch (e) {
-        console.error("Dashboard yüklenirken hata:", e);
-        container.innerHTML = `<div class="text-center text-red-400 py-4">Veriler yüklenemedi.</div>`;
+        console.error("Dashboard hatası:", e);
+        pendingContainer.innerHTML = `<div class="text-center text-red-400">Veriler yüklenemedi.</div>`;
     }
+}
+
+// Yardımcı: Kart HTML Oluşturucu
+function createStudentCard(item, color) {
+    const isRed = color === 'red';
+    const bgClass = isRed ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600';
+    const badgeText = isRed ? `${item.overdue} gün gecikme` : `Onay Bekliyor`;
+    const icon = isRed ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-hourglass-half"></i>';
+
+    return `
+    <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-pointer odev-card-click"
+            data-id="${item.id}" data-name="${item.name}">
+        <div class="flex items-center gap-4 pointer-events-none">
+            <div class="w-12 h-12 rounded-full ${bgClass} flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-sm">
+                ${item.count}
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-800 group-hover:text-purple-700 transition-colors">${item.name}</h4>
+                <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                    <span class="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">${item.sinif}</span>
+                    <span class="${isRed ? 'text-red-500 font-bold' : 'text-orange-500 font-medium'}">${icon} ${badgeText}</span>
+                </div>
+            </div>
+        </div>
+        <div class="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-purple-600 group-hover:text-white transition-all pointer-events-none">
+            <i class="fa-solid fa-arrow-right text-sm"></i>
+        </div>
+    </div>`;
 }
 
 // --- MODAL AÇMA ---
@@ -274,7 +305,6 @@ function openAddOdevModal() {
     const modal = document.getElementById('addOdevModal');
     if (!modal) { console.error('addOdevModal bulunamadı.'); return; }
 
-    // Değerleri Sıfırla
     const hiddenInput = document.getElementById('currentStudentIdForOdev');
     if(hiddenInput) hiddenInput.value = currentStudentId;
 
@@ -285,7 +315,6 @@ function openAddOdevModal() {
     document.getElementById('odevAciklama').value = '';
     document.getElementById('odevLink').value = '';
     
-    // Modal içindeki öğrenci seçimini gizle (Zaten seçili geldiğimiz için)
     const studentSelectContainer = document.getElementById('odevStudentSelectContainer');
     if(studentSelectContainer) studentSelectContainer.classList.add('hidden');
 
@@ -462,8 +491,21 @@ function createOdevCard(o) {
                 </div>`;
         }
     } else {
-        statusClass = "border-l-4 border-blue-500 bg-white shadow-sm hover:shadow-md transition-shadow";
-        icon = `<i class="fa-solid fa-spinner text-blue-400"></i>`;
+        // GECİKEN ÖDEV KONTROLÜ (KART ÜZERİNDE GÖRÜNÜM)
+        let isOverdue = false;
+        if(o.bitisTarihi) {
+            const today = new Date().toISOString().split('T')[0];
+            if(o.bitisTarihi < today) isOverdue = true;
+        }
+
+        statusClass = isOverdue 
+            ? "border-l-4 border-red-400 bg-red-50 shadow-sm" 
+            : "border-l-4 border-blue-500 bg-white shadow-sm hover:shadow-md transition-shadow";
+        
+        icon = isOverdue 
+            ? `<i class="fa-solid fa-triangle-exclamation text-red-400" title="Gecikti"></i>` 
+            : `<i class="fa-solid fa-spinner text-blue-400"></i>`;
+
         buttons = `<button onclick="deleteGlobalDoc('${o.path}')" class="text-xs text-gray-300 hover:text-red-500 ml-auto p-1"><i class="fa-solid fa-trash"></i></button>`;
     }
 

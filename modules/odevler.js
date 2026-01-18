@@ -17,30 +17,38 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     currentUserIdGlobal = currentUserId;
     currentAppIdGlobal = appId;
     
-    if (!document.getElementById('weeklyCalendarContainer')) {
-         currentStudentId = null;
-         currentWeekOffset = 0;
-    }
+    // Değişkenleri sıfırla
+    currentStudentId = null;
+    currentWeekOffset = 0;
 
     document.getElementById("mainContentTitle").textContent = "Haftalık Ödev Programı";
     const area = document.getElementById("mainContentArea");
     
     area.innerHTML = `
         <div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-30">
-            <div class="w-full lg:w-1/3 relative">
-                <button id="odevSelectTrigger" class="w-full flex justify-between items-center bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-sm shadow-sm">
-                    <span id="odevSelectedStudentText" class="font-medium">Öğrenci Seçiniz...</span>
-                    <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+            
+            <div class="w-full lg:w-1/3 relative flex items-center gap-3">
+                <button id="backToOdevDashboardBtn" class="hidden h-11 w-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-purple-100 hover:text-purple-600 transition-colors" title="Özete Dön">
+                    <i class="fa-solid fa-arrow-left"></i>
                 </button>
-                <input type="hidden" id="filterOdevStudentId">
-                <div id="odevSelectDropdown" class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 animate-fade-in overflow-hidden">
-                    <div class="p-3 border-b border-gray-100 bg-gray-50">
-                        <div class="relative"><i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i><input type="text" id="odevSelectSearch" placeholder="Öğrenci ara..." class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-purple-500"></div>
+
+                <div class="relative w-full">
+                    <button id="odevSelectTrigger" class="w-full flex justify-between items-center bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-sm shadow-sm group">
+                        <span id="odevSelectedStudentText" class="font-medium truncate">Öğrenci Seçiniz...</span>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs group-hover:text-purple-600"></i>
+                    </button>
+                    <input type="hidden" id="filterOdevStudentId">
+                    
+                    <div id="odevSelectDropdown" class="hidden absolute top-full left-0 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 animate-fade-in overflow-hidden">
+                        <div class="p-3 border-b border-gray-100 bg-gray-50">
+                            <div class="relative"><i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs"></i><input type="text" id="odevSelectSearch" placeholder="Öğrenci ara..." class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-purple-500"></div>
+                        </div>
+                        <div id="odevSelectList" class="max-h-60 overflow-y-auto custom-scrollbar"><div class="p-4 text-center text-gray-400 text-xs">Yükleniyor...</div></div>
                     </div>
-                    <div id="odevSelectList" class="max-h-60 overflow-y-auto custom-scrollbar"><div class="p-4 text-center text-gray-400 text-xs">Yükleniyor...</div></div>
                 </div>
             </div>
-            <div id="weeklyControls" class="hidden flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-center">
+
+            <div id="weeklyControls" class="hidden flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-center animate-fade-in">
                 <div class="flex items-center justify-between bg-gray-100 rounded-xl p-1 w-full sm:w-auto shadow-inner">
                     <button id="btnPrevWeek" class="p-2.5 hover:bg-white rounded-lg text-gray-600 transition-all shadow-sm"><i class="fa-solid fa-chevron-left"></i></button>
                     <span id="weekLabel" class="px-4 text-xs font-bold text-gray-700 min-w-[130px] text-center">...</span>
@@ -52,28 +60,214 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
                 </div>
             </div>
         </div>
-        <div id="weeklyCalendarContainer" class="relative z-10 pb-24 w-full overflow-hidden">
-            <div id="odevEmptyState" class="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-100 border-dashed"><i class="fa-regular fa-calendar-days text-5xl mb-4 opacity-20"></i><p>Programı görüntülemek için lütfen öğrenci seçin.</p></div>
-            <div id="calendarGrid" class="hidden w-full"></div>
+
+        <div id="odevDashboardView" class="animate-fade-in">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 px-1 border-l-4 border-orange-500 pl-3">Onay Bekleyen Ödevler</h3>
+            <div id="odevDashboardStatsContainer" class="space-y-3 pb-20">
+                <div class="text-center text-gray-400 py-12">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl opacity-30"></i>
+                    <p class="mt-2 text-sm">Ödev durumları analiz ediliyor...</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="odevDetailView" class="hidden animate-fade-in w-full">
+            <div id="weeklyCalendarContainer" class="relative z-10 pb-24 w-full overflow-hidden">
+                <div id="odevEmptyState" class="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-2xl border border-gray-100 border-dashed"><i class="fa-regular fa-calendar-days text-5xl mb-4 opacity-20"></i><p>Programı görüntülemek için lütfen öğrenci seçin.</p></div>
+                <div id="calendarGrid" class="hidden w-full"></div>
+            </div>
         </div>
     `;
 
+    // Başlangıç Yüklemeleri
     await setupOdevSearchableDropdown(db, currentUserId, appId);
+    loadPendingOdevsDashboard(db, currentUserId, appId);
 
+    // Event Listenerlar
     document.getElementById('btnAddNewOdev').addEventListener('click', openAddOdevModal);
     document.getElementById('btnApproveAllOdev').addEventListener('click', approvePendingOdevs);
     document.getElementById('btnPrevWeek').addEventListener('click', () => changeWeek(-1));
     document.getElementById('btnNextWeek').addEventListener('click', () => changeWeek(1));
     
-    if (currentStudentId) {
-        document.getElementById('odevEmptyState').classList.add('hidden');
-        document.getElementById('weeklyControls').classList.remove('hidden');
-        document.getElementById('calendarGrid').classList.remove('hidden');
-        startOdevListener(db, currentUserId, appId, currentStudentId);
+    // Geri Dön Butonu
+    document.getElementById('backToOdevDashboardBtn').addEventListener('click', switchToDashboardView);
+}
+
+// --- GÖRÜNÜM DEĞİŞTİRME FONKSİYONLARI ---
+
+function switchToDetailView(studentId, studentName) {
+    currentStudentId = studentId;
+    currentWeekOffset = 0; // Haftayı sıfırla
+
+    // Görünümleri Ayarla
+    document.getElementById('odevDashboardView').classList.add('hidden');
+    document.getElementById('odevDetailView').classList.remove('hidden');
+    
+    // Üst Bar Ayarları
+    document.getElementById('backToOdevDashboardBtn').classList.remove('hidden');
+    document.getElementById('weeklyControls').classList.remove('hidden');
+    
+    // Dropdown Güncelle
+    const label = document.getElementById('odevSelectedStudentText');
+    const hiddenInput = document.getElementById('filterOdevStudentId');
+    if(label) {
+        label.textContent = studentName;
+        label.classList.add('font-bold', 'text-purple-700');
+    }
+    if(hiddenInput) hiddenInput.value = studentId;
+
+    // Takvimi Başlat
+    document.getElementById('odevEmptyState').classList.add('hidden');
+    document.getElementById('calendarGrid').classList.remove('hidden');
+    startOdevListener(currentDb, currentUserIdGlobal, currentAppIdGlobal, studentId);
+}
+
+function switchToDashboardView() {
+    currentStudentId = null;
+    
+    // Görünümleri Ayarla
+    document.getElementById('odevDetailView').classList.add('hidden');
+    document.getElementById('odevDashboardView').classList.remove('hidden');
+
+    // Üst Bar Ayarları
+    document.getElementById('backToOdevDashboardBtn').classList.add('hidden');
+    document.getElementById('weeklyControls').classList.add('hidden');
+
+    // Dropdown Reset
+    const label = document.getElementById('odevSelectedStudentText');
+    const hiddenInput = document.getElementById('filterOdevStudentId');
+    if(label) {
+        label.textContent = "Öğrenci Seçiniz...";
+        label.classList.remove('font-bold', 'text-purple-700');
+    }
+    if(hiddenInput) hiddenInput.value = "";
+
+    // Listener Temizle
+    if (activeListeners.odevlerUnsubscribe) {
+        activeListeners.odevlerUnsubscribe();
+        activeListeners.odevlerUnsubscribe = null;
+    }
+
+    // Dashboard'ı Yenile
+    loadPendingOdevsDashboard(currentDb, currentUserIdGlobal, currentAppIdGlobal);
+}
+
+// --- DASHBOARD VERİSİ YÜKLEME ---
+async function loadPendingOdevsDashboard(db, uid, appId) {
+    const container = document.getElementById('odevDashboardStatsContainer');
+    
+    try {
+        const studentsSnap = await getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad")));
+        
+        let statsList = [];
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        const promises = [];
+
+        studentsSnap.forEach(studentDoc => {
+            const studentData = studentDoc.data();
+            // Onay bekleyen ve tamamlanmış ödevleri çek
+            const p = getDocs(query(
+                collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentDoc.id, "odevler"),
+                where("durum", "==", "tamamlandi"),
+                where("onayDurumu", "==", "bekliyor")
+            )).then(odevSnap => {
+                if (!odevSnap.empty) {
+                    let oldestDate = null;
+                    let maxOverdueDays = 0;
+                    
+                    odevSnap.forEach(o => {
+                        const oData = o.data();
+                        if (oData.bitisTarihi) {
+                            const endDate = new Date(oData.bitisTarihi);
+                            endDate.setHours(0,0,0,0);
+                            
+                            // En eski tarihi bul (Gecikme hesabı için)
+                            if (!oldestDate || endDate < oldestDate) {
+                                oldestDate = endDate;
+                            }
+                        }
+                    });
+
+                    // Gecikme hesapla (Bugün - En Eski Tarih)
+                    if (oldestDate && oldestDate < today) {
+                        const diffTime = Math.abs(today - oldestDate);
+                        maxOverdueDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    }
+
+                    statsList.push({
+                        id: studentDoc.id,
+                        name: `${studentData.ad} ${studentData.soyad}`,
+                        sinif: studentData.sinif || 'Belirtilmemiş',
+                        pendingCount: odevSnap.size,
+                        overdueDays: maxOverdueDays
+                    });
+                }
+            });
+            promises.push(p);
+        });
+
+        await Promise.all(promises);
+
+        // Sıralama: Önce gecikme günü çok olan, sonra onay sayısı çok olan
+        statsList.sort((a, b) => {
+            if (b.overdueDays !== a.overdueDays) return b.overdueDays - a.overdueDays;
+            return b.pendingCount - a.pendingCount;
+        });
+
+        if (statsList.length === 0) {
+            container.innerHTML = `
+                <div class="bg-green-50 border border-green-100 rounded-xl p-8 text-center animate-fade-in">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fa-solid fa-clipboard-check text-2xl text-green-600"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800">Her Şey Yolunda!</h4>
+                    <p class="text-sm text-gray-600 mt-1">Onay bekleyen ödev bulunmuyor.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = statsList.map(item => `
+            <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between group cursor-pointer odev-card-click"
+                 data-id="${item.id}" data-name="${item.name}">
+                
+                <div class="flex items-center gap-4 pointer-events-none">
+                    <div class="w-12 h-12 rounded-full ${item.overdueDays > 0 ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'} flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-sm">
+                        ${item.pendingCount}
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-bold text-gray-800 group-hover:text-purple-700 transition-colors">${item.name}</h4>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                            <span class="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">${item.sinif}</span>
+                            ${item.overdueDays > 0 
+                                ? `<span class="text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded"><i class="fa-solid fa-clock-rotate-left"></i> ${item.overdueDays} gün gecikme</span>` 
+                                : `<span class="text-orange-500 font-bold bg-orange-50 px-2 py-0.5 rounded"><i class="fa-solid fa-hourglass-half"></i> Bekliyor</span>`}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-purple-600 group-hover:text-white transition-all pointer-events-none">
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </div>
+            </div>
+        `).join('');
+
+        // Event Listener Ekle
+        document.querySelectorAll('.odev-card-click').forEach(item => {
+            item.addEventListener('click', () => {
+                switchToDetailView(item.getAttribute('data-id'), item.getAttribute('data-name'));
+            });
+        });
+
+    } catch (e) {
+        console.error("Dashboard yüklenirken hata:", e);
+        container.innerHTML = `<div class="text-center text-red-400 py-4">Veriler yüklenemedi.</div>`;
     }
 }
 
-// --- MODAL AÇMA (YENİ TASARIMA GÖRE) ---
+// --- MODAL AÇMA ---
 function openAddOdevModal() {
     if (!currentStudentId) { alert("Lütfen önce öğrenci seçin."); return; }
 
@@ -84,13 +278,14 @@ function openAddOdevModal() {
     const hiddenInput = document.getElementById('currentStudentIdForOdev');
     if(hiddenInput) hiddenInput.value = currentStudentId;
 
-    document.getElementById('odevTur').value = 'GÜNLÜK'; // Select Box Reset
+    document.getElementById('odevTur').value = 'GÜNLÜK';
     document.getElementById('odevBaslik').value = '';
     document.getElementById('odevBaslangicTarihi').value = new Date().toISOString().split('T')[0];
     document.getElementById('odevBitisTarihi').value = '';
     document.getElementById('odevAciklama').value = '';
     document.getElementById('odevLink').value = '';
     
+    // Modal içindeki öğrenci seçimini gizle (Zaten seçili geldiğimiz için)
     const studentSelectContainer = document.getElementById('odevStudentSelectContainer');
     if(studentSelectContainer) studentSelectContainer.classList.add('hidden');
 
@@ -113,7 +308,7 @@ function openAddOdevModal() {
 export async function saveGlobalOdev() {
     if (!currentDb || !currentUserIdGlobal || !currentStudentId) { alert("Bağlantı hatası."); return; }
 
-    const tur = document.getElementById('odevTur').value; // Select'ten al
+    const tur = document.getElementById('odevTur').value;
     const title = document.getElementById('odevBaslik').value.trim();
     const startDateStr = document.getElementById('odevBaslangicTarihi').value;
     const endDateStr = document.getElementById('odevBitisTarihi').value;
@@ -130,18 +325,16 @@ export async function saveGlobalOdev() {
     const collectionRef = collection(currentDb, "artifacts", currentAppIdGlobal, "users", currentUserIdGlobal, "ogrencilerim", currentStudentId, "odevler");
 
     try {
-        // === GÜNLÜK (TEK SEFERLİK) ===
         if (tur === 'GÜNLÜK') {
             const newDocRef = doc(collectionRef);
             batch.set(newDocRef, {
                 tur: 'GÜNLÜK', title: title, aciklama: desc, link: link,
                 baslangicTarihi: startDateStr, 
-                bitisTarihi: endDateStr, // Kullanıcının seçtiği bitiş tarihi
+                bitisTarihi: endDateStr,
                 durum: 'devam', onayDurumu: 'bekliyor',
                 kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
             });
         } 
-        // === HAFTALIK (PAZAR TESLİMLİ) ===
         else if (tur === 'HAFTALIK') {
             let current = new Date(startDateStr);
             const end = new Date(endDateStr);
@@ -149,8 +342,7 @@ export async function saveGlobalOdev() {
             const MAX_WEEKS = 52; 
 
             while (current <= end && count < MAX_WEEKS) {
-                // getDay() -> 0: Pazar, 1: Ptesi ...
-                if (current.getDay() === 0) { 
+                if (current.getDay() === 0) { // Pazar
                     const deadlineStr = current.toISOString().split('T')[0];
                     const newDocRef = doc(collectionRef);
                     batch.set(newDocRef, {
@@ -158,7 +350,7 @@ export async function saveGlobalOdev() {
                         title: `${title} (Hafta Sonu)`, 
                         aciklama: desc, link: link,
                         baslangicTarihi: startDateStr, 
-                        bitisTarihi: deadlineStr, // O haftanın Pazarı
+                        bitisTarihi: deadlineStr,
                         durum: 'devam', onayDurumu: 'bekliyor',
                         kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
                     });
@@ -167,7 +359,6 @@ export async function saveGlobalOdev() {
                 current.setDate(current.getDate() + 1);
             }
             
-            // Eğer aralıkta hiç Pazar yoksa (Örn: Salı - Perşembe), son günü teslim tarihi yap
             if (count === 0) {
                 const newDocRef = doc(collectionRef);
                 batch.set(newDocRef, {
@@ -175,7 +366,7 @@ export async function saveGlobalOdev() {
                     title: title, 
                     aciklama: desc, link: link,
                     baslangicTarihi: startDateStr, 
-                    bitisTarihi: endDateStr, // Kullanıcının seçtiği son gün
+                    bitisTarihi: endDateStr,
                     durum: 'devam', onayDurumu: 'bekliyor',
                     kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
                 });
@@ -193,7 +384,7 @@ export async function saveGlobalOdev() {
     }
 }
 
-// --- DİĞER FONKSİYONLAR (Takvim vb.) ---
+// --- TAKVİM FONKSİYONLARI ---
 function changeWeek(offset) { currentWeekOffset += offset; renderWeeklyGrid(); }
 
 function renderWeeklyGrid() {
@@ -288,14 +479,7 @@ function createOdevCard(o) {
 }
 
 function startOdevListener(db, uid, appId, studentId) {
-    document.getElementById('weeklyControls').classList.remove('hidden');
-    document.getElementById('weeklyCalendarContainer').classList.remove('hidden');
-    document.getElementById('odevEmptyState').classList.add('hidden');
-    document.getElementById('calendarGrid').classList.remove('hidden');
-
-    const q = query(
-        collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler")
-    );
+    const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler"));
     
     if (activeListeners.odevlerUnsubscribe) activeListeners.odevlerUnsubscribe();
     
@@ -333,13 +517,8 @@ async function setupOdevSearchableDropdown(db, uid, appId) {
             item.className = "px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 cursor-pointer border-b border-gray-50 last:border-0 transition-colors";
             item.textContent = s.name;
             item.onclick = () => {
-                hiddenInput.value = s.id;
-                currentStudentId = s.id; 
-                labelSpan.textContent = s.name;
-                labelSpan.classList.add('font-bold', 'text-purple-700');
-                dropdown.classList.add('hidden'); 
-                
-                startOdevListener(db, uid, appId, s.id);
+                switchToDetailView(s.id, s.name);
+                dropdown.classList.add('hidden');
             };
             listContainer.appendChild(item);
         });

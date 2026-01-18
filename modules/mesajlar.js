@@ -24,7 +24,6 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Mesajlar";
     const mainContentArea = document.getElementById("mainContentArea");
     
-    // HTML İskeleti
     mainContentArea.innerHTML = `
         <div class="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
             
@@ -63,6 +62,10 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
                             <span id="chatHeaderStatus" class="text-xs text-gray-400 block">Sohbet başlatmak için bir öğrenci seçin</span>
                         </div>
                     </div>
+
+                    <button id="btnDeleteChat" class="hidden w-9 h-9 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-all shadow-sm group" title="Sohbeti Temizle">
+                        <i class="fa-regular fa-trash-can text-sm group-hover:scale-110 transition-transform"></i>
+                    </button>
                 </div>
 
                 <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth relative">
@@ -87,7 +90,7 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
     `;
 
     // 2. Fonksiyonları Başlat
-    setupSearchFunctionality(); // Arama Motoru Başlat
+    setupSearchFunctionality();
     startStudentListListener(db, currentUserId, appId);
     setupChatForm(db, currentUserId, appId);
 
@@ -96,7 +99,6 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
     window.globalUserId = currentUserId; 
     window.globalAppId = appId;
 }
-
 // =================================================================
 // 2. ARAMA FONKSİYONU (YENİ EKLENDİ)
 // =================================================================
@@ -305,6 +307,8 @@ function sortStudentList() {
 // =================================================================
 // 5. SOHBET SEÇİMİ VE DETAYLAR
 // =================================================================
+// window.selectChatStudent fonksiyonunu bununla değiştirin:
+
 window.selectChatStudent = function(studentId, studentName, avatarContent) {
     currentChatStudentId = studentId;
 
@@ -331,6 +335,18 @@ window.selectChatStudent = function(studentId, studentName, avatarContent) {
             </div>`;
     }
 
+    // SİLME BUTONUNU AYARLA (YENİ KISIM)
+    const btnDelete = document.getElementById('btnDeleteChat');
+    if (btnDelete) {
+        btnDelete.classList.remove('hidden'); // Butonu göster
+        // Eski event listener'ları temizlemek için butonu klonla
+        const newBtn = btnDelete.cloneNode(true);
+        btnDelete.parentNode.replaceChild(newBtn, btnDelete);
+        
+        // Yeni silme olayını bağla
+        newBtn.onclick = () => deleteChatHistory(window.currentDb, window.globalUserId, window.globalAppId, studentId);
+    }
+
     // Butonları Aktif Et
     document.getElementById('messageInput').disabled = false;
     document.getElementById('sendMessageBtn').disabled = false;
@@ -346,7 +362,6 @@ window.selectChatStudent = function(studentId, studentName, avatarContent) {
         document.getElementById('messageInput').focus();
     }
 };
-
 // =================================================================
 // 6. MESAJLARI YÜKLE
 // =================================================================
@@ -447,4 +462,36 @@ async function markMessagesAsRead(db, currentUserId, appId, studentId) {
     const batch = writeBatch(db);
     snapshot.forEach(doc => batch.update(doc.ref, { okundu: true }));
     if (!snapshot.empty) await batch.commit();
+}
+// Bu fonksiyonu dosyanın sonuna ekleyin
+
+async function deleteChatHistory(db, currentUserId, appId, studentId) {
+    if (!confirm("Bu öğrenciyle olan TÜM mesaj geçmişi kalıcı olarak silinecek. Emin misiniz?")) return;
+
+    const btn = document.getElementById('btnDeleteChat');
+    if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Loading ikonu
+
+    try {
+        // Silinecek mesajları bul
+        const q = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar");
+        const snapshot = await getDocs(q);
+        
+        // Batch işlemi ile toplu sil (Daha hızlı ve güvenli)
+        const batch = writeBatch(db);
+        snapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        
+        // Başarılı olursa (Listener zaten ekranı temizleyecektir ama kullanıcıya bilgi verelim)
+        // İsteğe bağlı: alert("Sohbet temizlendi."); 
+
+    } catch (error) {
+        console.error("Silme hatası:", error);
+        alert("Mesajlar silinirken bir hata oluştu.");
+    } finally {
+        // İkonu geri getir
+        if(btn) btn.innerHTML = '<i class="fa-regular fa-trash-can text-sm group-hover:scale-110 transition-transform"></i>';
+    }
 }

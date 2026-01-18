@@ -20,7 +20,7 @@ import {
     collection, query, where, orderBy, onSnapshot, limit, collectionGroup,
     getCountFromServer // EKLENDİ
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; 
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging.js";
+
 // --- MODÜLLER ---
 import { cleanUpListeners, formatDateTR, renderStudentOptions } from './modules/helpers.js';
 import { renderAnaSayfa } from './modules/anasayfa.js';
@@ -51,37 +51,6 @@ const appId = "kocluk-sistemi";
 
 let currentUserId = null;
 
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging.js";
-
-// ... (Diğer importlar)
-
-const messaging = getMessaging(app);
-
-async function requestNotificationPermission(uid) {
-    try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            console.log('Bildirim izni verildi.');
-            
-            // Token al (VAPID Key'i Firebase Console -> Project Settings -> Cloud Messaging kısmından almalısınız)
-            const token = await getToken(messaging, { 
-                vapidKey: "BURAYA_FIREBASE_CONSOLE_DAN_ALDIGINIZ_KEY_GELECEK" 
-            });
-
-            if (token) {
-                // Bu token'ı kullanıcının profiline kaydetmelisiniz ki ona bildirim atabilelim
-                await updateDoc(doc(db, "artifacts", appId, "users", uid, "settings", "profile"), {
-                    fcmToken: token
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Bildirim izni hatası:', error);
-    }
-}
-
-// Bunu main() içinde kullanıcı giriş yaptıktan sonra çağırın:
-// requestNotificationPermission(user.uid);
 // =================================================================
 // 2. BAŞLATMA & GÜVENLİK
 // =================================================================
@@ -799,3 +768,5 @@ if (btnSaveRandevu) {
 }
 
 main();
+
+

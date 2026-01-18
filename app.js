@@ -426,58 +426,216 @@ document.getElementById('closeProfileModalButton')?.addEventListener('click', ()
 // =================================================================
 // 7. BİLDİRİMLER
 // =================================================================
+// =================================================================
+// 7. BİLDİRİMLER (GÜNCELLENMİŞ VE DÜZELTİLMİŞ HALİ)
+// =================================================================
 function initCoachNotifications(uid) {
     const list = document.getElementById('coachNotificationList');
     const dot = document.getElementById('headerNotificationDot'); 
     const dropdown = document.getElementById('coachNotificationDropdown');
     const btn = document.getElementById('btnHeaderNotifications');
     const closeBtn = document.getElementById('btnCloseCoachNotifications');
-    
-    if(!btn || !dropdown) return;
+    const msgBadge = document.getElementById('headerUnreadMsgCount');
 
-    btn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); if(dot) dot.classList.add('hidden'); };
-    if(closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.add('hidden'); };
-    document.addEventListener('click', (e) => { if(!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.add('hidden'); });
+    // Bildirim Sesi
+    const notificationSound = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
 
-    const today = new Date().toISOString().split('T')[0];
-    onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), where("tarih", ">=", today), orderBy("tarih", "asc"), limit(5)), (snap) => {
-        let html = '';
-        if (snap.empty) {
-            html = '<p class="text-center text-gray-400 text-xs py-8">Yaklaşan seans yok.</p>';
+    // --- 1. MENÜ AÇMA/KAPAMA VE GÖRSEL DÜZELTME ---
+    if(btn && dropdown) {
+        // [ÖNEMLİ DÜZELTME] Dropdown'ı en öne getirmek için z-index ayarı
+        dropdown.style.zIndex = "9999"; 
+        dropdown.style.position = "absolute";
+
+        btn.onclick = (e) => { 
+            e.stopPropagation(); 
+            dropdown.classList.toggle('hidden'); 
+            if(dot) dot.classList.add('hidden'); 
+        };
+        if(closeBtn) closeBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            dropdown.classList.add('hidden'); 
+        };
+        document.addEventListener('click', (e) => { 
+            if(!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.add('hidden'); 
+        });
+    }
+
+    // --- 2. MESAJ ROZETİNE TIKLAYINCA GİT ---
+    if (msgBadge) {
+        const msgBtn = msgBadge.closest('button') || msgBadge.parentElement;
+        if (msgBtn) {
+            msgBtn.style.cursor = 'pointer';
+            msgBtn.onclick = () => window.navigateToPage('mesajlar');
+        }
+    }
+
+    // --- 3. BİLDİRİM VERİLERİNİ TOPLA ---
+    // Tüm bildirimleri tek bir havuzda toplayıp tarih sırasına göre göstereceğiz
+    let notifications = {
+        ajanda: [],
+        odevler: [],
+        hedefler: [],
+        sorular: []
+    };
+
+    const renderNotifications = () => {
+        if (!list) return;
+        
+        // Hepsini birleştir ve zamana göre (yeniden eskiye) sırala
+        const allItems = [
+            ...notifications.ajanda,
+            ...notifications.odevler,
+            ...notifications.hedefler,
+            ...notifications.sorular
+        ].sort((a, b) => b.timestamp - a.timestamp);
+
+        if (allItems.length === 0) {
+            list.innerHTML = '<p class="text-center text-gray-400 text-xs py-8">Yeni bildirim yok.</p>';
             if(dot) dot.classList.add('hidden');
         } else {
             if(dot) dot.classList.remove('hidden');
-            snap.forEach(d => {
-                const data = d.data();
-                html += `
-                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors group" onclick="window.navigateToPage('ajandam')">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-bold text-gray-800 group-hover:text-indigo-600">${data.title || 'Seans'}</p>
-                            <p class="text-xs text-gray-500">${data.ogrenciAd} - ${formatDateTR(data.tarih)} ${data.baslangic}</p>
+            
+            list.innerHTML = allItems.map(item => `
+                <div class="p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors group relative" onclick="window.navigateToPage('${item.page}')">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${item.badgeClass}">${item.type}</span>
+                                <span class="text-[10px] text-gray-400">${item.timeStr}</span>
+                            </div>
+                            <p class="text-xs font-bold text-gray-800 group-hover:text-indigo-600 line-clamp-2">${item.title}</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">${item.desc}</p>
                         </div>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700">Seans</span>
+                        <i class="fa-solid fa-chevron-right text-gray-300 text-xs mt-2"></i>
                     </div>
-                </div>`;
-            });
+                </div>`
+            ).join('');
         }
-        list.innerHTML = html;
+    };
+
+    // Ses Çalma Kontrolü (Sayfa ilk açıldığında ötmesin)
+    let firstLoad = true;
+    const playSound = () => {
+        if (!firstLoad) {
+            notificationSound.play().catch(e => console.log("Ses çalınamadı:", e));
+        }
+    };
+    setTimeout(() => { firstLoad = false; }, 3000);
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // --- A. AJANDA (Sadece Bugün) ---
+    onSnapshot(query(collection(db, "artifacts", appId, "users", uid, "ajandam"), 
+        where("tarih", "==", todayStr), 
+        orderBy("baslangic", "asc")), (snap) => {
+        
+        notifications.ajanda = [];
+        if(!snap.empty && snap.docChanges().some(c => c.type === 'added')) playSound();
+        
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.ajanda.push({
+                type: 'AJANDA', badgeClass: 'bg-blue-100 text-blue-700',
+                title: data.title || 'Seans',
+                desc: `${data.ogrenciAd} ile ${data.baslangic} saatinde`,
+                timeStr: 'Bugün', page: 'ajandam', timestamp: new Date().getTime() 
+            });
+        });
+        renderNotifications();
     });
 
+    // --- B. ONAY BEKLEYEN ÖDEVLER ---
+    onSnapshot(query(collectionGroup(db, 'odevler'), 
+        where('kocId', '==', uid), 
+        where('onayDurumu', '==', 'bekliyor'),
+        where('durum', '==', 'tamamlandi')), (snap) => {
+        
+        notifications.odevler = [];
+        if(!snap.empty && snap.docChanges().some(c => c.type === 'added')) playSound();
+        
+        snap.forEach(d => {
+            const data = d.data();
+            notifications.odevler.push({
+                type: 'ÖDEV ONAY', badgeClass: 'bg-orange-100 text-orange-700',
+                title: data.title,
+                desc: `${formatDateTR(data.bitisTarihi)} tarihli ödev onay bekliyor`,
+                timeStr: 'Bekliyor', page: 'odevler', timestamp: data.eklenmeTarihi?.seconds * 1000 || 0
+            });
+        });
+        renderNotifications();
+    }, (error) => {
+        console.error("ÖDEV BİLDİRİM HATASI (Index eksik olabilir):", error);
+    });
+
+    // --- C. GECİKEN HEDEFLER ---
+    onSnapshot(query(collectionGroup(db, 'hedefler'), 
+        where('kocId', '==', uid), 
+        where('durum', '==', 'devam')), (snap) => {
+        
+        notifications.hedefler = [];
+        let hasOverdue = false;
+        
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.bitisTarihi && data.bitisTarihi < todayStr) {
+                hasOverdue = true;
+                notifications.hedefler.push({
+                    type: 'GECİKEN HEDEF', badgeClass: 'bg-red-100 text-red-700',
+                    title: data.title,
+                    desc: `${formatDateTR(data.bitisTarihi)} tarihli hedef gecikti!`,
+                    timeStr: 'Gecikti', page: 'hedefler', timestamp: data.olusturmaTarihi?.seconds * 1000 || 0
+                });
+            }
+        });
+        if(hasOverdue && !firstLoad) playSound();
+        renderNotifications();
+    }, (error) => {
+        console.error("HEDEF BİLDİRİM HATASI (Index eksik olabilir):", error);
+    });
+
+    // --- D. SORU TAKİBİ (TEK BİLDİRİM MANTIĞI) ---
+    onSnapshot(query(collectionGroup(db, 'soruTakibi'), 
+        where('kocId', '==', uid),
+        where('onayDurumu', '==', 'bekliyor')), (snap) => {
+            
+        notifications.sorular = [];
+        
+        // Eğer bekleyen soru varsa TEK BİR bildirim oluştur
+        if(!snap.empty) {
+            if(snap.docChanges().some(c => c.type === 'added')) playSound();
+            
+            const count = snap.size; // Toplam bekleyen kayıt sayısı
+            
+            notifications.sorular.push({
+                type: 'SORU TAKİBİ',
+                badgeClass: 'bg-purple-100 text-purple-700',
+                title: 'Onay Bekleyen Sorular',
+                desc: `${count} adet soru girişi onayınızı bekliyor.`,
+                timeStr: 'Yeni',
+                page: 'sorutakibi',
+                timestamp: new Date().getTime() // En üste çıksın
+            });
+        }
+        
+        renderNotifications();
+    }, (error) => {
+        console.error("SORU TAKİBİ BİLDİRİM HATASI (Index kontrol edin):", error);
+    });
+
+    // --- E. MESAJ SAYACI ---
     onSnapshot(query(collectionGroup(db, 'mesajlar'), where('kocId', '==', uid), where('gonderen', '==', 'ogrenci'), where('okundu', '==', false)), (snap) => {
         const count = snap.size;
-        const msgBadge = document.getElementById('headerUnreadMsgCount');
         if (msgBadge) {
             if(count > 0) {
                 msgBadge.textContent = count > 9 ? '9+' : count;
                 msgBadge.classList.remove('hidden');
+                if(snap.docChanges().some(c => c.type === 'added')) playSound();
             } else {
                 msgBadge.classList.add('hidden');
             }
         }
     });
 }
-
 // =================================================================
 // 8. İLK ÖĞRENCİ KONTROLÜ (YENİ EKLENDİ)
 // =================================================================

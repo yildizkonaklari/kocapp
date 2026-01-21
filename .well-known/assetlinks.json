@@ -6,3 +6,30 @@
         "sha256_cert_fingerprints": ["28:AD:7D:BA:9F:E8:02:C3:22:98:A8:D1:D9:D5:E3:4D:D7:B5:D8:0C:90:52:0C:99:74:D6:FB:5D:BF:5F:6B:B4"]
       }
     }]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.tyosis.netkoc.twa",
+      "sha256_cert_fingerprints": [
+        "28:AD:7D:BA:9F:E8:02:C3:22:98:A8:D1:D9:D5:E3:4D:D7:B5:D8:0C:90:52:0C:99:74:D6:FB:5D:BF:5F:6B:B4"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.tyosis.netkoc.app",
+      "sha256_cert_fingerprints": [
+        "74:ED:2A:60:9D:3D:E6:34:31:6C:0C:20:E4:42:5D:7A:E5:40:01:F2:20:50:7A:01:5B:8B:95:83:FE:42:6F:C1"
+      ]
+    }
+  }
+]

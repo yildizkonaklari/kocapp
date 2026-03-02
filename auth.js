@@ -27,8 +27,12 @@ onAuthStateChanged(auth, async (user) => {
         // Kullanıcı zaten giriş yapmış, rolüne bak
         try {
             const docSnap = await getDoc(doc(db, "artifacts", appId, "users", user.uid, "settings", "profile"));
-            if (docSnap.exists() && docSnap.data().rol === 'koc') {
-                window.location.href = "coach-dashboard.html";
+            if (docSnap.exists()) {
+                if (docSnap.data().rol === 'koc') {
+                    window.location.href = "coach-dashboard.html";
+                } else if (docSnap.data().rol === 'admin') {
+                    window.location.href = "admin.html";
+                }
             }
         } catch (e) { console.error(e); }
     }
@@ -62,9 +66,13 @@ if (loginButton) {
             const userRef = doc(db, "artifacts", appId, "users", userCredential.user.uid, "settings", "profile");
             const docSnap = await getDoc(userRef);
 
+            let isLoginAdmin = false;
+
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                if (userData.rol !== 'koc') {
+                if (userData.rol === 'admin') {
+                    isLoginAdmin = true;
+                } else if (userData.rol !== 'koc') {
                     throw new Error("NOT_COACH");
                 }
                 await updateDoc(userRef, { sonGirisTarihi: serverTimestamp() });
@@ -81,7 +89,11 @@ if (loginButton) {
             }
 
             // Yönlendirme
-            window.location.href = "coach-dashboard.html";
+            if (isLoginAdmin) {
+                window.location.href = "admin.html";
+            } else {
+                window.location.href = "coach-dashboard.html";
+            }
 
         } catch (error) {
             if (error.message === "NOT_COACH") {

@@ -1,29 +1,29 @@
-import { 
-    collection, query, onSnapshot, updateDoc, deleteDoc, 
-    where, orderBy, getDocs, doc, addDoc, serverTimestamp, writeBatch 
+import {
+    collection, query, onSnapshot, updateDoc, deleteDoc,
+    where, orderBy, getDocs, doc, addDoc, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { activeListeners, formatDateTR, openModalWithBackHistory } from './helpers.js';
 
-let currentDb = null; 
+let currentDb = null;
 let currentUserIdGlobal = null;
 let currentAppIdGlobal = null;
-let currentStudentId = null; 
-let currentWeekOffset = 0; 
-let allFetchedOdevs = []; 
+let currentStudentId = null;
+let currentWeekOffset = 0;
+let allFetchedOdevs = [];
 
 export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     currentDb = db;
     currentUserIdGlobal = currentUserId;
     currentAppIdGlobal = appId;
-    
+
     // Değişkenleri sıfırla
     currentStudentId = null;
     currentWeekOffset = 0;
 
     document.getElementById("mainContentTitle").textContent = "Haftalık Ödev Programı";
     const area = document.getElementById("mainContentArea");
-    
+
     area.innerHTML = `
         <div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-30">
             
@@ -104,7 +104,7 @@ export async function renderOdevlerSayfasi(db, currentUserId, appId) {
     document.getElementById('btnApproveAllOdev').addEventListener('click', approvePendingOdevs);
     document.getElementById('btnPrevWeek').addEventListener('click', () => changeWeek(-1));
     document.getElementById('btnNextWeek').addEventListener('click', () => changeWeek(1));
-    
+
     document.getElementById('backToOdevDashboardBtn').addEventListener('click', switchToDashboardView);
 }
 
@@ -116,17 +116,17 @@ function switchToDetailView(studentId, studentName) {
 
     document.getElementById('odevDashboardView').classList.add('hidden');
     document.getElementById('odevDetailView').classList.remove('hidden');
-    
+
     document.getElementById('backToOdevDashboardBtn').classList.remove('hidden');
     document.getElementById('weeklyControls').classList.remove('hidden');
-    
+
     const label = document.getElementById('odevSelectedStudentText');
     const hiddenInput = document.getElementById('filterOdevStudentId');
-    if(label) {
+    if (label) {
         label.textContent = studentName;
         label.classList.add('font-bold', 'text-purple-700');
     }
-    if(hiddenInput) hiddenInput.value = studentId;
+    if (hiddenInput) hiddenInput.value = studentId;
 
     document.getElementById('odevEmptyState').classList.add('hidden');
     document.getElementById('calendarGrid').classList.remove('hidden');
@@ -135,7 +135,7 @@ function switchToDetailView(studentId, studentName) {
 
 function switchToDashboardView() {
     currentStudentId = null;
-    
+
     document.getElementById('odevDetailView').classList.add('hidden');
     document.getElementById('odevDashboardView').classList.remove('hidden');
 
@@ -144,11 +144,11 @@ function switchToDashboardView() {
 
     const label = document.getElementById('odevSelectedStudentText');
     const hiddenInput = document.getElementById('filterOdevStudentId');
-    if(label) {
+    if (label) {
         label.textContent = "Öğrenci Seçiniz...";
         label.classList.remove('font-bold', 'text-purple-700');
     }
-    if(hiddenInput) hiddenInput.value = "";
+    if (hiddenInput) hiddenInput.value = "";
 
     if (activeListeners.odevlerUnsubscribe) {
         activeListeners.odevlerUnsubscribe();
@@ -162,22 +162,22 @@ function switchToDashboardView() {
 async function loadAllDashboardStats(db, uid, appId) {
     const pendingContainer = document.getElementById('odevDashboardStatsContainer');
     const incompleteContainer = document.getElementById('odevIncompleteStatsContainer');
-    
+
     try {
         const studentsSnap = await getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad")));
-        
+
         let pendingList = [];
         let incompleteList = [];
         const today = new Date();
-        today.setHours(0,0,0,0);
-        
+        today.setHours(0, 0, 0, 0);
+
         const promises = [];
 
         studentsSnap.forEach(studentDoc => {
             const studentData = studentDoc.data();
             const sName = `${studentData.ad} ${studentData.soyad}`;
             const sClass = studentData.sinif || 'Belirtilmemiş';
-            
+
             // 1. ONAY BEKLEYENLERİ ÇEK
             const p1 = getDocs(query(
                 collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentDoc.id, "odevler"),
@@ -189,7 +189,7 @@ async function loadAllDashboardStats(db, uid, appId) {
                     snap.forEach(d => {
                         const dd = d.data();
                         if (dd.bitisTarihi) {
-                            const ed = new Date(dd.bitisTarihi); ed.setHours(0,0,0,0);
+                            const ed = new Date(dd.bitisTarihi); ed.setHours(0, 0, 0, 0);
                             if (ed < today) {
                                 const diff = Math.ceil(Math.abs(today - ed) / (86400000));
                                 if (diff > maxOverdue) maxOverdue = diff;
@@ -212,9 +212,9 @@ async function loadAllDashboardStats(db, uid, appId) {
                 snap.forEach(d => {
                     const dd = d.data();
                     if (dd.bitisTarihi) {
-                        const ed = new Date(dd.bitisTarihi); 
-                        ed.setHours(0,0,0,0);
-                        
+                        const ed = new Date(dd.bitisTarihi);
+                        ed.setHours(0, 0, 0, 0);
+
                         // Eğer bitiş tarihi bugünden küçükse (geçmişse)
                         if (ed < today) {
                             overdueCount++;
@@ -306,7 +306,7 @@ function openAddOdevModal() {
     if (!modal) { console.error('addOdevModal bulunamadı.'); return; }
 
     const hiddenInput = document.getElementById('currentStudentIdForOdev');
-    if(hiddenInput) hiddenInput.value = currentStudentId;
+    if (hiddenInput) hiddenInput.value = currentStudentId;
 
     document.getElementById('odevTur').value = 'GÜNLÜK';
     document.getElementById('odevBaslik').value = '';
@@ -314,23 +314,21 @@ function openAddOdevModal() {
     document.getElementById('odevBitisTarihi').value = '';
     document.getElementById('odevAciklama').value = '';
     document.getElementById('odevLink').value = '';
-    
+
     const studentSelectContainer = document.getElementById('odevStudentSelectContainer');
-    if(studentSelectContainer) studentSelectContainer.classList.add('hidden');
+    if (studentSelectContainer) studentSelectContainer.classList.add('hidden');
 
     openModalWithBackHistory('addOdevModal');
 
-    const btnCloseX = document.getElementById('closeOdevModalButton'); 
-    const btnCancel = document.getElementById('cancelOdevModalButton'); 
+    const btnCloseX = document.getElementById('closeOdevModalButton');
+    const btnCancel = document.getElementById('cancelOdevModalButton');
     const handleClose = (e) => { e.preventDefault(); window.history.back(); };
 
-    if(btnCloseX) btnCloseX.onclick = handleClose;
-    if(btnCancel) btnCancel.onclick = handleClose;
+    if (btnCloseX) btnCloseX.onclick = handleClose;
+    if (btnCancel) btnCancel.onclick = handleClose;
 
     const btnSave = document.getElementById('saveOdevButton');
-    const newBtnSave = btnSave.cloneNode(true);
-    btnSave.parentNode.replaceChild(newBtnSave, btnSave);
-    newBtnSave.onclick = saveGlobalOdev; 
+    btnSave.onclick = saveGlobalOdev;
 }
 
 // --- KAYDETME (PAZAR TESLİMLİ MANTIĞI) ---
@@ -344,7 +342,7 @@ export async function saveGlobalOdev() {
     const desc = document.getElementById('odevAciklama').value;
     const link = document.getElementById('odevLink').value;
 
-    if(!title || !startDateStr || !endDateStr) { alert("Başlık ve tarihler zorunludur."); return; }
+    if (!title || !startDateStr || !endDateStr) { alert("Başlık ve tarihler zorunludur."); return; }
     if (endDateStr < startDateStr) { alert("Bitiş tarihi başlangıçtan önce olamaz."); return; }
 
     const btn = document.getElementById('saveOdevButton');
@@ -358,27 +356,27 @@ export async function saveGlobalOdev() {
             const newDocRef = doc(collectionRef);
             batch.set(newDocRef, {
                 tur: 'GÜNLÜK', title: title, aciklama: desc, link: link,
-                baslangicTarihi: startDateStr, 
+                baslangicTarihi: startDateStr,
                 bitisTarihi: endDateStr,
                 durum: 'devam', onayDurumu: 'bekliyor',
                 kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
             });
-        } 
+        }
         else if (tur === 'HAFTALIK') {
             let current = new Date(startDateStr);
             const end = new Date(endDateStr);
             let count = 0;
-            const MAX_WEEKS = 52; 
+            const MAX_WEEKS = 52;
 
             while (current <= end && count < MAX_WEEKS) {
                 if (current.getDay() === 0) { // Pazar
                     const deadlineStr = current.toISOString().split('T')[0];
                     const newDocRef = doc(collectionRef);
                     batch.set(newDocRef, {
-                        tur: 'HAFTALIK', 
-                        title: `${title} (Hafta Sonu)`, 
+                        tur: 'HAFTALIK',
+                        title: `${title} (Hafta Sonu)`,
                         aciklama: desc, link: link,
-                        baslangicTarihi: startDateStr, 
+                        baslangicTarihi: startDateStr,
                         bitisTarihi: deadlineStr,
                         durum: 'devam', onayDurumu: 'bekliyor',
                         kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
@@ -387,14 +385,14 @@ export async function saveGlobalOdev() {
                 }
                 current.setDate(current.getDate() + 1);
             }
-            
+
             if (count === 0) {
                 const newDocRef = doc(collectionRef);
                 batch.set(newDocRef, {
-                    tur: 'HAFTALIK', 
-                    title: title, 
+                    tur: 'HAFTALIK',
+                    title: title,
                     aciklama: desc, link: link,
-                    baslangicTarihi: startDateStr, 
+                    baslangicTarihi: startDateStr,
                     bitisTarihi: endDateStr,
                     durum: 'devam', onayDurumu: 'bekliyor',
                     kocId: currentUserIdGlobal, eklenmeTarihi: serverTimestamp()
@@ -403,7 +401,7 @@ export async function saveGlobalOdev() {
         }
 
         await batch.commit();
-        window.history.back(); 
+        window.history.back();
 
     } catch (e) {
         console.error(e);
@@ -419,16 +417,16 @@ function changeWeek(offset) { currentWeekOffset += offset; renderWeeklyGrid(); }
 function renderWeeklyGrid() {
     const grid = document.getElementById('calendarGrid');
     const label = document.getElementById('weekLabel');
-    if(!currentStudentId) return;
+    if (!currentStudentId) return;
 
     grid.className = "w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-4";
 
     const today = new Date();
-    const currentDay = today.getDay(); 
+    const currentDay = today.getDay();
     const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1) + (currentWeekOffset * 7);
-    const startOfWeek = new Date(today.setDate(diff)); 
+    const startOfWeek = new Date(today.setDate(diff));
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(endOfWeek.getDate() + 6); 
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
 
     const options = { month: 'short', day: 'numeric' };
     label.textContent = `${startOfWeek.toLocaleDateString('tr-TR', options)} - ${endOfWeek.toLocaleDateString('tr-TR', options)}`;
@@ -445,7 +443,7 @@ function renderWeeklyGrid() {
 
         const dayCol = document.createElement('div');
         dayCol.className = `flex flex-col bg-white rounded-xl border ${isToday ? 'border-purple-300 ring-2 ring-purple-50 shadow-md' : 'border-gray-200'} overflow-hidden min-h-[120px] transition-all w-full`;
-        
+
         let headerHtml = `
             <div class="p-3 flex justify-between items-center border-b ${isToday ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-600'}">
                 <div class="flex items-center gap-2">
@@ -493,17 +491,17 @@ function createOdevCard(o) {
     } else {
         // GECİKEN ÖDEV KONTROLÜ (KART ÜZERİNDE GÖRÜNÜM)
         let isOverdue = false;
-        if(o.bitisTarihi) {
+        if (o.bitisTarihi) {
             const today = new Date().toISOString().split('T')[0];
-            if(o.bitisTarihi < today) isOverdue = true;
+            if (o.bitisTarihi < today) isOverdue = true;
         }
 
-        statusClass = isOverdue 
-            ? "border-l-4 border-red-400 bg-red-50 shadow-sm" 
+        statusClass = isOverdue
+            ? "border-l-4 border-red-400 bg-red-50 shadow-sm"
             : "border-l-4 border-blue-500 bg-white shadow-sm hover:shadow-md transition-shadow";
-        
-        icon = isOverdue 
-            ? `<i class="fa-solid fa-triangle-exclamation text-red-400" title="Gecikti"></i>` 
+
+        icon = isOverdue
+            ? `<i class="fa-solid fa-triangle-exclamation text-red-400" title="Gecikti"></i>`
             : `<i class="fa-solid fa-spinner text-blue-400"></i>`;
 
         buttons = `<button onclick="deleteGlobalDoc('${o.path}')" class="text-xs text-gray-300 hover:text-red-500 ml-auto p-1"><i class="fa-solid fa-trash"></i></button>`;
@@ -522,15 +520,15 @@ function createOdevCard(o) {
 
 function startOdevListener(db, uid, appId, studentId) {
     const q = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "odevler"));
-    
+
     if (activeListeners.odevlerUnsubscribe) activeListeners.odevlerUnsubscribe();
-    
+
     activeListeners.odevlerUnsubscribe = onSnapshot(q, (snap) => {
         allFetchedOdevs = [];
         snap.forEach(doc => {
             allFetchedOdevs.push({ id: doc.id, ...doc.data(), path: doc.ref.path });
         });
-        renderWeeklyGrid(); 
+        renderWeeklyGrid();
     }, (error) => {
         console.error("Hata:", error);
     });
@@ -566,7 +564,7 @@ async function setupOdevSearchableDropdown(db, uid, appId) {
         });
     };
     renderList();
-    triggerBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); if(!dropdown.classList.contains('hidden')) searchInput.focus(); };
+    triggerBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); if (!dropdown.classList.contains('hidden')) searchInput.focus(); };
     searchInput.oninput = (e) => { renderList(e.target.value); };
     document.addEventListener('click', (e) => { if (!triggerBtn.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden'); });
 }
@@ -587,10 +585,10 @@ async function approvePendingOdevs() {
         batch.update(ref, { onayDurumu: 'onaylandi' });
     });
 
-    try { await batch.commit(); } catch (e) { console.error(e); alert("Onay hatası."); } 
+    try { await batch.commit(); } catch (e) { console.error(e); alert("Onay hatası."); }
     finally { btn.disabled = false; btn.innerHTML = orgText; }
 }
 
 window.approveSingleOdev = async (path) => { if (!currentDb) return; await updateDoc(doc(currentDb, path), { onayDurumu: 'onaylandi' }); };
 window.toggleGlobalOdevStatus = async (path, status) => { if (!currentDb) return; await updateDoc(doc(currentDb, path), { durum: 'devam', onayDurumu: 'bekliyor' }); };
-window.deleteGlobalDoc = async (path) => { if (!currentDb) return; if(confirm('Silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path)); };
+window.deleteGlobalDoc = async (path) => { if (!currentDb) return; if (confirm('Silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path)); };

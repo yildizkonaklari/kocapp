@@ -1,13 +1,13 @@
-import { 
-    collection, query, onSnapshot, updateDoc, deleteDoc, 
-    where, orderBy, getDocs, doc, addDoc, serverTimestamp 
+import {
+    collection, query, onSnapshot, updateDoc, deleteDoc,
+    where, orderBy, getDocs, doc, addDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { activeListeners, formatDateTR, openModalWithBackHistory } from './helpers.js';
 
 // Global Değişkenler
-let currentDb = null; 
-let activeUserId = null; 
+let currentDb = null;
+let activeUserId = null;
 let activeAppId = null;
 
 export async function renderHedeflerSayfasi(db, currentUserId, appId) {
@@ -17,7 +17,7 @@ export async function renderHedeflerSayfasi(db, currentUserId, appId) {
 
     document.getElementById("mainContentTitle").textContent = "Hedef Yönetimi";
     const area = document.getElementById("mainContentArea");
-    
+
     area.innerHTML = `
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-20">
             
@@ -73,16 +73,13 @@ export async function renderHedeflerSayfasi(db, currentUserId, appId) {
     await setupSearchableDropdown(db, currentUserId, appId);
     loadIncompleteGoalsDashboard(db, currentUserId, appId);
 
-    // Buton eventlerini bağla
     const btnAdd = document.getElementById('btnAddNewGoal');
-    if(btnAdd) {
-        const newBtn = btnAdd.cloneNode(true);
-        btnAdd.parentNode.replaceChild(newBtn, btnAdd);
-        newBtn.addEventListener('click', openAddModal);
+    if (btnAdd) {
+        btnAdd.onclick = openAddModal;
     }
 
     const btnBack = document.getElementById('backToDashboardBtn');
-    if(btnBack) {
+    if (btnBack) {
         btnBack.onclick = () => {
             switchToDashboardView();
         };
@@ -93,27 +90,27 @@ export async function renderHedeflerSayfasi(db, currentUserId, appId) {
 function switchToDetailView(studentId, studentName) {
     const dashboard = document.getElementById('goalDashboardView');
     const detail = document.getElementById('goalDetailView');
-    
-    if(dashboard) dashboard.classList.add('hidden');
-    if(detail) detail.classList.remove('hidden');
-    
+
+    if (dashboard) dashboard.classList.add('hidden');
+    if (detail) detail.classList.remove('hidden');
+
     // --- GÜNCELLENEN KISIM: DROPDOWN GİZLENMİYOR ---
     // Sadece geri butonu ve ekle butonu açılıyor
     document.getElementById('backToDashboardBtn').classList.remove('hidden');
     document.getElementById('btnAddNewGoal').classList.remove('hidden');
-    
+
     // Seçilen öğrenci ismini kutuya yaz (Dashboard'dan gelindiyse burası kritik)
     const label = document.getElementById('selectedStudentText');
-    if(label) {
+    if (label) {
         label.textContent = studentName;
         label.classList.add('font-bold', 'text-purple-700');
     }
-    
+
     // Hidden input güncelle
     document.getElementById('filterGoalStudentId').value = studentId;
 
     // Listener başlat
-    if(activeUserId && currentDb) {
+    if (activeUserId && currentDb) {
         startGoalListener(currentDb, activeUserId, activeAppId, studentId);
     } else {
         console.error("User ID veya DB bulunamadı");
@@ -123,23 +120,23 @@ function switchToDetailView(studentId, studentName) {
 function switchToDashboardView() {
     const dashboard = document.getElementById('goalDashboardView');
     const detail = document.getElementById('goalDetailView');
-    
-    if(detail) detail.classList.add('hidden');
-    if(dashboard) dashboard.classList.remove('hidden');
-    
+
+    if (detail) detail.classList.add('hidden');
+    if (dashboard) dashboard.classList.remove('hidden');
+
     // Geri ve Ekle butonlarını gizle
     document.getElementById('backToDashboardBtn').classList.add('hidden');
     document.getElementById('btnAddNewGoal').classList.add('hidden');
-    
+
     // --- GÜNCELLENEN KISIM: Dropdown Reset ---
     // Özete dönüldüğü için kutuyu varsayılana çevir
     const label = document.getElementById('selectedStudentText');
-    if(label) {
+    if (label) {
         label.textContent = "Bir öğrenci seçin...";
         label.classList.remove('font-bold', 'text-purple-700');
     }
     document.getElementById('filterGoalStudentId').value = "";
-    
+
     // Listener'ı durdur
     if (activeListeners.hedeflerUnsubscribe) {
         activeListeners.hedeflerUnsubscribe();
@@ -147,7 +144,7 @@ function switchToDashboardView() {
     }
 
     // Dashboard'ı yenile
-    if(activeUserId && currentDb) {
+    if (activeUserId && currentDb) {
         loadIncompleteGoalsDashboard(currentDb, activeUserId, activeAppId);
     }
 }
@@ -155,32 +152,32 @@ function switchToDashboardView() {
 // --- DASHBOARD VERİSİ YÜKLEME ---
 async function loadIncompleteGoalsDashboard(db, uid, appId) {
     const container = document.getElementById('dashboardStatsContainer');
-    
+
     try {
         const studentsSnap = await getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad")));
-        
+
         let statsList = [];
         const today = new Date();
-        today.setHours(0,0,0,0);
-        
+        today.setHours(0, 0, 0, 0);
+
         const promises = [];
 
         studentsSnap.forEach(studentDoc => {
             const studentData = studentDoc.data();
             const p = getDocs(query(
                 collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentDoc.id, "hedefler"),
-                where("durum", "==", "devam") 
+                where("durum", "==", "devam")
             )).then(goalSnap => {
                 if (!goalSnap.empty) {
                     let overdueCount = 0;
                     let maxOverdueDays = 0;
-                    
+
                     goalSnap.forEach(g => {
                         const gData = g.data();
                         if (gData.bitisTarihi) {
                             const endDate = new Date(gData.bitisTarihi);
-                            endDate.setHours(0,0,0,0);
-                            
+                            endDate.setHours(0, 0, 0, 0);
+
                             if (endDate < today) {
                                 overdueCount++;
                                 const diffTime = Math.abs(today - endDate);
@@ -230,9 +227,9 @@ async function loadIncompleteGoalsDashboard(db, uid, appId) {
                         <h4 class="font-bold text-gray-800 group-hover:text-purple-700 transition-colors">${item.name}</h4>
                         <div class="flex items-center gap-2 text-xs text-gray-500">
                             <span class="bg-gray-100 px-2 py-0.5 rounded text-gray-600">${item.sinif}</span>
-                            ${item.overdueDays > 0 
-                                ? `<span class="text-red-500 font-semibold"><i class="fa-solid fa-clock"></i> ${item.overdueDays} gün gecikme</span>` 
-                                : `<span class="text-orange-500"><i class="fa-solid fa-hourglass-half"></i> Devam Ediyor</span>`}
+                            ${item.overdueDays > 0
+                ? `<span class="text-red-500 font-semibold"><i class="fa-solid fa-clock"></i> ${item.overdueDays} gün gecikme</span>`
+                : `<span class="text-orange-500"><i class="fa-solid fa-hourglass-half"></i> Devam Ediyor</span>`}
                         </div>
                     </div>
                 </div>
@@ -289,8 +286,8 @@ async function setupSearchableDropdown(db, uid, appId) {
                 hiddenInput.value = s.id;
                 labelSpan.textContent = s.name;
                 labelSpan.classList.add('font-bold', 'text-purple-700');
-                dropdown.classList.add('hidden'); 
-                
+                dropdown.classList.add('hidden');
+
                 // Seçim yapılınca direkt detay görünümüne geç
                 switchToDetailView(s.id, s.name);
             };
@@ -298,13 +295,13 @@ async function setupSearchableDropdown(db, uid, appId) {
         });
     };
 
-    renderList(); 
+    renderList();
 
     triggerBtn.onclick = (e) => {
         e.stopPropagation();
         dropdown.classList.toggle('hidden');
-        if(!dropdown.classList.contains('hidden')) {
-            searchInput.focus(); 
+        if (!dropdown.classList.contains('hidden')) {
+            searchInput.focus();
         }
     };
 
@@ -327,15 +324,15 @@ function startGoalListener(db, uid, appId, studentId) {
         collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "hedefler"),
         orderBy('bitisTarihi', 'asc')
     );
-    
+
     if (activeListeners.hedeflerUnsubscribe) activeListeners.hedeflerUnsubscribe();
-    
+
     activeListeners.hedeflerUnsubscribe = onSnapshot(q, (snap) => {
         const goals = [];
         snap.forEach(doc => {
             goals.push({ id: doc.id, ...doc.data(), path: doc.ref.path });
         });
-        renderGoals(goals); 
+        renderGoals(goals);
     }, (error) => {
         console.error("Hedefler yüklenirken hata:", error);
         container.innerHTML = `<p class="col-span-full text-center text-red-500 p-8">Veriler yüklenemedi.</p>`;
@@ -344,7 +341,7 @@ function startGoalListener(db, uid, appId, studentId) {
 
 function renderGoals(goals) {
     const container = document.getElementById('goalsListContainer');
-    
+
     if (goals.length === 0) {
         container.innerHTML = `
             <div class="col-span-full text-center text-gray-400 py-12 flex flex-col items-center">
@@ -364,22 +361,22 @@ function renderGoals(goals) {
         if (!a.isPinned && b.isPinned) return 1;
         const timeA = a.olusturmaTarihi?.seconds || new Date(a.bitisTarihi).getTime() / 1000;
         const timeB = b.olusturmaTarihi?.seconds || new Date(b.bitisTarihi).getTime() / 1000;
-        return timeB - timeA; 
+        return timeB - timeA;
     });
 
     container.innerHTML = goals.map(g => {
         const isDone = g.durum === 'tamamlandi';
         const isPinned = g.isPinned === true;
-        
+
         let cardClass = isDone ? 'border-green-100 bg-green-50 opacity-80' : 'border-gray-200 bg-white';
-        if (isPinned && !isDone) cardClass = 'border-yellow-300 bg-yellow-50 shadow-md ring-1 ring-yellow-200'; 
+        if (isPinned && !isDone) cardClass = 'border-yellow-300 bg-yellow-50 shadow-md ring-1 ring-yellow-200';
 
         // Gecikme kontrolü
         let overdueBadge = '';
         if (!isDone && g.bitisTarihi) {
-            const today = new Date(); today.setHours(0,0,0,0);
-            const endDate = new Date(g.bitisTarihi); endDate.setHours(0,0,0,0);
-            if(endDate < today) {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const endDate = new Date(g.bitisTarihi); endDate.setHours(0, 0, 0, 0);
+            if (endDate < today) {
                 const diffTime = Math.abs(today - endDate);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 overdueBadge = `<span class="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold ml-2"><i class="fa-solid fa-clock-rotate-left"></i> ${diffDays} gün geçti</span>`;
@@ -432,15 +429,15 @@ function openAddModal() {
     document.getElementById('hedefAciklama').value = '';
     document.getElementById('hedefBitisTarihi').value = '';
     document.getElementById('currentStudentIdForHedef').value = sid;
-    
+
     openModalWithBackHistory('addHedefModal');
 
     const closeBtn = document.getElementById('closeHedefModalButton');
     const cancelBtn = document.getElementById('cancelHedefModalButton');
     const handleClose = (e) => { e.preventDefault(); window.history.back(); };
 
-    if(closeBtn) closeBtn.onclick = handleClose;
-    if(cancelBtn) cancelBtn.onclick = handleClose;
+    if (closeBtn) closeBtn.onclick = handleClose;
+    if (cancelBtn) cancelBtn.onclick = handleClose;
 }
 
 // --- GLOBAL FONKSİYONLAR ---
@@ -451,7 +448,7 @@ window.toggleGlobalGoalStatus = async (path, current) => {
 
 window.deleteGlobalDoc = async (path) => {
     if (!currentDb) return;
-    if(confirm('Bu hedefi silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path));
+    if (confirm('Bu hedefi silmek istediğinize emin misiniz?')) await deleteDoc(doc(currentDb, path));
 };
 
 window.toggleGoalPin = async (path, currentStatus) => {
@@ -463,13 +460,13 @@ window.toggleGoalPin = async (path, currentStatus) => {
 export async function saveGlobalHedef(db, uid, appId) {
     let sid = document.getElementById('currentStudentIdForHedef').value;
     if (!sid) sid = document.getElementById('filterGoalStudentId').value;
-    
+
     if (!sid) { alert('Öğrenci seçimi hatası.'); return; }
 
     const title = document.getElementById('hedefTitle').value.trim();
     const date = document.getElementById('hedefBitisTarihi').value;
-    
-    if(!title || !date) { alert("Başlık ve Bitiş Tarihi zorunludur."); return; }
+
+    if (!title || !date) { alert("Başlık ve Bitiş Tarihi zorunludur."); return; }
 
     const btn = document.getElementById('saveHedefButton');
     btn.disabled = true;

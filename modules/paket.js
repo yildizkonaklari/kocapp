@@ -1,7 +1,7 @@
 // === MODULES/PAKET.JS ===
-import { 
-    doc, 
-    getDoc 
+import {
+    doc,
+    getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { formatCurrency, openModalWithBackHistory, formatDateTR } from './helpers.js';
 
@@ -22,22 +22,22 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
     try {
         const profileRef = doc(db, "artifacts", appId, "users", currentUserId, "settings", "profile");
         const profileSnap = await getDoc(profileRef);
-        
+
         if (profileSnap.exists()) {
             const data = profileSnap.data();
             currentPackageInfo.name = data.paketAdi || 'Standart';
             currentPackageInfo.limit = data.maxOgrenci || 3;
-            
+
             // Bitiş Tarihi Kontrolü
             if (data.uyelikBitis) {
                 try {
                     // Timestamp veya Date string kontrolü
                     const dateObj = data.uyelikBitis.toDate ? data.uyelikBitis.toDate() : new Date(data.uyelikBitis);
-                    
+
                     // Geçerli bir tarih mi?
                     if (!isNaN(dateObj.getTime())) {
-                        currentPackageInfo.expiry = typeof formatDateTR === 'function' 
-                            ? formatDateTR(dateObj.toISOString().split('T')[0]) 
+                        currentPackageInfo.expiry = typeof formatDateTR === 'function'
+                            ? formatDateTR(dateObj.toISOString().split('T')[0])
                             : dateObj.toLocaleDateString('tr-TR');
                     }
                 } catch (e) {
@@ -54,7 +54,104 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
         console.error("Profil bilgileri alınamadı:", error);
     }
 
-    // 2. Sayfa İçeriği HTML
+    // 2. Platform Kontrolü ve Yönlendirme
+    const isNativeApp = typeof window.AndroidBridge !== 'undefined' || window.location.search.includes('source=app');
+
+    if (isNativeApp) {
+        renderMobilePaywall(area, currentPackageInfo);
+    } else {
+        renderWebPackages(area, currentPackageInfo);
+    }
+}
+
+// ==========================================
+// MOBİL PAYWALL EKRANI (GOOGLE PLAY İÇİN)
+// ==========================================
+function renderMobilePaywall(area, currentPackageInfo) {
+    area.innerHTML = `
+        <div class="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 mb-6 shadow-sm flex flex-col items-center animate-fade-in-up">
+            <h3 class="font-bold text-gray-800 text-lg mb-1">Mevcut Plan: <span class="text-indigo-600">${currentPackageInfo.name}</span></h3>
+            <p class="text-xs text-gray-500">Bitiş: ${currentPackageInfo.expiry} | Limit: ${currentPackageInfo.limit} Öğrenci</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 rounded-3xl p-6 text-white shadow-xl mb-8 relative overflow-hidden animate-fade-in-up">
+            <div class="absolute inset-0 opacity-30" style="background-image: url('data:image/svg+xml,%3Csvg width=\\'20\\' height=\\'20\\' xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Ccircle cx=\\'2\\' cy=\\'2\\' r=\\'1\\' fill=\\'white\\'/%3E%3C/svg%3E');"></div>
+            <div class="relative z-10 text-center">
+                <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/20">
+                    <i class="fa-solid fa-rocket text-3xl text-yellow-400"></i>
+                </div>
+                <h2 class="text-2xl font-black mb-2">PRO'YA GEÇİN</h2>
+                <p class="text-indigo-200 text-sm mb-6">Tüm sınırları kaldırın ve koçluk işinizi bir üst seviyeye taşıyın.</p>
+                
+                <div class="text-left space-y-3 mb-6 bg-black/20 rounded-2xl p-5 backdrop-blur-sm border border-white/10">
+                    <div class="flex items-center text-sm"><i class="fa-solid fa-check text-green-400 mr-3 text-lg"></i> Yapay Zeka Asistanı</div>
+                    <div class="flex items-center text-sm"><i class="fa-solid fa-check text-green-400 mr-3 text-lg"></i> Detaylı Öğrenci Raporları</div>
+                    <div class="flex items-center text-sm"><i class="fa-solid fa-check text-green-400 mr-3 text-lg"></i> Sınırsız Seans Takibi</div>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="text-lg font-bold text-gray-800 mb-4 px-2">Abonelik Seçenekleri</h3>
+
+        <div class="space-y-4 pb-24">
+            <!-- Bireysel 6 Ay -->
+            <div class="bg-white rounded-2xl p-5 border-2 border-gray-200 shadow-sm relative transition-all active:scale-[0.98] cursor-pointer" onclick="startMobilePurchase('bireysel_6ay')">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="bg-gray-100 text-gray-600 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase">Bireysel</span>
+                    <span class="text-indigo-600 font-black text-xl">1.881 ₺</span>
+                </div>
+                <h4 class="font-bold text-gray-900">6 Aylık Abonelik</h4>
+                <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-users text-indigo-400 mr-1"></i> 15 Öğrenci Kapasitesi</p>
+                <div class="mt-4 w-full bg-gray-50 text-indigo-600 font-bold text-center py-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">Seç ve İlerle</div>
+            </div>
+
+            <!-- Bireysel 1 Yıl -->
+            <div class="bg-white rounded-2xl p-5 border-2 border-indigo-500 shadow-md relative transition-all active:scale-[0.98] cursor-pointer" onclick="startMobilePurchase('bireysel_yillik')">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md z-10">%20 İNDİRİM</div>
+                <div class="flex justify-between items-center mb-2 mt-2">
+                    <span class="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase flex items-center gap-1"><i class="fa-solid fa-star text-indigo-400"></i> Popüler</span>
+                    <div class="text-right">
+                        <p class="text-[10px] text-gray-400 line-through mb-0.5">3.960 ₺</p>
+                        <span class="text-indigo-600 font-black text-xl">3.168 ₺</span>
+                    </div>
+                </div>
+                <h4 class="font-bold text-gray-900">Yıllık Abonelik</h4>
+                <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-users text-indigo-400 mr-1"></i> 15 Öğrenci Kapasitesi</p>
+                <div class="mt-4 w-full bg-indigo-600 text-white font-bold text-center py-2.5 rounded-xl shadow-md shadow-indigo-200 hover:bg-indigo-700 transition-colors">Seç ve İlerle</div>
+            </div>
+
+            <!-- Kurumsal 1 Yıl -->
+            <div class="bg-white rounded-2xl p-5 border-2 border-gray-200 shadow-sm relative transition-all active:scale-[0.98] cursor-pointer" onclick="startMobilePurchase('kurumsal_yillik')">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="bg-orange-50 text-orange-600 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase flex items-center gap-1"><i class="fa-solid fa-building"></i> Kurumsal</span>
+                    <span class="text-gray-900 font-black text-xl">9.900 ₺</span>
+                </div>
+                <h4 class="font-bold text-gray-900">Yıllık Profesyonel</h4>
+                <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-users text-orange-400 mr-1"></i> 50 Öğrenci Kapasitesi</p>
+                <div class="mt-4 w-full bg-gray-50 text-gray-700 font-bold text-center py-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">Seç ve İlerle</div>
+            </div>
+        </div>
+        
+        <div class="text-center px-4 mt-4 pb-8">
+            <p class="text-[10px] text-gray-400 leading-relaxed">Ödemeniz Google Play hesabınız üzerinden gerçekleştirilecektir. Aboneliğinizi dilediğiniz zaman Google Play Ayarları üzerinden iptal edebilirsiniz. <br><a href="#" class="underline hover:text-gray-600">Kullanım Koşulları</a> ve <a href="#" class="underline hover:text-gray-600">Gizlilik Politikası</a>.</p>
+        </div>
+    `;
+
+    // Global fonksiyon (Uygulama İçi HTML onclick ile çalışması için window objesine atıyoruz)
+    window.startMobilePurchase = function (packageId) {
+        if (typeof window.AndroidBridge !== 'undefined' && window.AndroidBridge.startPurchase) {
+            window.AndroidBridge.startPurchase(packageId); // Native Android Cihaz Fonksiyonunu Çağırır
+        } else {
+            console.log("SIMULASYON: Google Play ödeme ekranı tetikleniyor... Paket: " + packageId);
+            alert("Google Play Ödeme Sistemi Test Modu \\n\\nSeçilen Paket: " + packageId);
+        }
+    };
+}
+
+// ==========================================
+// WEB ARAYÜZÜ (WHATSAPP SİSTEMİ İLE DEVAM)
+// ==========================================
+function renderWebPackages(area, currentPackageInfo) {
     area.innerHTML = `
         <div class="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 mb-8 shadow-sm flex flex-col md:flex-row justify-between items-center animate-fade-in-up">
             <div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto">
@@ -197,23 +294,23 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
 
         // UI Güncelle
         document.getElementById('priceMonthly').textContent = `${formatCurrency(monthlyTotal)}`;
-        
+
         document.getElementById('priceSixOld').textContent = `${formatCurrency(sixMonthBase)}`;
         document.getElementById('priceSixTotal').textContent = `${formatCurrency(sixMonthDiscounted)}`;
-        
+
         document.getElementById('priceYearOld').textContent = `${formatCurrency(yearBase)}`;
         document.getElementById('priceYearTotal').textContent = `${formatCurrency(yearDiscounted)}`;
     };
 
-    document.getElementById('btnDecStudent').onclick = () => { 
+    document.getElementById('btnDecStudent').onclick = () => {
         let val = parseInt(input.value);
-        if(val > 5) {
+        if (val > 5) {
             input.value = val - 5;
             calculate();
         }
     };
-    
-    document.getElementById('btnIncStudent').onclick = () => { 
+
+    document.getElementById('btnIncStudent').onclick = () => {
         let val = parseInt(input.value);
         input.value = val + 5;
         calculate();
@@ -228,12 +325,12 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
         btn.addEventListener('click', (e) => {
             const plan = e.target.dataset.plan;
             const count = input.value;
-            
+
             const modalTitle = document.getElementById('modalContactPlanTitle');
-            if(modalTitle) modalTitle.textContent = `${plan} Plan - ${count} Öğrenci Limiti`;
-            
+            if (modalTitle) modalTitle.textContent = `${plan} Plan - ${count} Öğrenci Limiti`;
+
             const waLink = document.getElementById('btnWhatsappLink');
-            if(waLink) {
+            if (waLink) {
                 const msg = `Merhaba, ${count} öğrenci limiti için ${plan} paket hakkında bilgi almak ve satın alma işlemini gerçekleştirmek istiyorum.`;
                 waLink.href = `https://wa.me/905064083637?text=${encodeURIComponent(msg)}`;
             }
@@ -244,7 +341,7 @@ export async function renderPaketSayfasi(db, currentUserId, appId) {
 }
 
 function createContactModal() {
-    if(document.getElementById('upgradeContactModal')) return;
+    if (document.getElementById('upgradeContactModal')) return;
 
     const modalHtml = `
     <div id="upgradeContactModal" class="fixed inset-0 bg-gray-900/80 z-[200] hidden items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
@@ -272,7 +369,7 @@ function createContactModal() {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
     const closeModal = () => {
-        if(typeof openModalWithBackHistory === 'function') {
+        if (typeof openModalWithBackHistory === 'function') {
             window.history.back();
         } else {
             const m = document.getElementById('upgradeContactModal');

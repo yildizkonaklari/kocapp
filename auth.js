@@ -2,9 +2,7 @@
 // KOÇ GİRİŞ & KAYIT YÖNETİMİ (auth.js)
 // =================================================================
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-    getAuth,
+import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     updateProfile,
@@ -13,24 +11,10 @@ import {
     browserLocalPersistence,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    getFirestore, doc, setDoc, updateDoc, serverTimestamp, getDoc 
+import {
+    doc, setDoc, updateDoc, serverTimestamp, getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// Firebase Yapılandırması
-const firebaseConfig = {
-  apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
-  authDomain: "kocluk-99ad2.firebaseapp.com",
-  projectId: "kocluk-99ad2",
-  storageBucket: "kocluk-99ad2.firebasestorage.app",
-  messagingSenderId: "784379379600",
-  appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = "kocluk-sistemi";
+import { app, auth, db, appId } from './modules/firebase-config.js';
 
 // DOM Elementleri
 const loginButton = document.getElementById("loginButton");
@@ -43,7 +27,7 @@ onAuthStateChanged(auth, async (user) => {
         // Kullanıcı zaten giriş yapmış, rolüne bak
         try {
             const docSnap = await getDoc(doc(db, "artifacts", appId, "users", user.uid, "settings", "profile"));
-            if(docSnap.exists() && docSnap.data().rol === 'koc') {
+            if (docSnap.exists() && docSnap.data().rol === 'koc') {
                 window.location.href = "coach-dashboard.html";
             }
         } catch (e) { console.error(e); }
@@ -56,31 +40,31 @@ if (loginButton) {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
         const rememberMe = document.getElementById("rememberMe")?.checked;
-        
-        if (!email || !password) { 
-            showError("Lütfen e-posta ve şifrenizi girin."); 
-            return; 
+
+        if (!email || !password) {
+            showError("Lütfen e-posta ve şifrenizi girin.");
+            return;
         }
-        
+
         // Buton Durumu
         const originalText = loginButton.innerHTML;
         loginButton.disabled = true;
         loginButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Giriş Yapılıyor...';
-        
+
         try {
             // Beni Hatırla Ayarı
             await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
 
             // Giriş Yap
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            
+
             // Son Giriş Tarihini Güncelle & Rol Kontrolü
             const userRef = doc(db, "artifacts", appId, "users", userCredential.user.uid, "settings", "profile");
             const docSnap = await getDoc(userRef);
-            
+
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                if(userData.rol !== 'koc') {
+                if (userData.rol !== 'koc') {
                     throw new Error("NOT_COACH");
                 }
                 await updateDoc(userRef, { sonGirisTarihi: serverTimestamp() });
@@ -129,11 +113,11 @@ if (signupButton) {
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user; 
-            
+            const user = userCredential.user;
+
             const defaultDisplayName = email.split('@')[0];
             await updateProfile(user, { displayName: defaultDisplayName });
-            
+
             // Deneme Paketi Tanımlama (15 Gün)
             const today = new Date();
             const next15Days = new Date();
@@ -151,7 +135,7 @@ if (signupButton) {
                 uyelikBitis: formatDate(next15Days),
                 maxOgrenci: 5 // Deneme limiti
             });
-            
+
             window.location.href = "coach-dashboard.html";
 
         } catch (error) {
@@ -167,9 +151,9 @@ function showError(message) {
     if (errorMessage) {
         // Hata kutusu içindeki span'i bul veya direkt textContent yap
         const textSpan = errorMessage.querySelector('span');
-        if(textSpan) textSpan.textContent = message;
+        if (textSpan) textSpan.textContent = message;
         else errorMessage.textContent = message;
-        
+
         errorMessage.classList.remove("hidden");
         // Küçük bir sallanma efekti (css class varsa)
         errorMessage.classList.add('animate-pulse');

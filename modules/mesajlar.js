@@ -1,16 +1,16 @@
-import { 
-    collection, 
-    query, 
-    where, 
-    orderBy, 
-    onSnapshot, 
-    addDoc, 
-    serverTimestamp, 
-    doc, 
-    updateDoc, 
-    getDocs, 
+import {
+    collection,
+    query,
+    where,
+    orderBy,
+    onSnapshot,
+    addDoc,
+    serverTimestamp,
+    doc,
+    updateDoc,
+    getDocs,
     writeBatch,
-    limit 
+    limit
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { activeListeners, formatDateTR } from './helpers.js';
@@ -23,7 +23,7 @@ let currentChatStudentId = null;
 export function renderMesajlarSayfasi(db, currentUserId, appId) {
     document.getElementById("mainContentTitle").textContent = "Mesajlar";
     const mainContentArea = document.getElementById("mainContentArea");
-    
+
     mainContentArea.innerHTML = `
         <div class="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
             
@@ -95,8 +95,8 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
     setupChatForm(db, currentUserId, appId);
 
     // Global Değişkenler
-    window.currentDb = db; 
-    window.globalUserId = currentUserId; 
+    window.currentDb = db;
+    window.globalUserId = currentUserId;
     window.globalAppId = appId;
 }
 // =================================================================
@@ -104,12 +104,12 @@ export function renderMesajlarSayfasi(db, currentUserId, appId) {
 // =================================================================
 function setupSearchFunctionality() {
     const searchInput = document.getElementById('studentSearchInput');
-    
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const filter = e.target.value.toLowerCase();
             const listItems = document.querySelectorAll('#msgStudentList li');
-            
+
             listItems.forEach(item => {
                 // data-search-name attribute'undan ismi alıp kontrol ediyoruz
                 const name = item.getAttribute('data-search-name').toLowerCase();
@@ -130,7 +130,7 @@ function setupSearchFunctionality() {
 // =================================================================
 function startStudentListListener(db, currentUserId, appId) {
     const q = query(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim"), orderBy("ad"));
-    
+
     if (activeListeners.msgStudentList) activeListeners.msgStudentList();
 
     activeListeners.msgStudentList = onSnapshot(q, (snapshot) => {
@@ -168,11 +168,11 @@ function startStudentListListener(db, currentUserId, appId) {
             if (!existingItems[itemId]) {
                 const li = document.createElement('li');
                 li.id = itemId;
-                li.setAttribute('data-search-name', fullName); 
-                li.setAttribute('data-last-msg-time', 0); 
+                li.setAttribute('data-search-name', fullName);
+                li.setAttribute('data-last-msg-time', 0);
                 li.className = "group p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-0 transition-all duration-300 relative flex";
                 li.onclick = () => window.selectChatStudent(doc.id, fullName, avatarContent);
-                
+
                 li.innerHTML = `
                     <div class="flex items-center gap-3 w-full">
                         <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center font-bold border-2 border-white shadow-sm text-xl shrink-0 group-hover:scale-105 transition-transform">
@@ -191,9 +191,9 @@ function startStudentListListener(db, currentUserId, appId) {
                             0
                         </div>
                     </div>`;
-                
+
                 listContainer.appendChild(li);
-                
+
                 // Bu öğrenci için sohbet detaylarını dinlemeye başla
                 setupStudentChatListeners(db, currentUserId, appId, doc.id);
             }
@@ -231,7 +231,7 @@ function setupStudentChatListeners(db, currentUserId, appId, studentId) {
         const count = snapshot.size;
         const badge = document.getElementById(`unread-${studentId}`);
         const listItem = document.getElementById(`student-list-item-${studentId}`);
-        
+
         if (badge && listItem) {
             if (count > 0) {
                 badge.textContent = count > 99 ? '99+' : count;
@@ -255,19 +255,19 @@ function setupStudentChatListeners(db, currentUserId, appId, studentId) {
             const msg = snapshot.docs[0].data();
             const dateObj = msg.tarih ? msg.tarih.toDate() : new Date();
             const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
+
             // DOM Güncelleme (Önizleme ve Tarih)
             const previewEl = listItem.querySelector('.last-msg-preview');
             const dateEl = listItem.querySelector('.last-msg-date');
-            
+
             if (previewEl) {
                 // Mesajı kısalt
                 let text = msg.text.length > 30 ? msg.text.substring(0, 30) + '...' : msg.text;
-                if(msg.gonderen === 'koc') text = `siz: ${text}`;
+                if (msg.gonderen === 'koc') text = `siz: ${text}`;
                 previewEl.textContent = text;
-                
+
                 // Yeni mesaj geldiyse kalın yap
-                if(msg.gonderen === 'ogrenci' && !msg.okundu) {
+                if (msg.gonderen === 'ogrenci' && !msg.okundu) {
                     previewEl.classList.add('font-bold', 'text-gray-800');
                 } else {
                     previewEl.classList.remove('font-bold', 'text-gray-800');
@@ -309,7 +309,7 @@ function sortStudentList() {
 // =================================================================
 // window.selectChatStudent fonksiyonunu bununla değiştirin:
 
-window.selectChatStudent = function(studentId, studentName, avatarContent) {
+window.selectChatStudent = function (studentId, studentName, avatarContent) {
     currentChatStudentId = studentId;
 
     // Mobil Geçiş
@@ -339,12 +339,7 @@ window.selectChatStudent = function(studentId, studentName, avatarContent) {
     const btnDelete = document.getElementById('btnDeleteChat');
     if (btnDelete) {
         btnDelete.classList.remove('hidden'); // Butonu göster
-        // Eski event listener'ları temizlemek için butonu klonla
-        const newBtn = btnDelete.cloneNode(true);
-        btnDelete.parentNode.replaceChild(newBtn, btnDelete);
-        
-        // Yeni silme olayını bağla
-        newBtn.onclick = () => deleteChatHistory(window.currentDb, window.globalUserId, window.globalAppId, studentId);
+        btnDelete.onclick = () => deleteChatHistory(window.currentDb, window.globalUserId, window.globalAppId, studentId);
     }
 
     // Butonları Aktif Et
@@ -353,10 +348,10 @@ window.selectChatStudent = function(studentId, studentName, avatarContent) {
 
     // Mesajları Getir
     loadChatMessages(window.currentDb, window.globalUserId, window.globalAppId, studentId);
-    
+
     // Okundu Yap
     markMessagesAsRead(window.currentDb, window.globalUserId, window.globalAppId, studentId);
-    
+
     // Input Odak
     if (window.innerWidth >= 768) {
         document.getElementById('messageInput').focus();
@@ -418,7 +413,7 @@ function loadChatMessages(db, currentUserId, appId, studentId) {
 // =================================================================
 function setupChatForm(db, currentUserId, appId) {
     const form = document.getElementById('chatForm');
-    
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const input = document.getElementById('messageInput');
@@ -442,11 +437,11 @@ function setupChatForm(db, currentUserId, appId) {
     });
 }
 
-window.backToStudentList = function() {
+window.backToStudentList = function () {
     currentChatStudentId = null;
     const listPanel = document.getElementById('msgStudentListPanel');
     const chatPanel = document.getElementById('msgChatPanel');
-    
+
     listPanel.classList.remove('-translate-x-full', 'absolute');
     chatPanel.classList.add('translate-x-full', 'hidden');
     chatPanel.classList.remove('translate-x-0', 'flex');
@@ -469,21 +464,21 @@ async function deleteChatHistory(db, currentUserId, appId, studentId) {
     if (!confirm("Bu öğrenciyle olan TÜM mesaj geçmişi kalıcı olarak silinecek. Emin misiniz?")) return;
 
     const btn = document.getElementById('btnDeleteChat');
-    if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Loading ikonu
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Loading ikonu
 
     try {
         // Silinecek mesajları bul
         const q = collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", studentId, "mesajlar");
         const snapshot = await getDocs(q);
-        
+
         // Batch işlemi ile toplu sil (Daha hızlı ve güvenli)
         const batch = writeBatch(db);
         snapshot.forEach(doc => {
             batch.delete(doc.ref);
         });
-        
+
         await batch.commit();
-        
+
         // Başarılı olursa (Listener zaten ekranı temizleyecektir ama kullanıcıya bilgi verelim)
         // İsteğe bağlı: alert("Sohbet temizlendi."); 
 
@@ -492,6 +487,6 @@ async function deleteChatHistory(db, currentUserId, appId, studentId) {
         alert("Mesajlar silinirken bir hata oluştu.");
     } finally {
         // İkonu geri getir
-        if(btn) btn.innerHTML = '<i class="fa-regular fa-trash-can text-sm group-hover:scale-110 transition-transform"></i>';
+        if (btn) btn.innerHTML = '<i class="fa-regular fa-trash-can text-sm group-hover:scale-110 transition-transform"></i>';
     }
 }

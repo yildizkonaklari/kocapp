@@ -1,5 +1,5 @@
-import { 
-    collection, query, updateDoc, deleteDoc, 
+import {
+    collection, query, updateDoc, deleteDoc,
     where, orderBy, getDocs, doc, addDoc, serverTimestamp, writeBatch, limit, startAfter, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -15,14 +15,14 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
     currentDb = db;
     currentUserIdGlobal = currentUserId;
     currentAppIdGlobal = appId;
-    
+
     // State temizliği
     currentStudentId = null;
     lastVisibleQuestion = null;
 
     document.getElementById("mainContentTitle").textContent = "Bireysel Soru Takibi";
     const area = document.getElementById("mainContentArea");
-    
+
     // HTML İSKELETİ
     area.innerHTML = `
         <div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-30">
@@ -118,7 +118,7 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
 
     // Dropdown Kurulumu
     await setupSoruSearchableDropdown(db, currentUserId, appId);
-    
+
     // Dashboard Verisi Yükle
     loadPendingSoruDashboard(db, currentUserId, appId);
 
@@ -126,7 +126,7 @@ export async function renderSoruTakibiSayfasi(db, currentUserId, appId) {
     document.getElementById('btnAddNewSoru').addEventListener('click', openAddSoruModal);
     document.getElementById('btnApproveAllSoru').addEventListener('click', approveAllPendingQuestions);
     document.getElementById('backToSoruDashboardBtn').addEventListener('click', switchToDashboardView);
-    
+
     // Load More Listener
     document.getElementById('btnLoadMoreSoru').addEventListener('click', () => {
         fetchQuestions(true);
@@ -142,19 +142,19 @@ function switchToDetailView(studentId, studentName) {
     // Görünümleri Ayarla
     document.getElementById('soruDashboardView').classList.add('hidden');
     document.getElementById('soruDetailView').classList.remove('hidden');
-    
+
     // Üst Bar Ayarları
     document.getElementById('backToSoruDashboardBtn').classList.remove('hidden');
     document.getElementById('soruActionButtons').classList.remove('hidden');
-    
+
     // Dropdown Güncelle
     const label = document.getElementById('soruSelectedStudentText');
     const hiddenInput = document.getElementById('filterSoruStudentId');
-    if(label) {
+    if (label) {
         label.textContent = studentName;
         label.classList.add('font-bold', 'text-purple-700');
     }
-    if(hiddenInput) hiddenInput.value = studentId;
+    if (hiddenInput) hiddenInput.value = studentId;
 
     // Verileri Yükle
     document.getElementById('soruListContent').innerHTML = '';
@@ -165,7 +165,7 @@ function switchToDetailView(studentId, studentName) {
 function switchToDashboardView() {
     currentStudentId = null;
     lastVisibleQuestion = null;
-    
+
     // Görünümleri Ayarla
     document.getElementById('soruDetailView').classList.add('hidden');
     document.getElementById('soruDashboardView').classList.remove('hidden');
@@ -177,11 +177,11 @@ function switchToDashboardView() {
     // Dropdown Reset
     const label = document.getElementById('soruSelectedStudentText');
     const hiddenInput = document.getElementById('filterSoruStudentId');
-    if(label) {
+    if (label) {
         label.textContent = "Öğrenci Seçiniz...";
         label.classList.remove('font-bold', 'text-purple-700');
     }
-    if(hiddenInput) hiddenInput.value = "";
+    if (hiddenInput) hiddenInput.value = "";
 
     // Dashboard'ı Yenile
     loadPendingSoruDashboard(currentDb, currentUserIdGlobal, currentAppIdGlobal);
@@ -190,10 +190,10 @@ function switchToDashboardView() {
 // --- DASHBOARD VERİSİ YÜKLEME ---
 async function loadPendingSoruDashboard(db, uid, appId) {
     const container = document.getElementById('soruDashboardStatsContainer');
-    
+
     try {
         const studentsSnap = await getDocs(query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim"), orderBy("ad")));
-        
+
         let statsList = [];
         const promises = [];
 
@@ -201,7 +201,7 @@ async function loadPendingSoruDashboard(db, uid, appId) {
             const studentData = studentDoc.data();
             const sName = `${studentData.ad} ${studentData.soyad}`;
             const sClass = studentData.sinif || 'Belirtilmemiş';
-            
+
             // Onay bekleyenleri çek
             const p = getDocs(query(
                 collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentDoc.id, "soruTakibi"),
@@ -212,11 +212,11 @@ async function loadPendingSoruDashboard(db, uid, appId) {
                     snap.forEach(d => {
                         totalQuestions += parseInt(d.data().adet) || 0;
                     });
-                    
-                    statsList.push({ 
-                        id: studentDoc.id, 
-                        name: sName, 
-                        sinif: sClass, 
+
+                    statsList.push({
+                        id: studentDoc.id,
+                        name: sName,
+                        sinif: sClass,
                         pendingCount: snap.size, // Bekleyen Kayıt Sayısı
                         totalPendingQuestions: totalQuestions // Bekleyen Toplam Soru Adedi
                     });
@@ -298,7 +298,7 @@ async function setupSoruSearchableDropdown(db, uid, appId) {
         listContainer.innerHTML = "";
         const filtered = students.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
         if (filtered.length === 0) { listContainer.innerHTML = `<div class="p-3 text-center text-gray-400 text-xs">Sonuç bulunamadı.</div>`; return; }
-        
+
         filtered.forEach(s => {
             const item = document.createElement('div');
             item.className = "px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 cursor-pointer border-b border-gray-50 last:border-0 transition-colors";
@@ -310,10 +310,10 @@ async function setupSoruSearchableDropdown(db, uid, appId) {
             listContainer.appendChild(item);
         });
     };
-    
+
     renderList();
-    
-    triggerBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); if(!dropdown.classList.contains('hidden')) searchInput.focus(); };
+
+    triggerBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden'); if (!dropdown.classList.contains('hidden')) searchInput.focus(); };
     searchInput.oninput = (e) => { renderList(e.target.value); };
     document.addEventListener('click', (e) => { if (!triggerBtn.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden'); });
 }
@@ -379,11 +379,11 @@ async function fetchQuestions(isLoadMore = false) {
 function renderSingleQuestionCard(docSnapshot) {
     const container = document.getElementById('soruListContent');
     const q = { id: docSnapshot.id, ...docSnapshot.data(), path: docSnapshot.ref.path };
-    
+
     const isApproved = q.onayDurumu === 'onaylandi';
-    
+
     // Durum Rozeti
-    const statusBadge = isApproved 
+    const statusBadge = isApproved
         ? `<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded border border-green-200">Onaylı</span>`
         : `<span class="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded border border-orange-200">Onay Bekliyor</span>`;
 
@@ -443,31 +443,31 @@ function renderSingleQuestionCard(docSnapshot) {
     const btnDelete = cardElement.querySelector('.btn-soru-delete');
     const btnToggle = cardElement.querySelector('.btn-soru-toggle');
 
-    if(btnApprove) btnApprove.onclick = () => updateSoruStatus(q.path, 'onaylandi', cardElement);
-    if(btnDelete) btnDelete.onclick = () => deleteSoruDoc(q.path, cardElement);
-    if(btnToggle) btnToggle.onclick = () => updateSoruStatus(q.path, 'bekliyor', cardElement);
+    if (btnApprove) btnApprove.onclick = () => updateSoruStatus(q.path, 'onaylandi', cardElement);
+    if (btnDelete) btnDelete.onclick = () => deleteSoruDoc(q.path, cardElement);
+    if (btnToggle) btnToggle.onclick = () => updateSoruStatus(q.path, 'bekliyor', cardElement);
 }
 
 // --- İSTATİSTİK HESAPLAMA ---
 async function calculateSoruStats(db, uid, appId, sid) {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    
+
     // Bu haftanın başı (Pazartesi)
-    const day = now.getDay() || 7; 
+    const day = now.getDay() || 7;
     const thisWeekStart = new Date(now);
-    thisWeekStart.setHours(0,0,0,0);
+    thisWeekStart.setHours(0, 0, 0, 0);
     thisWeekStart.setDate(now.getDate() - day + 1);
     const weekStartStr = thisWeekStart.toISOString().split('T')[0];
 
     // Bekleyen Sayısı
     const qPending = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("onayDurumu", "==", "bekliyor"));
-    const snapPending = await getCountFromServer(qPending); 
-    
+    const snapPending = await getCountFromServer(qPending);
+
     // Bu Hafta Toplamı
     const qWeek = query(collection(db, "artifacts", appId, "users", uid, "ogrencilerim", sid, "soruTakibi"), where("tarih", ">=", weekStartStr));
     const snapWeek = await getDocs(qWeek);
-    
+
     let weekTotal = 0;
     let todayTotal = 0;
 
@@ -490,13 +490,13 @@ async function updateSoruStatus(path, status, cardElement) {
         cardElement.style.opacity = '0.5';
         setTimeout(() => {
             cardElement.innerHTML = `<div class="p-4 text-center text-green-600 font-bold bg-green-50 rounded-xl">İşlem Başarılı!</div>`;
-            setTimeout(() => cardElement.remove(), 500); 
+            setTimeout(() => cardElement.remove(), 500);
         }, 300);
     } catch (e) { console.error(e); alert("İşlem başarısız."); }
 }
 
 async function deleteSoruDoc(path, cardElement) {
-    if(!confirm("Silmek istediğinize emin misiniz?")) return;
+    if (!confirm("Silmek istediğinize emin misiniz?")) return;
     try {
         await deleteDoc(doc(currentDb, path));
         cardElement.style.transform = 'scale(0.9)';
@@ -508,7 +508,7 @@ async function deleteSoruDoc(path, cardElement) {
 function openAddSoruModal() {
     if (!currentStudentId) return;
     const modal = document.getElementById('addSoruModal');
-    if(!modal) return;
+    if (!modal) return;
 
     // Inputları temizle ve hazırla
     document.getElementById('soruStudentSelectContainer')?.classList.add('hidden');
@@ -525,9 +525,7 @@ function openAddSoruModal() {
 
     // Kaydet Butonu
     const saveBtn = document.getElementById('saveSoruButton');
-    const newSaveBtn = saveBtn.cloneNode(true);
-    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-    newSaveBtn.onclick = () => saveGlobalSoru(currentDb, currentUserIdGlobal, currentAppIdGlobal);
+    saveBtn.onclick = () => saveGlobalSoru(currentDb, currentUserIdGlobal, currentAppIdGlobal);
 }
 
 export async function saveGlobalSoru(db, currentUserId, appId) {
@@ -545,19 +543,19 @@ export async function saveGlobalSoru(db, currentUserId, appId) {
 
     try {
         await addDoc(collection(db, "artifacts", appId, "users", currentUserId, "ogrencilerim", sid, "soruTakibi"), {
-            tarih, ders, konu, adet, 
+            tarih, ders, konu, adet,
             onayDurumu: 'onaylandi',
             eklenmeTarihi: serverTimestamp(),
             kocId: currentUserId
         });
         window.history.back();
-    } catch (e) { console.error(e); alert("Hata oluştu."); } 
+    } catch (e) { console.error(e); alert("Hata oluştu."); }
     finally { btn.disabled = false; btn.textContent = "Kaydet"; }
 }
 
 async function approveAllPendingQuestions() {
     if (!currentStudentId) return;
-    
+
     const q = query(collection(currentDb, "artifacts", currentAppIdGlobal, "users", currentUserIdGlobal, "ogrencilerim", currentStudentId, "soruTakibi"), where("onayDurumu", "==", "bekliyor"));
     const snapshot = await getDocs(q);
 
@@ -575,12 +573,12 @@ async function approveAllPendingQuestions() {
             batch.update(doc.ref, { onayDurumu: 'onaylandi' });
         });
         await batch.commit();
-        
+
         document.getElementById('soruListContent').innerHTML = '';
         lastVisibleQuestion = null;
         fetchQuestions(false);
         calculateSoruStats(currentDb, currentUserIdGlobal, currentAppIdGlobal, currentStudentId);
 
-    } catch (e) { console.error(e); alert("Hata oluştu."); } 
+    } catch (e) { console.error(e); alert("Hata oluştu."); }
     finally { btn.disabled = false; btn.innerHTML = originalText; }
 }

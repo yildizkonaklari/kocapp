@@ -1,36 +1,20 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    query, 
-    where, 
-    getDocs, 
-    doc, 
-    updateDoc, 
-    collectionGroup, 
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import {
+    collection,
+    query,
+    where,
+    getDocs,
+    doc,
+    getDoc,
+    updateDoc,
+    collectionGroup,
     getCountFromServer,
     onSnapshot,
     orderBy,
-    limit 
+    limit
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD1pCaPISV86eoBNqN2qbDu5hbkx3Z4u2U",
-  authDomain: "kocluk-99ad2.firebaseapp.com",
-  projectId: "kocluk-99ad2",
-  storageBucket: "kocluk-99ad2.firebasestorage.app",
-  messagingSenderId: "784379379600",
-  appId: "1:784379379600:web:a2cbe572454c92d7c4bd15"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = "kocluk-sistemi";
-
-// --- ADMIN AYARLARI ---
-const ADMIN_EMAIL = "koc99@gmail.com"; 
+import { app, auth, db, appId } from './modules/firebase-config.js';
 
 // Dinleyicileri tutacak değişkenler (Sayfadan çıkılırsa kapatmak için)
 let listeners = {
@@ -39,25 +23,33 @@ let listeners = {
 };
 
 // --- 1. GİRİŞ VE YETKİ KONTROLÜ ---
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         // İstemci Tarafı Yetki Kontrolü
-        // ÖNEMLİ: Firestore Security Rules tarafında da bu e-postayı kilitlemelisiniz.
-        if (user.email !== ADMIN_EMAIL) {
-            alert("Bu sayfaya erişim yetkiniz yok! Ana sayfaya yönlendiriliyorsunuz.");
+        try {
+            const userProfileRef = doc(db, "artifacts", appId, "users", user.uid, "settings", "profile");
+            const userProfileSnap = await getDoc(userProfileRef);
+
+            if (!userProfileSnap.exists() || userProfileSnap.data().rol !== 'admin') {
+                alert("Bu sayfaya erişim yetkiniz yok! Ana sayfaya yönlendiriliyorsunuz.");
+                window.location.href = "index.html";
+                return;
+            }
+        } catch (error) {
+            console.error("Yetki kontrolü hatası:", error);
             window.location.href = "index.html";
             return;
         }
-        
+
         console.log("Admin oturumu açıldı:", user.email);
-        
+
         // Verileri Yükle
         listenToDemoRequests();
         loadCoaches();
-        
+
         // Çıkış Butonu Varsa Bağla
         const logoutBtn = document.getElementById('adminLogoutBtn');
-        if(logoutBtn) logoutBtn.onclick = () => signOut(auth).then(() => window.location.href='login.html');
+        if (logoutBtn) logoutBtn.onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
 
     } else {
         // Oturum yoksa login'e at
@@ -73,10 +65,10 @@ function listenToDemoRequests() {
     // Son 50 talebi getir (Performans için limit)
     // Not: 'createdAt' alanına göre sıralama için Firestore'da index oluşturmanız gerekebilir.
     // Konsolda hata alırsanız çıkan linke tıklayarak index oluşturun.
-    const requestsRef = collection(db, 'demoRequests'); 
+    const requestsRef = collection(db, 'demoRequests');
     const q = query(requestsRef, orderBy('createdAt', 'desc'), limit(50));
-    
-    if(listeners.demoRequests) listeners.demoRequests(); // Varsa eskiyi kapat
+
+    if (listeners.demoRequests) listeners.demoRequests(); // Varsa eskiyi kapat
 
     listeners.demoRequests = onSnapshot(q, (snapshot) => {
         if (snapshot.empty) {
@@ -87,7 +79,7 @@ function listenToDemoRequests() {
                         Henüz talep yok.
                     </td>
                 </tr>`;
-            if(requestCountBadge) requestCountBadge.textContent = "0";
+            if (requestCountBadge) requestCountBadge.textContent = "0";
             return;
         }
 
@@ -98,15 +90,15 @@ function listenToDemoRequests() {
 
         // Tabloyu Temizle ve Doldur
         demoTableBody.innerHTML = '';
-        
+
         requests.forEach(req => {
-            const date = req.createdAt ? new Date(req.createdAt.seconds * 1000).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' }) : '-';
-            
+            const date = req.createdAt ? new Date(req.createdAt.seconds * 1000).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '-';
+
             let roleClass = "bg-gray-100 text-gray-800";
-            if(req.role && req.role.includes("Koç")) roleClass = "bg-purple-100 text-purple-800";
-            else if(req.role && req.role.includes("Kurum")) roleClass = "bg-blue-100 text-blue-800";
-            else if(req.role && req.role.includes("Okul")) roleClass = "bg-orange-100 text-orange-800";
-            else if(req.role && req.role.includes("Aile")) roleClass = "bg-green-100 text-green-800";
+            if (req.role && req.role.includes("Koç")) roleClass = "bg-purple-100 text-purple-800";
+            else if (req.role && req.role.includes("Kurum")) roleClass = "bg-blue-100 text-blue-800";
+            else if (req.role && req.role.includes("Okul")) roleClass = "bg-orange-100 text-orange-800";
+            else if (req.role && req.role.includes("Aile")) roleClass = "bg-green-100 text-green-800";
 
             const row = `
                 <tr class="hover:bg-indigo-50 transition-colors border-b last:border-b-0">
@@ -132,7 +124,7 @@ function listenToDemoRequests() {
             demoTableBody.innerHTML += row;
         });
 
-        if(requestCountBadge) {
+        if (requestCountBadge) {
             requestCountBadge.textContent = `${requests.length} (Son 50)`;
             requestCountBadge.className = "bg-indigo-600 text-white py-1 px-3 rounded-full text-xs font-semibold shadow-sm";
         }
@@ -146,15 +138,15 @@ function listenToDemoRequests() {
 // --- 3. KOÇLARI YÜKLEME ---
 async function loadCoaches() {
     const tableBody = document.getElementById('coachTableBody');
-    if(!tableBody) return;
-    
+    if (!tableBody) return;
+
     tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500"><i class="fa-solid fa-spinner fa-spin"></i> Yükleniyor...</td></tr>';
 
     try {
         // Tüm ayarları değil, sadece koç profillerini çek
         const profilesQuery = query(collectionGroup(db, 'settings'), where('rol', '==', 'koc'), limit(20));
         const querySnapshot = await getDocs(profilesQuery);
-        
+
         if (querySnapshot.empty) {
             tableBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Kayıtlı koç bulunamadı.</td></tr>';
             return;
@@ -166,8 +158,8 @@ async function loadCoaches() {
 
             const data = profileDoc.data();
             // Parent'ın Parent'ı User ID'sidir: users/{uid}/settings/profile
-            const coachUid = profileDoc.ref.parent.parent.id; 
-            
+            const coachUid = profileDoc.ref.parent.parent.id;
+
             let studentCount = 0;
             try {
                 // Alt koleksiyon sayımı (Count sorgusu hafiftir)
@@ -185,7 +177,7 @@ async function loadCoaches() {
 
             const regDate = formatDate(data.kayitTarihi);
             const loginDate = formatDate(data.sonGirisTarihi);
-            
+
             const startDateVal = data.uyelikBaslangic || "";
             const endDateVal = data.uyelikBitis || "";
             const maxStudentVal = data.maxOgrenci || 1;
@@ -254,16 +246,16 @@ window.saveCoach = async (uid) => {
 
     try {
         const ref = doc(db, "artifacts", appId, "users", uid, "settings", "profile");
-        await updateDoc(ref, { 
-            uyelikBaslangic: start, 
-            uyelikBitis: end, 
-            maxOgrenci: max, 
-            paketAdi: paket 
+        await updateDoc(ref, {
+            uyelikBaslangic: start,
+            uyelikBitis: end,
+            maxOgrenci: max,
+            paketAdi: paket
         });
         alert("Bilgiler başarıyla güncellendi!");
         // Tabloyu tamamen yenilemek yerine sadece ilgili satırı güncellemek daha iyi olabilir ama
         // şimdilik basitlik adına yeniden yüklüyoruz.
-        loadCoaches(); 
+        loadCoaches();
     } catch (error) {
         console.error("Güncelleme hatası:", error);
         alert("Hata: " + error.message);

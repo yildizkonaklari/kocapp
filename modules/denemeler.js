@@ -1,21 +1,21 @@
-import { 
+import {
     collection, query, onSnapshot, updateDoc, deleteDoc, getDoc,
-    where, orderBy, getDocs, doc, addDoc, serverTimestamp, startAfter, limit 
+    where, orderBy, getDocs, doc, addDoc, serverTimestamp, startAfter, limit
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { 
-    activeListeners, 
-    formatDateTR, 
+import {
+    activeListeners,
+    formatDateTR,
     openModalWithBackHistory,
     EXAM_CONFIG,       // Merkezi Config'den alıyoruz
     CLASS_LEVEL_RULES  // Merkezi Kurallardan alıyoruz
 } from './helpers.js';
 
 let currentStudentId = null;
-let currentStudentClass = null; 
+let currentStudentClass = null;
 let denemeChartInstance = null;
 let currentDb = null;
-let globalUserId = null; 
+let globalUserId = null;
 let globalAppId = null;
 let lastVisibleDeneme = null; // Sayfalama için son dökümanı tutar
 const DENEME_PAGE_SIZE = 20;  // Sayfa başı kayıt sayısı
@@ -29,7 +29,7 @@ export async function renderDenemelerSayfasi(db, currentUserId, appId) {
 
     document.getElementById("mainContentTitle").textContent = "Deneme Yönetimi";
     const area = document.getElementById("mainContentArea");
-    
+
     area.innerHTML = `
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-20">
             
@@ -130,15 +130,15 @@ async function setupDenemeSearchableDropdown(db, uid, appId) {
                 hiddenInput.value = s.id;
                 currentStudentId = s.id;
                 currentStudentClass = s.sinif;
-                
+
                 labelSpan.textContent = s.name;
                 labelSpan.classList.add('font-bold', 'text-purple-700');
-                dropdown.classList.add('hidden'); 
-                
+                dropdown.classList.add('hidden');
+
                 document.getElementById('btnAddNewDeneme').classList.remove('hidden');
                 document.getElementById('denemeStatsArea').classList.remove('hidden');
                 document.getElementById('denemeChartContainer').classList.remove('hidden');
-                
+
                 startDenemeListener(db, uid, appId, s.id);
             };
             listContainer.appendChild(item);
@@ -150,8 +150,8 @@ async function setupDenemeSearchableDropdown(db, uid, appId) {
     triggerBtn.onclick = (e) => {
         e.stopPropagation();
         dropdown.classList.toggle('hidden');
-        if(!dropdown.classList.contains('hidden')) {
-            searchInput.focus(); 
+        if (!dropdown.classList.contains('hidden')) {
+            searchInput.focus();
         }
     };
 
@@ -170,9 +170,9 @@ async function setupDenemeSearchableDropdown(db, uid, appId) {
 async function startDenemeListener(db, uid, appId, studentId) {
     // 1. Listeyi ve State'i Sıfırla
     const container = document.getElementById('denemeListContainer');
-    container.innerHTML = ''; 
+    container.innerHTML = '';
     lastVisibleDeneme = null;
-    
+
     // 2. Yükle Butonu Alanını Oluştur
     let loadMoreDiv = document.getElementById('denemeLoadMoreContainer');
     if (!loadMoreDiv) {
@@ -182,7 +182,7 @@ async function startDenemeListener(db, uid, appId, studentId) {
         loadMoreDiv.innerHTML = `<button id="btnLoadMoreDeneme" class="bg-white border border-gray-200 text-gray-600 px-6 py-2 rounded-full text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors">Daha Fazla Göster</button>`;
         // Ana container'ın dışına değil, list container'ın hemen altına ekleyelim
         container.parentNode.appendChild(loadMoreDiv);
-        
+
         document.getElementById('btnLoadMoreDeneme').addEventListener('click', () => {
             fetchNextDenemeBatch(db, uid, appId, studentId);
         });
@@ -195,43 +195,43 @@ async function startDenemeListener(db, uid, appId, studentId) {
 async function fetchNextDenemeBatch(db, uid, appId, studentId, isFirstLoad = false) {
     if (isDenemeLoading) return;
     isDenemeLoading = true;
-    
+
     const loadMoreBtn = document.getElementById('btnLoadMoreDeneme');
     const loadMoreContainer = document.getElementById('denemeLoadMoreContainer');
-    
+
     if (loadMoreBtn) loadMoreBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yükleniyor...';
 
     try {
         let q = query(
-            collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "denemeler"), 
-            orderBy("tarih", "desc"), 
+            collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "denemeler"),
+            orderBy("tarih", "desc"),
             limit(DENEME_PAGE_SIZE)
         );
 
         // Eğer sayfalama yapıyorsak (ilk sayfa değilse), son kayıttan sonrasını getir
         if (!isFirstLoad && lastVisibleDeneme) {
             q = query(
-                collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "denemeler"), 
-                orderBy("tarih", "desc"), 
+                collection(db, "artifacts", appId, "users", uid, "ogrencilerim", studentId, "denemeler"),
+                orderBy("tarih", "desc"),
                 startAfter(lastVisibleDeneme),
                 limit(DENEME_PAGE_SIZE)
             );
         }
 
         const snap = await getDocs(q);
-        
+
         if (!snap.empty) {
             lastVisibleDeneme = snap.docs[snap.docs.length - 1]; // Son dökümanı kaydet
             const list = [];
-            snap.forEach(d => list.push({id: d.id, ...d.data()}));
-            
+            snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+
             // Listeyi Ekrana Bas (Append modu)
             appendDenemeCards(list);
-            
+
             // İstatistikleri sadece ilk yüklemede hesapla (veya her seferinde kümülatif eklenebilir ama basitlik için ilk 20 yeterli olabilir)
             // Not: İstatistiklerin tam doğru olması için tüm verinin çekilmesi gerekir. 
             // Pagination varken sadece çekilenlerin istatistiği gösterilir veya ayrı bir count sorgusu atılır.
-            if(isFirstLoad) calculateStatsAndChart(list); 
+            if (isFirstLoad) calculateStatsAndChart(list);
 
             // Daha fazla butonunu yönet
             if (snap.docs.length < DENEME_PAGE_SIZE) {
@@ -256,7 +256,7 @@ async function fetchNextDenemeBatch(db, uid, appId, studentId, isFirstLoad = fal
 
 function appendDenemeCards(list) {
     const container = document.getElementById('denemeListContainer');
-    
+
     // Uyarı mesajı (Sadece listenin başında ve bekleyen varsa göster)
     const hasPending = list.some(d => d.onayDurumu === 'bekliyor');
     // Eğer container boşsa ve bekleyen varsa uyarıyı ekle (Sadece ilk sayfada)
@@ -270,8 +270,8 @@ function appendDenemeCards(list) {
 
     const html = list.map(d => {
         const isApproved = d.onayDurumu === 'onaylandi';
-        const isExcluded = d.analizHaric === true; 
-        
+        const isExcluded = d.analizHaric === true;
+
         // Detay İçeriği (Netler Tablosu)
         let detailsContent = '';
         if (d.netler) {
@@ -342,10 +342,10 @@ function appendDenemeCards(list) {
 }
 
 // Global toggle fonksiyonu
-window.toggleDenemeDetails = function(card) {
+window.toggleDenemeDetails = function (card) {
     const panel = card.querySelector('.details-panel');
     const icon = card.querySelector('.chevron-icon');
-    
+
     // Diğer açık olanları kapat (Opsiyonel - Akordiyon etkisi için)
     // document.querySelectorAll('.details-panel').forEach(p => {
     //     if(p !== panel) p.classList.add('hidden');
@@ -361,18 +361,18 @@ function attachDenemeActionListeners() {
     deleteBtns.forEach(btn => {
         btn.onclick = async (e) => {
             e.stopPropagation(); // Kartın detayını açmayı engelle
-            
+
             // Tıklanan butonu garanti altına al
             const targetBtn = e.currentTarget || e.target.closest('.btn-delete-deneme');
             if (!targetBtn) return;
 
             const id = targetBtn.dataset.id;
-            
-            if(confirm("Bu denemeyi silmek istediğinize emin misiniz?")) {
+
+            if (confirm("Bu denemeyi silmek istediğinize emin misiniz?")) {
                 try {
                     // 1. Veritabanından Sil
                     await deleteDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id));
-                    
+
                     // 2. UI'dan Sil (Manuel Güncelleme)
                     const card = targetBtn.closest('.group');
                     if (card) {
@@ -393,13 +393,13 @@ function attachDenemeActionListeners() {
     approveBtns.forEach(btn => {
         btn.onclick = async (e) => {
             e.stopPropagation();
-            
+
             const targetBtn = e.currentTarget || e.target.closest('.btn-approve-deneme');
             if (!targetBtn) return;
 
             const id = targetBtn.dataset.id;
-            
-            if(confirm("Bu denemeyi onaylamak istiyor musunuz?")) {
+
+            if (confirm("Bu denemeyi onaylamak istiyor musunuz?")) {
                 const originalHtml = targetBtn.innerHTML;
                 targetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
                 targetBtn.disabled = true;
@@ -409,16 +409,16 @@ function attachDenemeActionListeners() {
                     await updateDoc(doc(currentDb, "artifacts", globalAppId, "users", globalUserId, "ogrencilerim", currentStudentId, "denemeler", id), {
                         onayDurumu: 'onaylandi'
                     });
-                    
+
                     // 2. UI Güncelle (Manuel)
                     const card = targetBtn.closest('.group');
-                    if(card) {
+                    if (card) {
                         // Kartın üst kısmındaki 'Bekliyor' yazısını bul ve değiştir
                         const headerBadgeArea = card.querySelector('.flex.items-center.gap-2.mb-1');
-                        
+
                         // Eski badge'i kaldır
-                        const oldBadge = headerBadgeArea.querySelector('.bg-orange-100'); 
-                        if(oldBadge) oldBadge.remove();
+                        const oldBadge = headerBadgeArea.querySelector('.bg-orange-100');
+                        if (oldBadge) oldBadge.remove();
 
                         // Yeni 'Onaylı' badge'i ekle
                         const newBadge = document.createElement('span');
@@ -432,7 +432,7 @@ function attachDenemeActionListeners() {
 
                         // Onayla butonunu kaldır
                         targetBtn.remove();
-                        
+
                         alert("Deneme onaylandı ve analize dahil edildi.");
                     }
 
@@ -449,12 +449,12 @@ function attachDenemeActionListeners() {
 // --- İSTATİSTİK VE GRAFİK ---
 function calculateStatsAndChart(list) {
     const validList = list.filter(d => d.onayDurumu === 'onaylandi' && d.analizHaric !== true);
-    
+
     let totalNet = 0, maxNet = 0;
     validList.forEach(d => {
         const n = parseFloat(d.toplamNet);
         totalNet += n;
-        if(n > maxNet) maxNet = n;
+        if (n > maxNet) maxNet = n;
     });
 
     document.getElementById('statGlobalAvg').textContent = validList.length ? (totalNet / validList.length).toFixed(2) : '-';
@@ -463,9 +463,9 @@ function calculateStatsAndChart(list) {
 
     const ctx = document.getElementById('coachDenemeChart');
     if (ctx) {
-        const sorted = [...validList].sort((a,b) => a.tarih.localeCompare(b.tarih)).slice(-10);
-        
-        if(denemeChartInstance) denemeChartInstance.destroy();
+        const sorted = [...validList].sort((a, b) => a.tarih.localeCompare(b.tarih)).slice(-10);
+
+        if (denemeChartInstance) denemeChartInstance.destroy();
         denemeChartInstance = new Chart(ctx, {
             type: 'line',
             data: {
@@ -487,7 +487,7 @@ function calculateStatsAndChart(list) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { 
+                scales: {
                     y: { beginAtZero: false, grid: { display: true, color: '#f3f4f6' } },
                     x: { grid: { display: false } }
                 }
@@ -518,7 +518,7 @@ function openDenemeModal(db, uid, appId) {
     // Formu Hazırla
     document.getElementById('denemeAdi').value = '';
     document.getElementById('denemeTarih').value = new Date().toISOString().split('T')[0];
-    
+
     // Öğrenci Sınıfına Göre Türleri Getir (helpers.js'den CLASS_LEVEL_RULES kullanıyoruz)
     const isOrtaokul = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf'].includes(currentStudentClass);
     const levelKey = isOrtaokul ? 'ORTAOKUL' : 'LISE';
@@ -526,7 +526,7 @@ function openDenemeModal(db, uid, appId) {
 
     const typeSelect = document.getElementById('denemeTuru');
     typeSelect.innerHTML = rules.types.map(t => `<option value="${t}">${t}</option>`).join('');
-    
+
     renderDenemeInputs(rules.types[0], rules.defaultRatio);
 
     typeSelect.onchange = (e) => {
@@ -535,11 +535,7 @@ function openDenemeModal(db, uid, appId) {
 
     // Kaydet Butonu
     const saveBtn = document.getElementById('saveDenemeButton');
-    // Önceki listener'ları temizlemek için klonlama
-    const newSaveBtn = saveBtn.cloneNode(true);
-    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-    
-    newSaveBtn.onclick = async () => saveDeneme(db, uid, appId, levelKey);
+    saveBtn.onclick = async () => saveDeneme(db, uid, appId, levelKey);
 }
 
 function renderDenemeInputs(tur, ratio) {
@@ -547,7 +543,7 @@ function renderDenemeInputs(tur, ratio) {
     container.innerHTML = '';
 
     let ratioText = ratio === 3 ? "3 Yanlış 1 Doğruyu Götürür" : "4 Yanlış 1 Doğruyu Götürür";
-    
+
     if (tur === 'Diger') {
         container.innerHTML = `
             <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3 text-xs text-orange-800 text-center">
@@ -565,8 +561,8 @@ function renderDenemeInputs(tur, ratio) {
         container.innerHTML = `<p class="text-xs text-gray-400 text-center mb-3 bg-gray-100 py-1 rounded">${ratioText}</p>`;
         // helpers.js'den gelen EXAM_CONFIG
         const config = EXAM_CONFIG[tur];
-        
-        if(config && config.subjects) {
+
+        if (config && config.subjects) {
             config.subjects.forEach(sub => {
                 container.innerHTML += `
                 <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
@@ -586,7 +582,7 @@ async function saveDeneme(db, uid, appId, levelKey) {
     const tur = document.getElementById('denemeTuru').value;
     const tarih = document.getElementById('denemeTarih').value;
     const ratio = CLASS_LEVEL_RULES[levelKey].defaultRatio;
-    const studentNameEl = document.getElementById('denemeSelectedStudentText'); 
+    const studentNameEl = document.getElementById('denemeSelectedStudentText');
 
     if (!tarih) { alert('Lütfen tarih seçin.'); return; }
     if (!ad) { alert('Lütfen yayın adını girin.'); return; }
@@ -597,13 +593,13 @@ async function saveDeneme(db, uid, appId, levelKey) {
         kocId: uid,
         studentId: currentStudentId,
         studentAd: studentNameEl.innerText,
-        onayDurumu: 'onaylandi', 
+        onayDurumu: 'onaylandi',
         eklenmeTarihi: serverTimestamp()
     };
 
-if (tur === 'Diger') {
+    if (tur === 'Diger') {
         const soru = parseInt(document.getElementById('inpDigerSoru').value) || 0;
-        
+
         // YENİ KONTROL
         if (soru <= 0) {
             alert("Lütfen soru sayısını giriniz.");
@@ -611,16 +607,16 @@ if (tur === 'Diger') {
         }
         const dogru = parseInt(document.getElementById('inpDigerDogru').value) || 0;
         const yanlis = parseInt(document.getElementById('inpDigerYanlis').value) || 0;
-        
+
         if (dogru + yanlis > soru) { alert("Doğru + Yanlış soru sayısını geçemez!"); return; }
 
         totalNet = dogru - (yanlis / ratio);
-        
+
         dataPayload.soruSayisi = soru;
         dataPayload.dogru = dogru;
         dataPayload.yanlis = yanlis;
         dataPayload.toplamNet = totalNet.toFixed(2);
-        dataPayload.analizHaric = true; 
+        dataPayload.analizHaric = true;
 
     } else {
         let netler = {};
@@ -633,14 +629,14 @@ if (tur === 'Diger') {
 
             const d = parseInt(dVal) || 0;
             const y = parseInt(yVal) || 0;
-            
+
             if (d > 0 || y > 0) {
                 const n = d - (y / ratio);
                 totalNet += n;
                 netler[i.dataset.ders] = { d, y, net: n.toFixed(2) };
             }
         });
-        
+
         // YENİ KONTROL: Boş kayda izin yok
         if (!hasEntry) {
             alert("Lütfen en az bir ders için Doğru/Yanlış girişi yapınız.");

@@ -4,12 +4,12 @@ import { openModalWithBackHistory, closeModalWithBackHistory } from './helpers.j
 export async function openReportModal(db, coachId, studentId, studentName) {
     const modalId = 'reportModal';
     const select = document.getElementById('reportMonthSelect');
-    
+
     // Select kutusunu temizle ve son 3 ayı doldur
     select.innerHTML = '';
     const months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
     const today = new Date();
-    
+
     for (let i = 0; i < 6; i++) { // Son 6 aya kadar genişletildi
         const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
         const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -28,19 +28,15 @@ export async function openReportModal(db, coachId, studentId, studentName) {
 
     // Event Listener'lar (Tekrar eklenmesini önlemek için kontrol edilebilir ama modal yapısı statikse sorun olmaz)
     // Ancak her açılışta listener eklenmemesi için elementleri temizleyip yeniden atamak veya onclick kullanmak daha güvenli.
-    
+
     select.onchange = () => loadReportData(db, coachId, studentId, select.value);
 
     const btnShare = document.getElementById('btnShareWhatsapp');
-    // Butonu klonlayarak eski event listener'ları temizle
-    const newBtnShare = btnShare.cloneNode(true);
-    btnShare.parentNode.replaceChild(newBtnShare, btnShare);
-    
-    newBtnShare.onclick = () => shareToWhatsapp(studentName, select.options[select.selectedIndex].text);
+    btnShare.onclick = () => shareToWhatsapp(studentName, select.options[select.selectedIndex].text);
 
     // Kapatma butonu
     const closeBtn = document.querySelector(`#${modalId} .close-modal`) || document.querySelector(`#${modalId} button[onclick*="none"]`);
-    if(closeBtn) {
+    if (closeBtn) {
         // Eski onclick attribute'unu kaldır
         closeBtn.removeAttribute('onclick');
         closeBtn.onclick = () => {
@@ -77,21 +73,21 @@ async function loadReportData(db, coachId, studentId, yearMonth) {
         let totalHw = 0, doneHw = 0;
         snapOdev.forEach(d => {
             totalHw++;
-            if(d.data().durum === 'tamamlandi') doneHw++;
+            if (d.data().durum === 'tamamlandi') doneHw++;
         });
-        const hwRate = totalHw === 0 ? "%0" : `%${Math.round((doneHw/totalHw)*100)}`;
+        const hwRate = totalHw === 0 ? "%0" : `%${Math.round((doneHw / totalHw) * 100)}`;
 
         // 3. Deneme Ortalaması
         let totalNet = 0;
         snapDeneme.forEach(d => {
-            if(d.data().analizHaric !== true) totalNet += (parseFloat(d.data().toplamNet) || 0);
+            if (d.data().analizHaric !== true) totalNet += (parseFloat(d.data().toplamNet) || 0);
         });
         const validExams = snapDeneme.docs.filter(d => d.data().analizHaric !== true).length;
         const examAvg = validExams === 0 ? "-" : (totalNet / validExams).toFixed(2) + " Net";
 
         // 4. Seans Katılımı
         let attended = 0;
-        snapSeans.forEach(d => { if(d.data().durum === 'tamamlandi') attended++; });
+        snapSeans.forEach(d => { if (d.data().durum === 'tamamlandi') attended++; });
 
         // UI Güncelle
         document.getElementById('repTotalQuestions').textContent = totalQuestions;
@@ -113,14 +109,14 @@ function shareToWhatsapp(studentName, periodText) {
     const comment = document.getElementById('reportCoachComment').value;
 
     const text = `📊 *Öğrenci Gelişim Raporu* 📊\n` +
-                 `👤 Öğrenci: ${studentName}\n` +
-                 `🗓️ Dönem: ${periodText}\n\n` +
-                 `✅ *Çözülen Soru:* ${q}\n` +
-                 `📚 *Ödev Başarısı:* ${h}\n` +
-                 `📈 *Deneme Ort:* ${e}\n` +
-                 `🎯 *Seans:* ${s}\n\n` +
-                 `💬 *Koç Notu:* ${comment ? comment : 'Başarılarının devamını dilerim.'}\n\n` +
-                 `🚀 *NetKoç Takip Sistemi*`;
+        `👤 Öğrenci: ${studentName}\n` +
+        `🗓️ Dönem: ${periodText}\n\n` +
+        `✅ *Çözülen Soru:* ${q}\n` +
+        `📚 *Ödev Başarısı:* ${h}\n` +
+        `📈 *Deneme Ort:* ${e}\n` +
+        `🎯 *Seans:* ${s}\n\n` +
+        `💬 *Koç Notu:* ${comment ? comment : 'Başarılarının devamını dilerim.'}\n\n` +
+        `🚀 *NetKoç Takip Sistemi*`;
 
     // Masaüstü ve Mobil ayrımı yapılabilir, şimdilik evrensel api
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;

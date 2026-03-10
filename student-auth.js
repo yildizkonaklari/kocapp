@@ -73,6 +73,9 @@ if (loginButton) {
 
         } catch (error) {
             console.error("Giriş Hatası:", error);
+            // MOBİL HATA AYIKLAMA İÇİN ALERT EKLEDİK
+            alert("Firebase Hatası: " + error.code + " - " + error.message);
+            
             let msg = "Giriş yapılamadı.";
             if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-email') {
                 msg = "Kullanıcı adı veya şifre hatalı.";

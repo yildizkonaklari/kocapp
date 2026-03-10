@@ -27,7 +27,7 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 // --- PWA ÖNBELLEKLEME (GÜNCELLENMİŞ STRATEJİ) ---
-const CACHE_NAME = 'netkoc-v6-network-first'; // Versiyonu artırdık
+const CACHE_NAME = 'netkoc-v7-network-first'; // Versiyonu artırdık
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

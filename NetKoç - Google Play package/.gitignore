@@ -1,0 +1,11 @@
+.idea/
+source/.gradle/
+source/build/
+source/app/build/
+source/local.properties
+source/signingKey.keystore
+signing.keystore
+signing-key-info.txt
+*.apk
+*.aab
+*.idsig
